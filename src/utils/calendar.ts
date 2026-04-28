@@ -1,0 +1,161 @@
+import { getHolidayMap } from '../data/holidays';
+
+/** Cache for holiday maps per year range */
+let _holidayMap: Map<string, string> | null = null;
+let _holidayMapRange: [number, number] | null = null;
+
+function ensureHolidayMap(year: number): Map<string, string> {
+  const from = year - 1;
+  const to = year + 1;
+  if (
+    !_holidayMap ||
+    !_holidayMapRange ||
+    _holidayMapRange[0] > from ||
+    _holidayMapRange[1] < to
+  ) {
+    _holidayMap = getHolidayMap(from, to);
+    _holidayMapRange = [from, to];
+  }
+  return _holidayMap;
+}
+
+/** Check if a given date is a public holiday in Hesse */
+export function isPublicHoliday(date: Date): boolean {
+  const map = ensureHolidayMap(date.getFullYear());
+  return map.has(toISODate(date));
+}
+
+/** Get holiday name for a date, or null */
+export function getHolidayName(date: Date): string | null {
+  const map = ensureHolidayMap(date.getFullYear());
+  return map.get(toISODate(date)) ?? null;
+}
+
+/** Check if a date is a work day (Mon–Fri, not a public holiday) */
+export function isWorkDay(date: Date): boolean {
+  const day = date.getDay();
+  if (day === 0 || day === 6) return false; // weekend
+  return !isPublicHoliday(date);
+}
+
+/**
+ * Dec 24 (Christmas Eve) and Dec 31 (New Year's Eve) always count as
+ * half days (0.5) even when booked as full vacation days.
+ */
+export function isSpecialHalfDay(date: Date): boolean {
+  const month = date.getMonth(); // 0-based, 11 = December
+  const day = date.getDate();
+  return month === 11 && (day === 24 || day === 31);
+}
+
+/** Count work days between two dates (inclusive) */
+export function countWorkDays(start: Date, end: Date): number {
+  let count = 0;
+  const current = new Date(start);
+  current.setHours(0, 0, 0, 0);
+  const endTime = new Date(end);
+  endTime.setHours(0, 0, 0, 0);
+
+  while (current <= endTime) {
+    if (isWorkDay(current)) count++;
+    current.setDate(current.getDate() + 1);
+  }
+  return count;
+}
+
+/**
+ * Count work days consumed by a vacation period.
+ * - Normal work days count as 1.0
+ * - Dec 24 and Dec 31 always count as 0.5 (special half days)
+ * - User-flagged half-day bookings count as 0.5 (single-day periods only)
+ */
+export function countVacationWorkDays(period: { startDate: string; endDate: string; halfDay?: boolean }): number {
+  const start = parseISODate(period.startDate);
+  const end = parseISODate(period.endDate);
+  let total = 0;
+  const current = new Date(start);
+  current.setHours(0, 0, 0, 0);
+  const endTime = new Date(end);
+  endTime.setHours(0, 0, 0, 0);
+
+  while (current <= endTime) {
+    if (isWorkDay(current)) {
+      if (period.halfDay) {
+        total += 0.5;
+      } else if (isSpecialHalfDay(current)) {
+        total += 0.5;
+      } else {
+        total += 1;
+      }
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  return total;
+}
+
+/** Convert Date to ISO date string YYYY-MM-DD */
+export function toISODate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** Parse ISO date string to Date */
+export function parseISODate(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** Get all days in a month as Date objects */
+export function getDaysInMonth(year: number, month: number): Date[] {
+  const days: Date[] = [];
+  const date = new Date(year, month, 1);
+  while (date.getMonth() === month) {
+    days.push(new Date(date));
+    date.setDate(date.getDate() + 1);
+  }
+  return days;
+}
+
+/** Get the day of week (0=Sun) for the first day of the month */
+export function getFirstDayOfMonth(year: number, month: number): number {
+  return new Date(year, month, 1).getDay();
+}
+
+/** German month names */
+export const MONTH_NAMES = [
+  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+];
+
+/** German weekday abbreviations */
+export const WEEKDAY_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+
+/** Format date range for display */
+export function formatDateRange(startISO: string, endISO: string): string {
+  const start = parseISODate(startISO);
+  const end = parseISODate(endISO);
+  const sameMonth = start.getMonth() === end.getMonth();
+  const sameYear = start.getFullYear() === end.getFullYear();
+
+  const fmt = (d: Date) =>
+    `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`;
+
+  if (startISO === endISO) {
+    return `${fmt(start)}${start.getFullYear()}`;
+  }
+  if (sameMonth && sameYear) {
+    return `${String(start.getDate()).padStart(2, '0')}.–${fmt(end)}${end.getFullYear()}`;
+  }
+  if (sameYear) {
+    return `${fmt(start)}–${fmt(end)}${end.getFullYear()}`;
+  }
+  return `${fmt(start)}${start.getFullYear()} – ${fmt(end)}${end.getFullYear()}`;
+}
+
+/** Format single date for display */
+export function formatDate(iso: string): string {
+  const d = parseISODate(iso);
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+}

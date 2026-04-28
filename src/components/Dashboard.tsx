@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../state/store';
-import { countVacationWorkDays, parseISODate, formatDateRange } from '../utils/calendar';
+import { countVacationWorkDaysInYear, parseISODate, formatDateRange } from '../utils/calendar';
 import { VacationModal } from './VacationModal';
 
 export function Dashboard() {
@@ -9,9 +9,9 @@ export function Dashboard() {
 
   const usedDays = useMemo(() => {
     return periods.reduce((sum, p) => {
-      return sum + countVacationWorkDays(p, state);
+      return sum + countVacationWorkDaysInYear(p, year, state);
     }, 0);
-  }, [periods]);
+  }, [periods, year, state]);
 
   const remainingDays = totalDays - usedDays;
   const usedPercent = Math.min((usedDays / totalDays) * 100, 100);
@@ -85,7 +85,7 @@ export function Dashboard() {
         ) : (
           <div className="upcoming-list">
             {upcoming.map((p) => {
-              const days = countVacationWorkDays(p, state);
+              const days = countVacationWorkDaysInYear(p, year, state);
               const daysLabel = days === 0.5 ? '0,5 Tage' : `${days} ${days === 1 ? 'Tag' : 'Tage'}`;
               return (
                 <div key={p.id} className="upcoming-item">

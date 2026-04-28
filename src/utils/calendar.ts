@@ -117,6 +117,32 @@ export function countVacationWorkDays(period: { startDate: string; endDate: stri
   return total;
 }
 
+/**
+ * Count work days consumed by a vacation period, clipped to a specific year.
+ * For periods that span multiple years, only the portion inside the given
+ * year is counted.
+ */
+export function countVacationWorkDaysInYear(
+  period: { startDate: string; endDate: string; halfDay?: boolean },
+  year: number,
+  state: GermanState
+): number {
+  const yearStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
+
+  // Clip the period to the year boundaries
+  const clippedStart = period.startDate > yearStart ? period.startDate : yearStart;
+  const clippedEnd = period.endDate < yearEnd ? period.endDate : yearEnd;
+
+  // If clipped range is invalid (period is entirely outside the year), return 0
+  if (clippedStart > clippedEnd) return 0;
+
+  return countVacationWorkDays(
+    { startDate: clippedStart, endDate: clippedEnd, halfDay: period.halfDay && period.startDate === period.endDate },
+    state
+  );
+}
+
 /** Convert Date to ISO date string YYYY-MM-DD */
 export function toISODate(date: Date): string {
   const y = date.getFullYear();

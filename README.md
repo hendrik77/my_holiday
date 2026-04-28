@@ -7,7 +7,7 @@ A vacation day planner for Germany. Plan your annual vacation days with automati
 - **Configurable budget** — set your annual vacation allowance (default: 30 days)
 - **All 16 German states** — select your Bundesland; public holidays computed via [`feiertagejs`](https://www.npmjs.com/package/feiertagejs)
 - **Half-day booking** — mark single days as half days (0.5 instead of 1.0); Dec 24 and Dec 31 always count as 0.5
-- **Smart work-day counting** — only counts Monday–Friday, excludes weekends and public holidays
+- **Smart work-day counting** — only counts Monday–Friday, excludes weekends and public holidays; periods spanning multiple years are correctly clipped to the selected year
 - **Four views** — Dashboard summary, year grid (12 mini calendars), full month calendar, and a sortable list
 - **Click-to-plan** — select date ranges directly in the month view; click existing vacations to edit or delete
 - **Live work-day preview** — the add/edit modal shows exactly how many work days a date range consumes

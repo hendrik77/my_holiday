@@ -9,7 +9,7 @@ import {
   toISODate,
   parseISODate,
   countWorkDays,
-  countVacationWorkDays,
+  countVacationWorkDaysInYear,
 } from '../utils/calendar';
 import type { VacationPeriod } from '../types';
 import { VacationModal } from './VacationModal';
@@ -255,7 +255,7 @@ export function MonthView() {
                 return start <= monthEnd && end >= monthStart;
               })
               .map((p) => {
-                const days = countVacationWorkDays(p, state);
+                const days = countVacationWorkDaysInYear(p, year, state);
                 const daysLabel = days === 0.5 ? '0,5 Arbeitstage' : `${days} ${days === 1 ? 'Arbeitstag' : 'Arbeitstage'}`;
                 return (
                   <div key={p.id} className="upcoming-item">

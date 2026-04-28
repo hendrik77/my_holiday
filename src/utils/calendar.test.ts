@@ -6,6 +6,7 @@ import {
   isSpecialHalfDay,
   countWorkDays,
   countVacationWorkDays,
+  countVacationWorkDaysInYear,
   hasOverlap,
   toISODate,
   parseISODate,
@@ -252,5 +253,56 @@ describe('hasOverlap', () => {
     expect(hasOverlap('2026-06-15', '2026-06-15', periods)).toBe(true);
     expect(hasOverlap('2026-06-14', '2026-06-16', periods)).toBe(true);
     expect(hasOverlap('2026-06-16', '2026-06-16', periods)).toBe(false);
+  });
+});
+
+describe('countVacationWorkDaysInYear', () => {
+  const HE = 'HE' as const;
+
+  it('counts only work days within the year', () => {
+    // Dec 28 2026 (Mon) to Jan 3 2027 (Sun)
+    // In 2026: Dec 28-31 = Mon-Thu = 4 work days, but Dec 31 is 0.5
+    // So: 3*1.0 + 0.5 = 3.5 in 2026
+    const period = { startDate: '2026-12-28', endDate: '2027-01-03' };
+    expect(countVacationWorkDaysInYear(period, 2026, HE)).toBe(3.5);
+    // In 2027: Jan 1 (Fri, holiday) + Jan 2-3 (Sat-Sun) = 0
+    expect(countVacationWorkDaysInYear(period, 2027, HE)).toBe(0);
+  });
+
+  it('returns full count when period is fully inside the year', () => {
+    const period = { startDate: '2026-07-01', endDate: '2026-07-10' };
+    const full = countVacationWorkDays(period, HE);
+    expect(countVacationWorkDaysInYear(period, 2026, HE)).toBe(full);
+  });
+
+  it('returns 0 when period is entirely outside the year', () => {
+    const period = { startDate: '2027-06-01', endDate: '2027-06-10' };
+    expect(countVacationWorkDaysInYear(period, 2026, HE)).toBe(0);
+  });
+
+  it('handles single-day period crossing year boundary', () => {
+    // Should never happen in practice (single day can't cross years)
+    // but should handle gracefully
+    const period = { startDate: '2026-06-15', endDate: '2026-06-15', halfDay: true };
+    expect(countVacationWorkDaysInYear(period, 2026, HE)).toBe(0.5);
+    expect(countVacationWorkDaysInYear(period, 2025, HE)).toBe(0);
+  });
+
+  it('handles multi-year span (2026-2028)', () => {
+    // Jan 1 2026 (Thu, holiday) to Jan 1 2028 (Mon, holiday)
+    const period = { startDate: '2026-01-01', endDate: '2028-01-01' };
+    const in2026 = countVacationWorkDaysInYear(period, 2026, HE);
+    const in2027 = countVacationWorkDaysInYear(period, 2027, HE);
+    // Both should be > 0
+    expect(in2026).toBeGreaterThan(0);
+    expect(in2027).toBeGreaterThan(0);
+    // 2028: Jan 1 only, which is a holiday
+    expect(countVacationWorkDaysInYear(period, 2028, HE)).toBe(0);
+  });
+
+  it('handles halfDay periods crossing years', () => {
+    // Dec 31 2026 (Thu, 0.5 special) - single day
+    const period = { startDate: '2026-12-31', endDate: '2026-12-31', halfDay: true };
+    expect(countVacationWorkDaysInYear(period, 2026, HE)).toBe(0.5);
   });
 });

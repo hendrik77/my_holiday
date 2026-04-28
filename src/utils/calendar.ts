@@ -52,6 +52,26 @@ export function isSpecialHalfDay(date: Date): boolean {
   return month === 11 && (day === 24 || day === 31);
 }
 
+/**
+ * Check if a new vacation period overlaps with any existing period.
+ * Overlap: startA <= endB && endA >= startB.
+ * Optionally exclude a period by id (for editing).
+ */
+export function hasOverlap(
+  newStart: string,
+  newEnd: string,
+  existing: { id: string; startDate: string; endDate: string }[],
+  excludeId?: string
+): boolean {
+  for (const p of existing) {
+    if (excludeId && p.id === excludeId) continue;
+    if (newStart <= p.endDate && newEnd >= p.startDate) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /** Count work days between two dates (inclusive) */
 export function countWorkDays(start: Date, end: Date, state: GermanState): number {
   let count = 0;

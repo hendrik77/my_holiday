@@ -11,6 +11,7 @@ A vacation day planner for Germany. Plan your annual vacation days with automati
 - **Four views** — Dashboard summary, year grid (12 mini calendars), full month calendar, and a sortable list
 - **Click-to-plan** — select date ranges directly in the month view; click existing vacations to edit or delete
 - **Live work-day preview** — the add/edit modal shows exactly how many work days a date range consumes
+- **Overlap prevention** — prevents booking a vacation that conflicts with an existing one
 - **CSV import/export** — backup your data or edit it in Excel; semicolon-delimited UTF-8 with BOM
 - **Persistent storage** — all data saved to your browser's `localStorage`, no backend required
 - **Responsive** — works on desktop, tablet, and mobile
@@ -59,6 +60,8 @@ Click the ⚙️ gear icon in the navigation bar to open settings:
 4. Toggle **Halber Tag** for single-day bookings (e.g. a doctor's appointment)
 5. The modal shows the live work-day count
 6. Click **Urlaub planen** to save
+
+The modal prevents booking a vacation that overlaps with an existing one — an error message is shown if the date range conflicts.
 
 ### Half-day rules
 

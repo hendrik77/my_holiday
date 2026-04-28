@@ -776,6 +776,15 @@
   color: var(--color-text-secondary);
 }
 
+.form-error {
+  font-size: 13px;
+  color: var(--color-primary);
+  background: #fef2f2;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  padding: var(--space-sm) var(--space-md);
+}
+
 /* === Half-day checkbox === */
 .form-checkbox {
   display: flex;

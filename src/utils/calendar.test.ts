@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
+import type { VacationPeriod } from '../types';
 import {
   isWorkDay,
   isPublicHoliday,
   isSpecialHalfDay,
   countWorkDays,
   countVacationWorkDays,
+  hasOverlap,
   toISODate,
   parseISODate,
 } from './calendar';
@@ -196,5 +198,59 @@ describe('toISODate / parseISODate', () => {
     expect(parsed.getFullYear()).toBe(2026);
     expect(parsed.getMonth()).toBe(6);
     expect(parsed.getDate()).toBe(15);
+  });
+});
+
+describe('hasOverlap', () => {
+  const existing: VacationPeriod[] = [
+    { id: '1', startDate: '2026-07-01', endDate: '2026-07-10', note: 'Sommer' },
+    { id: '2', startDate: '2026-12-23', endDate: '2026-12-27', note: 'Weihnachten' },
+  ];
+
+  it('detects overlapping start (new starts inside existing)', () => {
+    expect(hasOverlap('2026-07-05', '2026-07-15', existing)).toBe(true);
+  });
+
+  it('detects overlapping end (new ends inside existing)', () => {
+    expect(hasOverlap('2026-06-25', '2026-07-05', existing)).toBe(true);
+  });
+
+  it('detects full overlap (new fully contains existing)', () => {
+    expect(hasOverlap('2026-06-25', '2026-07-15', existing)).toBe(true);
+  });
+
+  it('detects exact same dates', () => {
+    expect(hasOverlap('2026-07-01', '2026-07-10', existing)).toBe(true);
+  });
+
+  it('detects adjacent on start (touching boundary)', () => {
+    // New ends on the day before existing starts = no overlap
+    // New starts on the day after existing ends = no overlap
+    expect(hasOverlap('2026-07-11', '2026-07-15', existing)).toBe(false);
+    expect(hasOverlap('2026-06-25', '2026-06-30', existing)).toBe(false);
+  });
+
+  it('returns false when no overlap', () => {
+    expect(hasOverlap('2026-08-01', '2026-08-10', existing)).toBe(false);
+  });
+
+  it('returns false for empty existing periods', () => {
+    expect(hasOverlap('2026-07-01', '2026-07-10', [])).toBe(false);
+  });
+
+  it('excludes a period by id (for editing)', () => {
+    // Overlaps with itself, but excluded
+    expect(hasOverlap('2026-07-01', '2026-07-10', existing, '1')).toBe(false);
+    // Still overlaps with the other period
+    expect(hasOverlap('2026-07-01', '2026-12-24', existing, '1')).toBe(true);
+  });
+
+  it('single-day periods overlap correctly', () => {
+    const periods: VacationPeriod[] = [
+      { id: '1', startDate: '2026-06-15', endDate: '2026-06-15', note: '' },
+    ];
+    expect(hasOverlap('2026-06-15', '2026-06-15', periods)).toBe(true);
+    expect(hasOverlap('2026-06-14', '2026-06-16', periods)).toBe(true);
+    expect(hasOverlap('2026-06-16', '2026-06-16', periods)).toBe(false);
   });
 });

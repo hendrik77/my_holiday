@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useStore } from '../state/store';
 import type { VacationPeriod } from '../types';
-import { countVacationWorkDays } from '../utils/calendar';
+import { countVacationWorkDays, hasOverlap } from '../utils/calendar';
 
 interface VacationModalProps {
   onClose: () => void;
@@ -10,7 +10,7 @@ interface VacationModalProps {
 }
 
 export function VacationModal({ onClose, initial, presetDates }: VacationModalProps) {
-  const { addPeriod, updatePeriod, year, state } = useStore();
+  const { addPeriod, updatePeriod, year, state, periods } = useStore();
   const isEditing = !!initial?.id;
 
   const [startDate, setStartDate] = useState(
@@ -21,6 +21,7 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
   );
   const [note, setNote] = useState(initial?.note || '');
   const [halfDay, setHalfDay] = useState(initial?.halfDay || false);
+  const [error, setError] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const isSingleDay = startDate === endDate;
@@ -48,6 +49,12 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
   }, [halfDay, startDate, endDate]);
 
   const handleSave = () => {
+    // Check for overlaps
+    if (hasOverlap(startDate, endDate, periods, initial?.id)) {
+      setError('Dieser Zeitraum überschneidet sich mit einem bereits geplanten Urlaub.');
+      return;
+    }
+
     if (isEditing && initial) {
       updatePeriod(initial.id, { startDate, endDate, note, halfDay });
     } else {
@@ -119,6 +126,10 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
             <div className="form-hint" style={{ marginTop: -8 }}>
               Ein halber Tag kann nur für einzelne Tage gebucht werden.
             </div>
+          )}
+
+          {error && (
+            <div className="form-error">{error}</div>
           )}
 
           <div className="form-hint">

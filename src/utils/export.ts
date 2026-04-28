@@ -47,8 +47,11 @@ function escapeCSV(value: string): string {
 function parseCSVRows(csv: string): string[][] {
   // Strip BOM if present
   const text = csv.replace(/^\uFEFF/, '').trim();
+  if (!text) return [];
+
   const rows: string[][] = [];
-  let current = '';
+  let currentRow: string[] = [];
+  let currentField = '';
   let inQuotes = false;
 
   for (let i = 0; i < text.length; i++) {
@@ -57,32 +60,39 @@ function parseCSVRows(csv: string): string[][] {
 
     if (inQuotes) {
       if (char === '"' && next === '"') {
-        current += '"';
+        currentField += '"';
         i++; // skip escaped quote
       } else if (char === '"') {
         inQuotes = false;
       } else {
-        current += char;
+        currentField += char;
       }
     } else {
       if (char === '"') {
         inQuotes = true;
-      } else if (char === '\n' || (char === '\r' && next === '\n')) {
-        rows.push(current.split(';'));
-        current = '';
-        if (char === '\r') i++; // skip \n in \r\n
-      } else if (char === '\r') {
-        rows.push(current.split(';'));
-        current = '';
+      } else if (char === ';') {
+        currentRow.push(currentField);
+        currentField = '';
+      } else if (char === '\n' || char === '\r') {
+        currentRow.push(currentField);
+        if (currentRow.some((f) => f !== '')) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentField = '';
+        if (char === '\r' && next === '\n') i++; // skip \n in \r\n
       } else {
-        current += char;
+        currentField += char;
       }
     }
   }
 
-  // Last row (no trailing newline)
-  if (current.length > 0 || rows.length === 0) {
-    rows.push(current.split(';'));
+  // Last field / row
+  if (currentField.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentField);
+    if (currentRow.some((f) => f !== '')) {
+      rows.push(currentRow);
+    }
   }
 
   return rows;

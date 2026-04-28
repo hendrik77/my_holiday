@@ -1,4 +1,5 @@
 import type { GermanState } from '../data/holidays';
+import type { Language } from '../i18n/translations';
 
 export interface VacationPeriod {
   id: string;
@@ -14,6 +15,7 @@ export interface VacationState {
   year: number;
   totalDays: number;
   state: GermanState;
+  language: Language;
   periods: VacationPeriod[];
   view: ViewType;
   selectedMonth: number; // 0-11
@@ -29,4 +31,5 @@ export interface VacationActions {
   removePeriod: (id: string) => void;
   importData: (totalDays: number, periods: Omit<VacationPeriod, 'id'>[]) => void;
   setState: (state: GermanState) => void;
+  setLanguage: (language: Language) => void;
 }

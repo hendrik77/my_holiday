@@ -1,0 +1,68 @@
+import { createContext, useContext, useCallback, type ReactNode } from 'react';
+import { useStore } from '../state/store';
+import { translations, type Language } from './translations';
+
+type NestedKeyOf<T, K extends keyof T = keyof T> = K extends string
+  ? T[K] extends Record<string, unknown>
+    ? `${K}.${NestedKeyOf<T[K]>}`
+    : K
+  : never;
+
+type TranslationParams = Record<string, string | number>;
+
+const I18nContext = createContext<{
+  t: (key: string, params?: TranslationParams) => string;
+  lang: Language;
+}>({ t: (k) => k, lang: 'de' });
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const language = useStore((s) => s.language);
+
+  const t = useCallback(
+    (key: string, params?: TranslationParams) => {
+      const lang = language as Language;
+      const keys = key.split('.');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let value: any = translations[lang];
+      for (const k of keys) {
+        if (value && typeof value === 'object' && k in value) {
+          value = value[k];
+        } else {
+          // Fallback to German
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let fallback: any = translations.de;
+          for (const fk of keys) {
+            if (fallback && typeof fallback === 'object' && fk in fallback) {
+              fallback = fallback[fk];
+            } else {
+              return key; // key not found anywhere
+            }
+          }
+          value = fallback;
+          break;
+        }
+      }
+
+      if (typeof value !== 'string') return key;
+
+      if (params) {
+        return value.replace(/\{(\w+)\}/g, (_, param) => {
+          return params[param]?.toString() ?? `{${param}}`;
+        });
+      }
+
+      return value;
+    },
+    [language]
+  );
+
+  return (
+    <I18nContext.Provider value={{ t, lang: language }}>
+      {children}
+    </I18nContext.Provider>
+  );
+}
+
+export function useT() {
+  return useContext(I18nContext);
+}

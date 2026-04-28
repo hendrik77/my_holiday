@@ -3,13 +3,14 @@ import { useStore } from '../state/store';
 import { countVacationWorkDaysInYear, formatDateRange } from '../utils/calendar';
 import type { VacationPeriod } from '../types';
 import { VacationModal } from './VacationModal';
+import { useT } from '../i18n/context';
 
 export function ListView() {
   const { periods, year, totalDays, state, removePeriod } = useStore();
+  const { t } = useT();
   const [editingPeriod, setEditingPeriod] = useState<VacationPeriod | null>(null);
   const [showAdd, setShowAdd] = useState(false);
 
-  // Filter periods that overlap with the current year
   const yearPeriods = useMemo(() => {
     const yearStart = `${year}-01-01`;
     const yearEnd = `${year}-12-31`;
@@ -27,25 +28,25 @@ export function ListView() {
   return (
     <div className="list-view">
       <div className="list-header">
-        <h2>Urlaubsliste {year}</h2>
+        <h2>{t('listView.title', { year })}</h2>
         <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
-          + Urlaub planen
+          {t('listView.addVacation')}
         </button>
       </div>
 
       {yearPeriods.length === 0 ? (
         <div className="empty-state">
-          <h3>Keine Urlaube für {year}</h3>
-          <p>Plane deine Urlaubstage, um sie hier zu sehen.</p>
+          <h3>{t('listView.noVacation', { year })}</h3>
+          <p>{t('listView.noVacationHint')}</p>
         </div>
       ) : (
         <>
           <table className="list-table">
             <thead>
               <tr>
-                <th>Zeitraum</th>
-                <th>Arbeitstage</th>
-                <th>Notiz</th>
+                <th>{t('listView.period')}</th>
+                <th>{t('listView.workdays')}</th>
+                <th>{t('listView.note')}</th>
                 <th style={{ width: 80 }}></th>
               </tr>
             </thead>
@@ -62,30 +63,16 @@ export function ListView() {
                     <td>
                       <strong>{daysLabel}</strong>{' '}
                       <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
-                        {days === 0.5 ? 'Tage' : days === 1 ? 'Tag' : 'Tage'}
+                        {days === 0.5 ? t('dashboard.days_half') : t(days === 1 ? 'dashboard.days_one' : 'dashboard.days_other', { count: days })}
                       </span>
                     </td>
                     <td>
-                      <span className="list-note">
-                        {p.note || '—'}
-                      </span>
+                      <span className="list-note">{p.note || '—'}</span>
                     </td>
                     <td>
                       <div className="list-actions">
-                        <button
-                          className="btn-ghost btn-sm"
-                          onClick={() => setEditingPeriod(p)}
-                          title="Bearbeiten"
-                        >
-                          ✎
-                        </button>
-                        <button
-                          className="btn-danger btn-sm"
-                          onClick={() => removePeriod(p.id)}
-                          title="Löschen"
-                        >
-                          ✕
-                        </button>
+                        <button className="btn-ghost btn-sm" onClick={() => setEditingPeriod(p)} title={t('vacationModal.edit')}>✎</button>
+                        <button className="btn-danger btn-sm" onClick={() => removePeriod(p.id)} title={t('toast.deleted')}>✕</button>
                       </div>
                     </td>
                   </tr>
@@ -94,11 +81,11 @@ export function ListView() {
             </tbody>
             <tfoot>
               <tr>
-                <td style={{ fontWeight: 500 }}>Gesamt</td>
+                <td style={{ fontWeight: 500 }}>{t('listView.total')}</td>
                 <td>
-                  <strong>{totalUsed}</strong>{' '}
+                  <strong>{totalUsed % 1 === 0 ? totalUsed : totalUsed.toFixed(1).replace('.', ',')}</strong>{' '}
                   <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
-                    von {totalDays} Tagen
+                    {t('listView.ofDays', { total: totalDays })}
                   </span>
                 </td>
                 <td colSpan={2}>
@@ -109,8 +96,8 @@ export function ListView() {
                     }}
                   >
                     {totalUsed > totalDays
-                      ? `${totalUsed - totalDays} Tage über Limit`
-                      : `${totalDays - totalUsed} Tage übrig`}
+                      ? t('listView.over', { over: totalUsed - totalDays })
+                      : t('listView.remaining', { remaining: totalDays - totalUsed })}
                   </span>
                 </td>
               </tr>
@@ -119,15 +106,8 @@ export function ListView() {
         </>
       )}
 
-      {editingPeriod && (
-        <VacationModal
-          initial={editingPeriod}
-          onClose={() => setEditingPeriod(null)}
-        />
-      )}
-      {showAdd && (
-        <VacationModal onClose={() => setShowAdd(false)} />
-      )}
+      {editingPeriod && <VacationModal initial={editingPeriod} onClose={() => setEditingPeriod(null)} />}
+      {showAdd && <VacationModal onClose={() => setShowAdd(false)} />}
     </div>
   );
 }

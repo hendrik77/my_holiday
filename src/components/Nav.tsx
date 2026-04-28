@@ -3,23 +3,25 @@ import { useStore } from '../state/store';
 import type { ViewType } from '../types';
 import { downloadCSV, parseImportCSV } from '../utils/export';
 import { SettingsModal } from './SettingsModal';
+import { useT } from '../i18n/context';
 
-const views: { key: ViewType; label: string }[] = [
-  { key: 'dashboard', label: 'Übersicht' },
-  { key: 'year', label: 'Jahresansicht' },
-  { key: 'month', label: 'Monatsansicht' },
-  { key: 'list', label: 'Liste' },
+const views: { key: ViewType; labelKey: string }[] = [
+  { key: 'dashboard', labelKey: 'nav.overview' },
+  { key: 'year', labelKey: 'nav.yearView' },
+  { key: 'month', labelKey: 'nav.monthView' },
+  { key: 'list', labelKey: 'nav.list' },
 ];
 
 export function Nav() {
   const { view, year, setView, setYear, setSelectedMonth, periods, totalDays, state, importData } =
     useStore();
+  const { t } = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
   const handleExport = () => {
-    downloadCSV(periods, totalDays, year, state);
+    downloadCSV(periods, totalDays, year, state, t);
   };
 
   const handleImport = () => {
@@ -33,11 +35,11 @@ export function Nav() {
     const reader = new FileReader();
     reader.onload = () => {
       const text = reader.result as string;
-      const result = parseImportCSV(text);
+      const result = parseImportCSV(text, t);
 
       if (result.periods.length > 0) {
         const confirmed = window.confirm(
-          `${result.periods.length} Urlaubseinträge importieren?\n\nBestehende Einträge werden dabei ersetzt.`
+          t('nav.importConfirm', { count: result.periods.length })
         );
         if (confirmed) {
           importData(totalDays, result.periods);
@@ -52,11 +54,10 @@ export function Nav() {
       }
     };
     reader.onerror = () => {
-      setImportError('Fehler beim Lesen der Datei.');
+      setImportError(t('nav.importErrorRead'));
     };
     reader.readAsText(file, 'UTF-8');
 
-    // Reset input so the same file can be re-imported
     e.target.value = '';
   };
 
@@ -65,7 +66,7 @@ export function Nav() {
       <div className="nav-inner">
         <div className="nav-brand">
           <span className="nav-brand-dot" />
-          My Holiday
+          {t('app.title')}
         </div>
 
         <div className="nav-links">
@@ -75,7 +76,7 @@ export function Nav() {
               className={`nav-link ${view === v.key ? 'active' : ''}`}
               onClick={() => setView(v.key)}
             >
-              {v.label}
+              {t(v.labelKey)}
             </button>
           ))}
         </div>
@@ -88,7 +89,7 @@ export function Nav() {
               setYear(newYear);
               setSelectedMonth(0);
             }}
-            title="Vorheriges Jahr"
+            title={t('nav.prevYear')}
           >
             ‹
           </button>
@@ -100,7 +101,7 @@ export function Nav() {
               setYear(newYear);
               setSelectedMonth(0);
             }}
-            title="Nächstes Jahr"
+            title={t('nav.nextYear')}
           >
             ›
           </button>
@@ -110,23 +111,23 @@ export function Nav() {
           <button
             className="nav-io-btn"
             onClick={() => setShowSettings(true)}
-            title="Einstellungen"
+            title={t('nav.settings')}
           >
             ⚙️
           </button>
           <button
             className="nav-io-btn"
             onClick={handleImport}
-            title="Urlaubsdaten aus CSV importieren"
+            title={t('nav.importTitle')}
           >
-            📥 Import
+            {t('nav.import')}
           </button>
           <button
             className="nav-io-btn"
             onClick={handleExport}
-            title="Urlaubsdaten als CSV exportieren"
+            title={t('nav.exportTitle')}
           >
-            📤 Export
+            {t('nav.export')}
           </button>
           <input
             ref={fileInputRef}

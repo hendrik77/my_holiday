@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useStore } from '../state/store';
 import type { VacationPeriod } from '../types';
 import { countVacationWorkDays, hasOverlap } from '../utils/calendar';
+import { useT } from '../i18n/context';
 
 interface VacationModalProps {
   onClose: () => void;
@@ -11,6 +12,7 @@ interface VacationModalProps {
 
 export function VacationModal({ onClose, initial, presetDates }: VacationModalProps) {
   const { addPeriod, updatePeriod, year, state, periods } = useStore();
+  const { t } = useT();
   const isEditing = !!initial?.id;
 
   const [startDate, setStartDate] = useState(
@@ -34,14 +36,12 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
     }
   }, [startDate, endDate, halfDay]);
 
-  // Ensure endDate >= startDate
   useEffect(() => {
     if (endDate < startDate) {
       setEndDate(startDate);
     }
   }, [startDate, endDate]);
 
-  // Auto-collapse to single day when half-day is toggled on
   useEffect(() => {
     if (halfDay && startDate !== endDate) {
       setEndDate(startDate);
@@ -49,9 +49,8 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
   }, [halfDay, startDate, endDate]);
 
   const handleSave = () => {
-    // Check for overlaps
     if (hasOverlap(startDate, endDate, periods, initial?.id)) {
-      setError('Dieser Zeitraum überschneidet sich mit einem bereits geplanten Urlaub.');
+      setError(t('vacationModal.overlapError'));
       return;
     }
 
@@ -69,20 +68,20 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
     }
   };
 
+  const workDaysDisplay = workDays === 0.5 ? '0,5' : workDays;
+
   return (
     <div className="modal-overlay" ref={overlayRef} onClick={handleOverlayClick}>
       <div className="modal">
         <div className="modal-header">
-          <h3>{isEditing ? 'Urlaub bearbeiten' : 'Neuer Urlaub'}</h3>
-          <button className="modal-close" onClick={onClose}>
-            ✕
-          </button>
+          <h3>{isEditing ? t('vacationModal.edit') : t('vacationModal.new')}</h3>
+          <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
         <div className="modal-body">
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Startdatum</label>
+              <label className="form-label">{t('vacationModal.startDate')}</label>
               <input
                 type="date"
                 className="form-input"
@@ -91,7 +90,7 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Enddatum</label>
+              <label className="form-label">{t('vacationModal.endDate')}</label>
               <input
                 type="date"
                 className="form-input"
@@ -103,11 +102,11 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
           </div>
 
           <div className="form-group">
-            <label className="form-label">Notiz (optional)</label>
+            <label className="form-label">{t('vacationModal.note')}</label>
             <input
               type="text"
               className="form-input"
-              placeholder="z.B. Sommerurlaub, Ski-Urlaub..."
+              placeholder={t('vacationModal.notePlaceholder')}
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
@@ -120,31 +119,28 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
               onChange={(e) => setHalfDay(e.target.checked)}
               disabled={!isSingleDay && !halfDay}
             />
-            <span>Halber Tag (½ Arbeitstag)</span>
+            <span>{t('vacationModal.halfDay')}</span>
           </label>
           {!isSingleDay && (
             <div className="form-hint" style={{ marginTop: -8 }}>
-              Ein halber Tag kann nur für einzelne Tage gebucht werden.
+              {t('vacationModal.halfDayHint')}
             </div>
           )}
 
-          {error && (
-            <div className="form-error">{error}</div>
-          )}
+          {error && <div className="form-error">{error}</div>}
 
           <div className="form-hint">
-            <strong>{workDays === 0.5 ? '0,5' : workDays}</strong>{' '}
-            {workDays === 1 ? 'Arbeitstag' : workDays === 0.5 ? 'Arbeitstage' : 'Arbeitstage'}
-            {' '}(WE, Feiertage nicht gezählt; 24.12. & 31.12. zählen als ½ Tag)
+            <strong>{workDaysDisplay}</strong>{' '}
+            {t('vacationModal.workdayHint')}
           </div>
         </div>
 
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>
-            Abbrechen
+            {t('vacationModal.cancel')}
           </button>
           <button className="btn btn-primary" onClick={handleSave}>
-            {isEditing ? 'Speichern' : 'Urlaub planen'}
+            {isEditing ? t('vacationModal.save') : t('vacationModal.plan')}
           </button>
         </div>
       </div>

@@ -9,14 +9,15 @@ export function downloadCSV(
   periods: VacationPeriod[],
   totalDays: number,
   year: number,
-  state: GermanState
+  state: GermanState,
+  t: (key: string, params?: Record<string, string | number>) => string
 ): void {
   const BOM = '\uFEFF';
-  const rows = [CSV_HEADER];
+  const rows = [t('csv.header')];
 
   for (const p of periods) {
     const workDays = countVacationWorkDays(p, state);
-    const halfDayLabel = p.halfDay ? 'Ja' : 'Nein';
+    const halfDayLabel = p.halfDay ? t('csv.yes') : t('csv.no');
     const note = escapeCSV(p.note || '');
     rows.push(
       `${p.startDate};${p.endDate};${note};${halfDayLabel};${workDays.toString().replace('.', ',')}`
@@ -105,13 +106,16 @@ export interface ImportResult {
 }
 
 /** Parse a CSV file and return vacation periods */
-export function parseImportCSV(csv: string): ImportResult {
+export function parseImportCSV(
+  csv: string,
+  t: (key: string, params?: Record<string, string | number>) => string
+): ImportResult {
   const periods: Omit<VacationPeriod, 'id'>[] = [];
   const errors: string[] = [];
 
   const rows = parseCSVRows(csv);
   if (rows.length === 0) {
-    return { periods, errors: ['Datei ist leer.'] };
+    return { periods, errors: [t('csv.emptyFile')] };
   }
 
   // Find header row (skip blank lines, look for our columns)
@@ -127,9 +131,7 @@ export function parseImportCSV(csv: string): ImportResult {
   if (headerIdx === -1) {
     return {
       periods,
-      errors: [
-        'Keine Kopfzeile gefunden. Erwartet: "Startdatum;Enddatum;Notiz;Halber Tag;Arbeitstage"',
-      ],
+      errors: [t('csv.missingHeader')],
     };
   }
 
@@ -142,7 +144,7 @@ export function parseImportCSV(csv: string): ImportResult {
   if (startCol === -1 || endCol === -1) {
     return {
       periods,
-      errors: ['Spalten "Startdatum" und/oder "Enddatum" nicht gefunden.'],
+      errors: [t('csv.missingColumns')],
     };
   }
 
@@ -156,7 +158,7 @@ export function parseImportCSV(csv: string): ImportResult {
     const endStr = row[endCol]?.trim();
 
     if (!startStr || !endStr) {
-      errors.push(`Zeile ${i + 1}: Start- oder Enddatum fehlt.`);
+      errors.push(t('csv.missingColumns'));
       continue;
     }
 
@@ -164,11 +166,11 @@ export function parseImportCSV(csv: string): ImportResult {
     const endDate = parseDate(endStr);
 
     if (!startDate) {
-      errors.push(`Zeile ${i + 1}: Ungültiges Startdatum "${startStr}".`);
+      errors.push(t('csv.invalidDate', { row: i + 1, value: startStr }));
       continue;
     }
     if (!endDate) {
-      errors.push(`Zeile ${i + 1}: Ungültiges Enddatum "${endStr}".`);
+      errors.push(t('csv.invalidEndDate', { row: i + 1, value: endStr }));
       continue;
     }
 
@@ -188,7 +190,7 @@ export function parseImportCSV(csv: string): ImportResult {
   }
 
   if (periods.length === 0 && errors.length === 0) {
-    errors.push('Keine Urlaubseinträge in der Datei gefunden.');
+    errors.push(t('csv.noEntries'));
   }
 
   return { periods, errors };

@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react';
 import { useStore } from '../state/store';
 import { countVacationWorkDaysInYear, parseISODate, formatDateRange } from '../utils/calendar';
 import { VacationModal } from './VacationModal';
+import { useT } from '../i18n/context';
 
 export function Dashboard() {
   const { periods, totalDays, year, state, setView } = useStore();
+  const { t } = useT();
   const [showAdd, setShowAdd] = useState(false);
 
   const usedDays = useMemo(() => {
@@ -17,7 +19,6 @@ export function Dashboard() {
   const usedPercent = Math.min((usedDays / totalDays) * 100, 100);
   const isOver = usedDays > totalDays;
 
-  // Upcoming vacations (not yet ended, sorted by start date)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const upcoming = useMemo(() => {
@@ -30,37 +31,35 @@ export function Dashboard() {
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
   }, [periods, today.toISOString()]);
 
+  const formatUsed = usedDays % 1 === 0 ? usedDays : usedDays.toFixed(1).replace('.', ',');
+
   return (
     <div className="dashboard">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Übersicht {year}</h2>
+        <h2>{t('dashboard.title', { year })}</h2>
         <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
-          + Urlaub planen
+          {t('dashboard.addVacation')}
         </button>
       </div>
 
-      {/* Stats */}
       <div className="stats-grid">
         <div className={`stat-card used`}>
-          <div className="stat-label">Genutzt</div>
-          <div className={`stat-value ${isOver ? 'over' : ''}`}>
-            {usedDays % 1 === 0 ? usedDays : usedDays.toFixed(1).replace('.', ',')}
-          </div>
-          <div className="stat-sub">Tage</div>
+          <div className="stat-label">{t('dashboard.used')}</div>
+          <div className={`stat-value ${isOver ? 'over' : ''}`}>{formatUsed}</div>
+          <div className="stat-sub">{t('dashboard.days')}</div>
         </div>
         <div className={`stat-card remaining`}>
-          <div className="stat-label">Verbleibend</div>
+          <div className="stat-label">{t('dashboard.remaining')}</div>
           <div className="stat-value">{Math.max(0, remainingDays)}</div>
-          <div className="stat-sub">Tage</div>
+          <div className="stat-sub">{t('dashboard.days')}</div>
         </div>
         <div className="stat-card total">
-          <div className="stat-label">Gesamt</div>
+          <div className="stat-label">{t('dashboard.total')}</div>
           <div className="stat-value">{totalDays}</div>
-          <div className="stat-sub">Urlaubstage</div>
+          <div className="stat-sub">{t('dashboard.vacationDays')}</div>
         </div>
       </div>
 
-      {/* Progress bar */}
       <div>
         <div className="progress-bar">
           <div
@@ -69,24 +68,26 @@ export function Dashboard() {
           />
         </div>
         <div className="progress-labels">
-          <span>{usedDays % 1 === 0 ? usedDays : usedDays.toFixed(1).replace('.', ',')} genutzt</span>
-          <span>{Math.max(0, remainingDays)} übrig</span>
+          <span>{t('dashboard.usedLabel', { used: formatUsed })}</span>
+          <span>{t('dashboard.remainingLabel', { remaining: Math.max(0, remainingDays) })}</span>
         </div>
       </div>
 
-      {/* Upcoming */}
       <div>
-        <h3 className="upcoming-title">Anstehende Urlaube</h3>
+        <h3 className="upcoming-title">{t('dashboard.upcoming')}</h3>
         {upcoming.length === 0 ? (
           <div className="empty-state">
-            <h3>Noch kein Urlaub geplant</h3>
-            <p>Plane deine Urlaubstage für {year}.</p>
+            <h3>{t('dashboard.noVacation')}</h3>
+            <p>{t('dashboard.planHint', { year })}</p>
           </div>
         ) : (
           <div className="upcoming-list">
             {upcoming.map((p) => {
               const days = countVacationWorkDaysInYear(p, year, state);
-              const daysLabel = days === 0.5 ? '0,5 Tage' : `${days} ${days === 1 ? 'Tag' : 'Tage'}`;
+              const daysLabel =
+                days === 0.5
+                  ? t('dashboard.days_half')
+                  : t(days === 1 ? 'dashboard.days_one' : 'dashboard.days_other', { count: days });
               return (
                 <div key={p.id} className="upcoming-item">
                   <div>
@@ -100,9 +101,7 @@ export function Dashboard() {
                       </div>
                     )}
                   </div>
-                  <div className="upcoming-days">
-                    {daysLabel}
-                  </div>
+                  <div className="upcoming-days">{daysLabel}</div>
                 </div>
               );
             })}
@@ -110,11 +109,7 @@ export function Dashboard() {
         )}
       </div>
 
-      {showAdd && (
-        <VacationModal
-          onClose={() => setShowAdd(false)}
-        />
-      )}
+      {showAdd && <VacationModal onClose={() => setShowAdd(false)} />}
     </div>
   );
 }

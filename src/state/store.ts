@@ -18,6 +18,7 @@ export const useStore = create<Store>()(
       totalDays: 30,
       state: 'HE' as GermanState,
       language: 'de' as Language,
+      theme: 'auto' as const,
       periods: [],
       view: 'dashboard',
       selectedMonth: new Date().getMonth(),
@@ -53,6 +54,7 @@ export const useStore = create<Store>()(
 
       setState: (state) => set({ state }),
       setLanguage: (language) => set({ language }),
+      setTheme: (theme) => set({ theme }),
     }),
     {
       name: 'my-holiday-storage',

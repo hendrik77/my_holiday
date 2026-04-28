@@ -79,3 +79,34 @@ button {
 input, textarea, select {
   font-family: var(--font-body);
 }
+
+/* === Dark Theme === */
+[data-theme="dark"] {
+  --color-bg: #151f27;
+  --color-text: #f4f8fc;
+  --color-text-secondary: #8d99a5;
+  --color-border: #2a3a4a;
+  --color-surface: #1e2d3d;
+  --shadow-mid: rgba(0, 0, 0, 0.3) 0px 2px 10px -3px;
+  --shadow-high: rgba(0, 0, 0, 0.5) 0px 0px 18px 0px;
+}
+
+[data-theme="dark"] .month-grid-day.weekend:not(.other-month) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .month-grid-day.other-month {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .modal-overlay {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .nav-error {
+  background: #2a1515;
+}
+
+[data-theme="dark"] .form-error {
+  background: #2a1515;
+}

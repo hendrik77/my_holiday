@@ -68,6 +68,19 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           </div>
 
           <div className="form-group">
+            <label className="form-label">{t('settings.theme')}</label>
+            <select
+              className="form-input"
+              value={selectedTheme}
+              onChange={(e) => setSelectedTheme(e.target.value as 'light' | 'dark' | 'auto')}
+            >
+              <option value="light">{t('settings.themeLight')}</option>
+              <option value="dark">{t('settings.themeDark')}</option>
+              <option value="auto">{t('settings.themeAuto')}</option>
+            </select>
+          </div>
+
+          <div className="form-group">
             <label className="form-label">{t('settings.language')}</label>
             <select
               className="form-input"

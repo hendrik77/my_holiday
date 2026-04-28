@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Nav } from './components/Nav';
 import { Dashboard } from './components/Dashboard';
 import { YearView } from './components/YearView';
@@ -8,6 +9,23 @@ import './App.css';
 
 function App() {
   const view = useStore((s) => s.view);
+  const theme = useStore((s) => s.theme);
+
+  useEffect(() => {
+    const root = document.documentElement;
+
+    if (theme === 'auto') {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const apply = () => {
+        root.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
+      };
+      apply();
+      mq.addEventListener('change', apply);
+      return () => mq.removeEventListener('change', apply);
+    } else {
+      root.setAttribute('data-theme', theme);
+    }
+  }, [theme]);
 
   return (
     <div className="app">

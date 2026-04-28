@@ -16,6 +16,7 @@ export interface VacationState {
   totalDays: number;
   state: GermanState;
   language: Language;
+  theme: 'light' | 'dark' | 'auto';
   periods: VacationPeriod[];
   view: ViewType;
   selectedMonth: number; // 0-11
@@ -32,4 +33,5 @@ export interface VacationActions {
   importData: (totalDays: number, periods: Omit<VacationPeriod, 'id'>[]) => void;
   setState: (state: GermanState) => void;
   setLanguage: (language: Language) => void;
+  setTheme: (theme: 'light' | 'dark' | 'auto') => void;
 }

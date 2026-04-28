@@ -20,6 +20,11 @@ export interface VacationState {
   periods: VacationPeriod[];
   view: ViewType;
   selectedMonth: number; // 0-11
+  // Undo/redo (not persisted)
+  _undoStack: VacationPeriod[][];
+  _redoStack: VacationPeriod[][];
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 export interface VacationActions {
@@ -34,4 +39,9 @@ export interface VacationActions {
   setState: (state: GermanState) => void;
   setLanguage: (language: Language) => void;
   setTheme: (theme: 'light' | 'dark' | 'auto') => void;
+  undo: () => void;
+  redo: () => void;
+  _pushUndo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }

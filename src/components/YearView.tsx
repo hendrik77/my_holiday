@@ -8,7 +8,7 @@ import {
   isSpecialHalfDay,
   toISODate,
 } from '../utils/calendar';
-import { useT } from '../i18n/context';
+import { isSchoolHoliday } from '../data/schoolHolidays';
 
 export function YearView() {
   const { year, periods, state, setView, setSelectedMonth } = useStore();
@@ -87,6 +87,7 @@ export function YearView() {
                     cls += (period?.halfDay || isSpecialHalfDay(d)) ? ' vacation-half' : ' vacation';
                   } else if (isHoliday) cls += ' holiday';
                   else if (isWeekend) cls += ' weekend';
+                  if (isSchoolHoliday(d, state)) cls += ' school-holiday';
 
                   return <div key={iso} className={cls}>{d.getDate()}</div>;
                 })}

@@ -13,6 +13,10 @@ A vacation day planner for Germany. Plan your annual vacation days with automati
 - **Live work-day preview** — the add/edit modal shows exactly how many work days a date range consumes
 - **Overlap prevention** — prevents booking a vacation that conflicts with an existing one
 - **CSV import/export** — backup your data or edit it in Excel; semicolon-delimited UTF-8 with BOM
+- **Dark mode** — light, dark, or auto (follows system preference)
+- **English & German** — switch language in settings, all UI translated
+- **School holidays** — subtle overlay showing school breaks for your state
+- **Undo/redo** — Ctrl+Z / Ctrl+Y or toast notification with undo button
 - **Persistent storage** — all data saved to your browser's `localStorage`, no backend required
 - **Responsive** — works on desktop, tablet, and mobile
 

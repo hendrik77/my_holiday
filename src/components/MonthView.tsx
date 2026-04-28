@@ -10,8 +10,10 @@ import {
   countWorkDays,
   countVacationWorkDaysInYear,
 } from '../utils/calendar';
+import { isSchoolHoliday } from '../data/schoolHolidays';
 import type { VacationPeriod } from '../types';
 import { VacationModal } from './VacationModal';
+import { showToast } from './Toast';
 import { useT } from '../i18n/context';
 
 export function MonthView() {
@@ -158,6 +160,7 @@ export function MonthView() {
           else if (isSelected) cls += ' selected';
           else if (isWeekend) cls += ' weekend';
           if (isHoliday && isCurrentMonth) cls += ' holiday';
+          if (isSchoolHoliday(d, state) && isCurrentMonth) cls += ' school-holiday';
           if (isToday && isCurrentMonth) cls += ' today';
 
           return (
@@ -174,6 +177,11 @@ export function MonthView() {
             </div>
           );
         })}
+      </div>
+
+      {/* School holiday legend */}
+      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 'var(--space-xs)' }}>
+        ⚜ = Schulferien
       </div>
 
       {periods.filter((p) => {
@@ -218,7 +226,13 @@ export function MonthView() {
                     <span className="upcoming-days">{daysLabel}</span>
                     <div className="list-actions">
                       <button className="btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); setEditingPeriod(p); }}>✎</button>
-                      <button className="btn-danger btn-sm" onClick={(e) => { e.stopPropagation(); removePeriod(p.id); }}>✕</button>
+                      <button className="btn-danger btn-sm" onClick={(e) => {
+                        e.stopPropagation();
+                        removePeriod(p.id);
+                        showToast(t('toast.deleted'), () => {
+                          useStore.getState().undo();
+                        });
+                      }}>✕</button>
                     </div>
                   </div>
                 </div>

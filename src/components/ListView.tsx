@@ -25,6 +25,13 @@ export function ListView() {
     }, 0);
   }, [yearPeriods, year, state]);
 
+  const handleRemove = (p: VacationPeriod) => {
+    removePeriod(p.id);
+    showToast(t('toast.deleted'), () => {
+      useStore.getState().undo();
+    });
+  };
+
   return (
     <div className="list-view">
       <div className="list-header">
@@ -72,7 +79,7 @@ export function ListView() {
                     <td>
                       <div className="list-actions">
                         <button className="btn-ghost btn-sm" onClick={() => setEditingPeriod(p)} title={t('vacationModal.edit')}>✎</button>
-                        <button className="btn-danger btn-sm" onClick={() => removePeriod(p.id)} title={t('toast.deleted')}>✕</button>
+                        <button className="btn-danger btn-sm" onClick={() => handleRemove(p)} title={t('toast.deleted')}>✕</button>
                       </div>
                     </td>
                   </tr>

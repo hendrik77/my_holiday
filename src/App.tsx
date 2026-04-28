@@ -4,6 +4,7 @@ import { Dashboard } from './components/Dashboard';
 import { YearView } from './components/YearView';
 import { MonthView } from './components/MonthView';
 import { ListView } from './components/ListView';
+import { ToastContainer } from './components/Toast';
 import { useStore } from './state/store';
 import './App.css';
 
@@ -36,6 +37,7 @@ function App() {
         {view === 'month' && <MonthView />}
         {view === 'list' && <ListView />}
       </main>
+      <ToastContainer />
     </div>
   );
 }

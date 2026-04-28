@@ -26,6 +26,15 @@ npm run dev
 
 Opens at `http://localhost:5173`.
 
+### Running tests
+
+```bash
+npm test          # single run
+npm run test:watch  # watch mode
+```
+
+Tests follow the RED-GREEN principle — see [`RULES.md`](./RULES.md).
+
 ### Views
 
 | Tab | What it does |

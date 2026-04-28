@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { VacationState, VacationActions, VacationPeriod, ViewType } from '../types';
+import type { GermanState } from '../data/holidays';
 
 type Store = VacationState & VacationActions;
 
@@ -14,6 +15,7 @@ export const useStore = create<Store>()(
       // State
       year: new Date().getFullYear(),
       totalDays: 30,
+      state: 'HE' as GermanState,
       periods: [],
       view: 'dashboard',
       selectedMonth: new Date().getMonth(),
@@ -46,6 +48,8 @@ export const useStore = create<Store>()(
           totalDays,
           periods: periods.map((p) => ({ ...p, id: generateId() })),
         })),
+
+      setState: (state) => set({ state }),
     }),
     {
       name: 'my-holiday-storage',

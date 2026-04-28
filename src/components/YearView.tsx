@@ -2,20 +2,17 @@ import { useMemo } from 'react';
 import { useStore } from '../state/store';
 import {
   MONTH_NAMES,
-  WEEKDAY_SHORT,
   getFirstDayOfMonth,
   getDaysInMonth,
   isWorkDay,
   isPublicHoliday,
-  getHolidayName,
   isSpecialHalfDay,
   toISODate,
   parseISODate,
-  countVacationWorkDays,
 } from '../utils/calendar';
 
 export function YearView() {
-  const { year, periods, setView, setSelectedMonth } = useStore();
+  const { year, periods, state, setView, setSelectedMonth } = useStore();
 
   // Build a set of vacation day ISO strings
   const vacationDays = useMemo(() => {
@@ -61,7 +58,7 @@ export function YearView() {
           let vacayCount = 0;
           for (const d of days) {
             const iso = toISODate(d);
-            if (vacationDays.has(iso) && isWorkDay(d)) {
+            if (vacationDays.has(iso) && isWorkDay(d, state)) {
               // Check if this day belongs to a half-day period
               const period = periods.find((p) => {
                 return iso >= p.startDate && iso <= p.endDate;
@@ -100,7 +97,7 @@ export function YearView() {
                   }
                   const iso = toISODate(d);
                   const isVacation = vacationDays.has(iso);
-                  const isHoliday = isPublicHoliday(d);
+                  const isHoliday = isPublicHoliday(d, state);
                   const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                   const isToday = iso === todayStr;
 

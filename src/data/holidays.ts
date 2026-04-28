@@ -1,80 +1,42 @@
-import type { PublicHoliday } from '../types';
+import { getHolidays } from 'feiertagejs';
+
+/** German state codes supported by feiertagejs */
+export type GermanState = 'BW' | 'BY' | 'BE' | 'BB' | 'HB' | 'HH' | 'MV' | 'NI' | 'NW' | 'RP' | 'SL' | 'SN' | 'ST' | 'SH' | 'TH';
+
+/** State code → display name mapping */
+export const GERMAN_STATES: { code: GermanState; name: string }[] = [
+  { code: 'BW', name: 'Baden-Württemberg' },
+  { code: 'BY', name: 'Bayern' },
+  { code: 'BE', name: 'Berlin' },
+  { code: 'BB', name: 'Brandenburg' },
+  { code: 'HB', name: 'Bremen' },
+  { code: 'HH', name: 'Hamburg' },
+  { code: 'HE', name: 'Hessen' },
+  { code: 'MV', name: 'Mecklenburg-Vorpommern' },
+  { code: 'NI', name: 'Niedersachsen' },
+  { code: 'NW', name: 'Nordrhein-Westfalen' },
+  { code: 'RP', name: 'Rheinland-Pfalz' },
+  { code: 'SL', name: 'Saarland' },
+  { code: 'SN', name: 'Sachsen' },
+  { code: 'ST', name: 'Sachsen-Anhalt' },
+  { code: 'SH', name: 'Schleswig-Holstein' },
+  { code: 'TH', name: 'Thüringen' },
+];
 
 /**
- * Compute Easter Sunday for a given year using the
- * Anonymous Gregorian algorithm (valid for all Gregorian years).
+ * Return a map of ISO date → holiday name for a range of years
+ * and a specific German state. Uses feiertagejs internally.
  */
-function getEaster(year: number): Date {
-  const a = year % 19;
-  const b = Math.floor(year / 100);
-  const c = year % 100;
-  const d = Math.floor(b / 4);
-  const e = b % 4;
-  const f = Math.floor((b + 8) / 25);
-  const g = Math.floor((b - f + 1) / 3);
-  const h = (19 * a + b - d - g + 15) % 30;
-  const i = Math.floor(c / 4);
-  const k = c % 4;
-  const l = (32 + 2 * e + 2 * i - h - k) % 7;
-  const m = Math.floor((a + 11 * h + 22 * l) / 451);
-  const month = Math.floor((h + l - 7 * m + 114) / 31);
-  const day = ((h + l - 7 * m + 114) % 31) + 1;
-  return new Date(year, month - 1, day);
-}
-
-function toISO(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function addDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-/**
- * Return all public holidays for Hesse (Frankfurt am Main)
- * for the given year.
- */
-export function getHolidaysForYear(year: number): PublicHoliday[] {
-  const easter = getEaster(year);
-
-  const fixed: [number, number, string][] = [
-    [0, 1, 'Neujahr'],
-    [4, 1, 'Tag der Arbeit'],
-    [9, 3, 'Tag der Deutschen Einheit'],
-    [11, 25, '1. Weihnachtstag'],
-    [11, 26, '2. Weihnachtstag'],
-  ];
-
-  const holidays: PublicHoliday[] = fixed.map(([month, day, name]) => ({
-    date: toISO(new Date(year, month, day)),
-    name,
-  }));
-
-  // Easter-dependent holidays
-  holidays.push({ date: toISO(addDays(easter, -2)), name: 'Karfreitag' });
-  holidays.push({ date: toISO(addDays(easter, 1)), name: 'Ostermontag' });
-  holidays.push({ date: toISO(addDays(easter, 39)), name: 'Christi Himmelfahrt' });
-  holidays.push({ date: toISO(addDays(easter, 50)), name: 'Pfingstmontag' });
-  holidays.push({ date: toISO(addDays(easter, 60)), name: 'Fronleichnam' });
-
-  holidays.sort((a, b) => a.date.localeCompare(b.date));
-  return holidays;
-}
-
-/** Return all holidays across a range of years, indexed by ISO date. */
 export function getHolidayMap(
   fromYear: number,
-  toYear: number
+  toYear: number,
+  state: GermanState
 ): Map<string, string> {
   const map = new Map<string, string>();
   for (let y = fromYear; y <= toYear; y++) {
-    for (const h of getHolidaysForYear(y)) {
-      map.set(h.date, h.name);
+    const holidays = getHolidays(y.toString(), state);
+    for (const h of holidays) {
+      map.set(h.dateString, h.translate('de') || h.name);
     }
   }
   return map;

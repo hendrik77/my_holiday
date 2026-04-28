@@ -1,15 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../state/store';
-import {
-  countVacationWorkDays,
-  parseISODate,
-  formatDateRange,
-} from '../utils/calendar';
+import { countVacationWorkDays, formatDateRange } from '../utils/calendar';
 import type { VacationPeriod } from '../types';
 import { VacationModal } from './VacationModal';
 
 export function ListView() {
-  const { periods, year, totalDays, removePeriod } = useStore();
+  const { periods, year, totalDays, state, removePeriod } = useStore();
   const [editingPeriod, setEditingPeriod] = useState<VacationPeriod | null>(null);
   const [showAdd, setShowAdd] = useState(false);
 
@@ -24,7 +20,7 @@ export function ListView() {
 
   const totalUsed = useMemo(() => {
     return yearPeriods.reduce((sum, p) => {
-      return sum + countVacationWorkDays(p);
+      return sum + countVacationWorkDays(p, state);
     }, 0);
   }, [yearPeriods]);
 
@@ -55,7 +51,7 @@ export function ListView() {
             </thead>
             <tbody>
               {yearPeriods.map((p) => {
-                const days = countVacationWorkDays(p);
+                const days = countVacationWorkDays(p, state);
                 const daysLabel = days === 0.5 ? '0,5' : String(days);
                 return (
                   <tr key={p.id}>

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useStore } from '../state/store';
 import type { ViewType } from '../types';
 import { downloadCSV, parseImportCSV } from '../utils/export';
+import { SettingsModal } from './SettingsModal';
 
 const views: { key: ViewType; label: string }[] = [
   { key: 'dashboard', label: 'Übersicht' },
@@ -11,13 +12,14 @@ const views: { key: ViewType; label: string }[] = [
 ];
 
 export function Nav() {
-  const { view, year, setView, setYear, setSelectedMonth, periods, totalDays, importData } =
+  const { view, year, setView, setYear, setSelectedMonth, periods, totalDays, state, importData } =
     useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const handleExport = () => {
-    downloadCSV(periods, totalDays, year);
+    downloadCSV(periods, totalDays, year, state);
   };
 
   const handleImport = () => {
@@ -107,6 +109,13 @@ export function Nav() {
         <div className="nav-io">
           <button
             className="nav-io-btn"
+            onClick={() => setShowSettings(true)}
+            title="Einstellungen"
+          >
+            ⚙️
+          </button>
+          <button
+            className="nav-io-btn"
             onClick={handleImport}
             title="Urlaubsdaten aus CSV importieren"
           >
@@ -135,6 +144,8 @@ export function Nav() {
           <button onClick={() => setImportError(null)}>✕</button>
         </div>
       )}
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </nav>
   );
 }

@@ -4,12 +4,12 @@ import { countVacationWorkDays, parseISODate, formatDateRange } from '../utils/c
 import { VacationModal } from './VacationModal';
 
 export function Dashboard() {
-  const { periods, totalDays, year, setView } = useStore();
+  const { periods, totalDays, year, state, setView } = useStore();
   const [showAdd, setShowAdd] = useState(false);
 
   const usedDays = useMemo(() => {
     return periods.reduce((sum, p) => {
-      return sum + countVacationWorkDays(p);
+      return sum + countVacationWorkDays(p, state);
     }, 0);
   }, [periods]);
 
@@ -85,7 +85,7 @@ export function Dashboard() {
         ) : (
           <div className="upcoming-list">
             {upcoming.map((p) => {
-              const days = countVacationWorkDays(p);
+              const days = countVacationWorkDays(p, state);
               const daysLabel = days === 0.5 ? '0,5 Tage' : `${days} ${days === 1 ? 'Tag' : 'Tage'}`;
               return (
                 <div key={p.id} className="upcoming-item">

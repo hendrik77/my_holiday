@@ -2,10 +2,8 @@ import { useMemo, useState, useCallback } from 'react';
 import { useStore } from '../state/store';
 import {
   MONTH_NAMES,
-  WEEKDAY_SHORT,
   getFirstDayOfMonth,
   getDaysInMonth,
-  isWorkDay,
   isPublicHoliday,
   getHolidayName,
   toISODate,
@@ -21,6 +19,7 @@ export function MonthView() {
     year,
     selectedMonth,
     periods,
+    state,
     setSelectedMonth,
     setView,
     setYear,
@@ -71,8 +70,6 @@ export function MonthView() {
 
   const handleDayClick = useCallback(
     (iso: string) => {
-      const date = parseISODate(iso);
-
       // If clicking on an existing vacation, open edit
       const existing = dayToPeriod.get(iso);
       if (existing && !selectStart) {
@@ -136,9 +133,9 @@ export function MonthView() {
   const selectedDaysInfo = useMemo(() => {
     if (!selectStart) return null;
     // Count work days if selection ends at the start
-    const days = countWorkDays(parseISODate(selectStart), parseISODate(selectStart));
+    const days = countWorkDays(parseISODate(selectStart), parseISODate(selectStart), state);
     return `${days} Arbeitstag${days !== 1 ? 'e' : ''}`;
-  }, [selectStart]);
+  }, [selectStart, state]);
 
   return (
     <div className="month-view">
@@ -191,8 +188,8 @@ export function MonthView() {
           const iso = cell.iso;
           const isCurrentMonth = d.getMonth() === selectedMonth;
           const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-          const isHoliday = isPublicHoliday(d);
-          const holidayName = getHolidayName(d);
+          const isHoliday = isPublicHoliday(d, state);
+          const holidayName = getHolidayName(d, state);
           const isToday = iso === todayStr;
           const isSelected = selectionRange.has(iso);
           const period = dayToPeriod.get(iso);
@@ -258,7 +255,7 @@ export function MonthView() {
                 return start <= monthEnd && end >= monthStart;
               })
               .map((p) => {
-                const days = countVacationWorkDays(p);
+                const days = countVacationWorkDays(p, state);
                 const daysLabel = days === 0.5 ? '0,5 Arbeitstage' : `${days} ${days === 1 ? 'Arbeitstag' : 'Arbeitstage'}`;
                 return (
                   <div key={p.id} className="upcoming-item">

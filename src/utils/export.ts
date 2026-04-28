@@ -1,4 +1,5 @@
 import type { VacationPeriod } from '../types';
+import type { GermanState } from '../data/holidays';
 import { countVacationWorkDays } from './calendar';
 
 const CSV_HEADER = 'Startdatum;Enddatum;Notiz;Halber Tag;Arbeitstage';
@@ -7,13 +8,14 @@ const CSV_HEADER = 'Startdatum;Enddatum;Notiz;Halber Tag;Arbeitstage';
 export function downloadCSV(
   periods: VacationPeriod[],
   totalDays: number,
-  year: number
+  year: number,
+  state: GermanState
 ): void {
   const BOM = '\uFEFF';
   const rows = [CSV_HEADER];
 
   for (const p of periods) {
-    const workDays = countVacationWorkDays(p);
+    const workDays = countVacationWorkDays(p, state);
     const halfDayLabel = p.halfDay ? 'Ja' : 'Nein';
     const note = escapeCSV(p.note || '');
     rows.push(
@@ -189,8 +191,10 @@ function parseDate(raw: string): string | null {
   // Already ISO format: YYYY-MM-DD
   const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (isoMatch) {
-    const [_, y, m, d] = isoMatch;
-    if (isValidDate(Number(y), Number(m), Number(d))) {
+    const y = Number(isoMatch[1]);
+    const m = Number(isoMatch[2]);
+    const d = Number(isoMatch[3]);
+    if (isValidDate(y, m, d)) {
       return s;
     }
   }
@@ -198,12 +202,13 @@ function parseDate(raw: string): string | null {
   // German format: DD.MM.YYYY or D.M.YYYY or DD.MM.YY
   const deMatch = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
   if (deMatch) {
-    const [_, d, m, yRaw] = deMatch;
-    let y = Number(yRaw);
+    const d = Number(deMatch[1]);
+    const m = Number(deMatch[2]);
+    let y = Number(deMatch[3]);
     if (y < 100) y += 2000; // assume 20xx for two-digit years
-    const dd = String(Number(d)).padStart(2, '0');
-    const mm = String(Number(m)).padStart(2, '0');
-    if (isValidDate(y, Number(m), Number(d))) {
+    const dd = String(d).padStart(2, '0');
+    const mm = String(m).padStart(2, '0');
+    if (isValidDate(y, m, d)) {
       return `${y}-${mm}-${dd}`;
     }
   }
@@ -211,8 +216,9 @@ function parseDate(raw: string): string | null {
   // US format: MM/DD/YYYY or M/D/YYYY
   const usMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   if (usMatch) {
-    const [_, m, d, yRaw] = usMatch;
-    let y = Number(yRaw);
+    const m = Number(usMatch[1]);
+    const d = Number(usMatch[2]);
+    let y = Number(usMatch[3]);
     if (y < 100) y += 2000;
     if (isValidDate(y, Number(m), Number(d))) {
       const dd = String(Number(d)).padStart(2, '0');

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useStore } from '../state/store';
 import type { VacationPeriod } from '../types';
-import { countVacationWorkDays, parseISODate, toISODate } from '../utils/calendar';
+import { countVacationWorkDays } from '../utils/calendar';
 
 interface VacationModalProps {
   onClose: () => void;
@@ -10,7 +10,7 @@ interface VacationModalProps {
 }
 
 export function VacationModal({ onClose, initial, presetDates }: VacationModalProps) {
-  const { addPeriod, updatePeriod, year } = useStore();
+  const { addPeriod, updatePeriod, year, state } = useStore();
   const isEditing = !!initial?.id;
 
   const [startDate, setStartDate] = useState(
@@ -27,7 +27,7 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
 
   const workDays = useMemo(() => {
     try {
-      return countVacationWorkDays({ startDate, endDate, halfDay });
+      return countVacationWorkDays({ startDate, endDate, halfDay }, state);
     } catch {
       return 0;
     }

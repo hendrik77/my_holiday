@@ -1,3 +1,5 @@
+import type { GermanState } from '../data/holidays';
+
 export interface VacationPeriod {
   id: string;
   startDate: string; // ISO date YYYY-MM-DD
@@ -11,6 +13,7 @@ export type ViewType = 'dashboard' | 'year' | 'month' | 'list';
 export interface VacationState {
   year: number;
   totalDays: number;
+  state: GermanState;
   periods: VacationPeriod[];
   view: ViewType;
   selectedMonth: number; // 0-11
@@ -25,9 +28,5 @@ export interface VacationActions {
   updatePeriod: (id: string, updates: Partial<VacationPeriod>) => void;
   removePeriod: (id: string) => void;
   importData: (totalDays: number, periods: Omit<VacationPeriod, 'id'>[]) => void;
-}
-
-export interface PublicHoliday {
-  date: string; // ISO date
-  name: string;
+  setState: (state: GermanState) => void;
 }

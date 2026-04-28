@@ -1,41 +1,45 @@
 import { getHolidayMap } from '../data/holidays';
+import type { GermanState } from '../data/holidays';
 
-/** Cache for holiday maps per year range */
+/** Cache for holiday maps per year range + state */
 let _holidayMap: Map<string, string> | null = null;
 let _holidayMapRange: [number, number] | null = null;
+let _holidayMapState: GermanState | null = null;
 
-function ensureHolidayMap(year: number): Map<string, string> {
+function ensureHolidayMap(year: number, state: GermanState): Map<string, string> {
   const from = year - 1;
   const to = year + 1;
   if (
     !_holidayMap ||
     !_holidayMapRange ||
+    _holidayMapState !== state ||
     _holidayMapRange[0] > from ||
     _holidayMapRange[1] < to
   ) {
-    _holidayMap = getHolidayMap(from, to);
+    _holidayMap = getHolidayMap(from, to, state);
     _holidayMapRange = [from, to];
+    _holidayMapState = state;
   }
   return _holidayMap;
 }
 
 /** Check if a given date is a public holiday in Hesse */
-export function isPublicHoliday(date: Date): boolean {
-  const map = ensureHolidayMap(date.getFullYear());
+export function isPublicHoliday(date: Date, state: GermanState): boolean {
+  const map = ensureHolidayMap(date.getFullYear(), state);
   return map.has(toISODate(date));
 }
 
 /** Get holiday name for a date, or null */
-export function getHolidayName(date: Date): string | null {
-  const map = ensureHolidayMap(date.getFullYear());
+export function getHolidayName(date: Date, state: GermanState): string | null {
+  const map = ensureHolidayMap(date.getFullYear(), state);
   return map.get(toISODate(date)) ?? null;
 }
 
 /** Check if a date is a work day (Mon–Fri, not a public holiday) */
-export function isWorkDay(date: Date): boolean {
+export function isWorkDay(date: Date, state: GermanState): boolean {
   const day = date.getDay();
   if (day === 0 || day === 6) return false; // weekend
-  return !isPublicHoliday(date);
+  return !isPublicHoliday(date, state);
 }
 
 /**
@@ -49,7 +53,7 @@ export function isSpecialHalfDay(date: Date): boolean {
 }
 
 /** Count work days between two dates (inclusive) */
-export function countWorkDays(start: Date, end: Date): number {
+export function countWorkDays(start: Date, end: Date, state: GermanState): number {
   let count = 0;
   const current = new Date(start);
   current.setHours(0, 0, 0, 0);
@@ -57,7 +61,7 @@ export function countWorkDays(start: Date, end: Date): number {
   endTime.setHours(0, 0, 0, 0);
 
   while (current <= endTime) {
-    if (isWorkDay(current)) count++;
+    if (isWorkDay(current, state)) count++;
     current.setDate(current.getDate() + 1);
   }
   return count;
@@ -69,7 +73,7 @@ export function countWorkDays(start: Date, end: Date): number {
  * - Dec 24 and Dec 31 always count as 0.5 (special half days)
  * - User-flagged half-day bookings count as 0.5 (single-day periods only)
  */
-export function countVacationWorkDays(period: { startDate: string; endDate: string; halfDay?: boolean }): number {
+export function countVacationWorkDays(period: { startDate: string; endDate: string; halfDay?: boolean }, state: GermanState): number {
   const start = parseISODate(period.startDate);
   const end = parseISODate(period.endDate);
   let total = 0;
@@ -79,7 +83,7 @@ export function countVacationWorkDays(period: { startDate: string; endDate: stri
   endTime.setHours(0, 0, 0, 0);
 
   while (current <= endTime) {
-    if (isWorkDay(current)) {
+    if (isWorkDay(current, state)) {
       if (period.halfDay) {
         total += 0.5;
       } else if (isSpecialHalfDay(current)) {

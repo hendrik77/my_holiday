@@ -40,6 +40,12 @@ export const useStore = create<Store>()(
         set((state) => ({
           periods: state.periods.filter((p) => p.id !== id),
         })),
+
+      importData: (totalDays, periods) =>
+        set(() => ({
+          totalDays,
+          periods: periods.map((p) => ({ ...p, id: generateId() })),
+        })),
     }),
     {
       name: 'my-holiday-storage',

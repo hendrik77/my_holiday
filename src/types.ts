@@ -24,6 +24,7 @@ export interface VacationActions {
   addPeriod: (period: Omit<VacationPeriod, 'id'>) => void;
   updatePeriod: (id: string, updates: Partial<VacationPeriod>) => void;
   removePeriod: (id: string) => void;
+  importData: (totalDays: number, periods: Omit<VacationPeriod, 'id'>[]) => void;
 }
 
 export interface PublicHoliday {

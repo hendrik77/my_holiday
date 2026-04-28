@@ -102,6 +102,54 @@
   text-align: center;
 }
 
+/* === Import / Export === */
+.nav-io {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.nav-io-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.nav-io-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(219, 0, 27, 0.04);
+}
+
+.nav-error {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-xl);
+  background: #fef2f2;
+  border-top: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  font-size: 13px;
+  white-space: pre-line;
+  text-align: center;
+}
+
+.nav-error button {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
 /* === Main Content === */
 .main {
   flex: 1;
@@ -780,6 +828,16 @@
     height: auto;
     padding: var(--space-md) 0;
     gap: var(--space-sm);
+  }
+
+  .nav-io {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .nav-io-btn {
+    font-size: 12px;
+    padding: 5px 10px;
   }
 
   .main {

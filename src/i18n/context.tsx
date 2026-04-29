@@ -12,14 +12,15 @@ type TranslationParams = Record<string, string | number>;
 
 const I18nContext = createContext<{
   t: (key: string, params?: TranslationParams) => string;
+  tRaw: <T = string | string[]>(key: string) => T;
   lang: Language;
-}>({ t: (k) => k, lang: 'de' });
+}>({ t: (k) => k, tRaw: (k) => k as never, lang: 'de' });
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const language = useStore((s) => s.language);
 
-  const t = useCallback(
-    (key: string, params?: TranslationParams) => {
+  const resolve = useCallback(
+    (key: string) => {
       const lang = language as Language;
       const keys = key.split('.');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,13 +36,21 @@ export function I18nProvider({ children }: { children: ReactNode }) {
             if (fallback && typeof fallback === 'object' && fk in fallback) {
               fallback = fallback[fk];
             } else {
-              return key; // key not found anywhere
+              return key;
             }
           }
           value = fallback;
           break;
         }
       }
+      return value;
+    },
+    [language]
+  );
+
+  const t = useCallback(
+    (key: string, params?: TranslationParams) => {
+      const value = resolve(key);
 
       if (typeof value !== 'string') return key;
 
@@ -53,11 +62,19 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
       return value;
     },
-    [language]
+    [resolve]
+  );
+
+  const tRaw = useCallback(
+    <T,>(key: string): T => {
+      const value = resolve(key);
+      return (value !== key ? value : key) as T;
+    },
+    [resolve]
   );
 
   return (
-    <I18nContext.Provider value={{ t, lang: language }}>
+    <I18nContext.Provider value={{ t, tRaw, lang: language }}>
       {children}
     </I18nContext.Provider>
   );

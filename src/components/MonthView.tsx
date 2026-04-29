@@ -21,13 +21,13 @@ export function MonthView() {
     year, selectedMonth, periods, state,
     setSelectedMonth, setView, setYear, removePeriod,
   } = useStore();
-  const { t } = useT();
+  const { t, tRaw } = useT();
 
   const [selectStart, setSelectStart] = useState<string | null>(null);
   const [editingPeriod, setEditingPeriod] = useState<VacationPeriod | null>(null);
 
-  const months = t('monthView.months') as unknown as string[];
-  const weekdays = t('monthView.weekdays') as unknown as string[];
+  const months = tRaw<string[]>('monthView.months');
+  const weekdays = tRaw<string[]>('monthView.weekdays');
 
   const todayStr = toISODate(new Date());
   const days = useMemo(() => getDaysInMonth(year, selectedMonth), [year, selectedMonth]);

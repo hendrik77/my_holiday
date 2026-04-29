@@ -12,9 +12,9 @@ import { isSchoolHoliday } from '../data/schoolHolidays';
 
 export function YearView() {
   const { year, periods, state, setView, setSelectedMonth } = useStore();
-  const { t } = useT();
-  const months = t('monthView.months') as unknown as string[];
-  const weekdays = t('monthView.weekdays') as unknown as string[];
+  const { t, tRaw } = useT();
+  const months = tRaw<string[]>('monthView.months');
+  const weekdays = tRaw<string[]>('monthView.weekdays');
 
   const vacationDays = useMemo(() => {
     const set = new Set<string>();

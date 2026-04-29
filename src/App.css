@@ -457,6 +457,10 @@
   background: rgba(244, 248, 252, 0.5);
 }
 
+.month-grid-day.vacation:not(.other-month) {
+  background: rgba(219, 0, 27, 0.1);
+}
+
 .month-grid-day.school-holiday:not(.other-month) {
   background: repeating-linear-gradient(
     -45deg,

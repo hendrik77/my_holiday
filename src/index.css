@@ -95,6 +95,10 @@ input, textarea, select {
   background: rgba(255, 255, 255, 0.03);
 }
 
+[data-theme="dark"] .month-grid-day.vacation:not(.other-month) {
+  background: rgba(219, 0, 27, 0.2);
+}
+
 [data-theme="dark"] .month-grid-day.other-month {
   background: rgba(0, 0, 0, 0.2);
 }

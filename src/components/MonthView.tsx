@@ -160,6 +160,7 @@ export function MonthView() {
           else if (isSelected) cls += ' selected';
           else if (isWeekend) cls += ' weekend';
           if (isHoliday && isCurrentMonth) cls += ' holiday';
+          if (isVacation && isCurrentMonth) cls += ' vacation';
           if (isSchoolHoliday(d, state) && isCurrentMonth) cls += ' school-holiday';
           if (isToday && isCurrentMonth) cls += ' today';
 

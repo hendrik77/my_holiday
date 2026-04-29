@@ -4,6 +4,26 @@ All notable changes to My Holiday.
 
 ---
 
+## 1.0.3 (2026-04-29)
+
+### Fixed
+- **Build was broken** — `'HE'` (Hessen) was missing from the `GermanState` union despite being the default state and used throughout (~15 TS errors)
+- **Broken imports** — `src/types.ts` used `'../'` paths from inside `src/`
+- **Dead theme picker** — `SettingsModal` referenced undeclared `selectedTheme`/`setSelectedTheme`; the theme dropdown is now wired up
+- **Crashing delete** — `ListView` delete handler called `showToast` without importing it
+- **`setState`-in-effect in `VacationModal`** — replaced two effects with `handleStartDateChange` / `handleHalfDayToggle` event handlers
+- **Missing `state` dep in `VacationModal` `workDays` useMemo** — switching Bundesland with the modal open showed stale work-day counts
+- **CSV import respected `Halber Tag` on multi-day rows** — `halfDay` is now coerced to `false` unless start === end (matches the data invariant)
+
+### Changed
+- **Toast split** — module store extracted to `components/toastStore.ts`; `Toast.tsx` is now component-only (fast-refresh friendly)
+- **i18n split** — `useT` hook + `I18nContext` extracted to `i18n/useT.ts`; `context.tsx` now exports only `I18nProvider`
+- **Dashboard upcoming filter** — switched from `Date` arithmetic to ISO string compare (removes complex `useMemo` dep)
+- ESLint config now ignores `coverage/`
+- Dropped unused declarations: `CSV_HEADER`, `totalDays` parameter on `downloadCSV`, `NestedKeyOf`, `setView`, `isToday`/`todayStr`, `StateData`, `VacationPeriod`/`ViewType` re-imports
+
+---
+
 ## 1.0.2 (2026-04-29)
 
 ### Added

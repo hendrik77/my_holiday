@@ -19,7 +19,7 @@ All notable changes to My Holiday.
 - **LocalStorage persistence** — all data survives page reloads
 
 ### Import / Export
-- **CSV export** — UTF-8 with BOM, semicolon-delimited, Excel-compatible
+- **CSV export** — UTF-8 with BOM, semicolon-delimited, Excel-compatible; filename includes timestamp
 - **CSV import** — accepts ISO, German, and US date formats; flexible column mapping
 
 ### Internationalisation
@@ -34,6 +34,11 @@ All notable changes to My Holiday.
 - **School holidays** — striped overlay on calendar for the selected state (2025–2026 data)
 - **Undo/redo** — Ctrl+Z / Ctrl+Y, toast notifications with undo button on delete
 - **Test suite** — 67 tests covering calendar logic, CSV parsing, translations, holidays
+
+### Bug Fixes
+- **Vacation day highlighting** — all vacation days now get a red tint background in month view (was only first day)
+- **i18n arrays** — weekday and month name arrays correctly handled via `tRaw()` (was breaking with `.map()`)
+- **Missing import** — `useT` import restored in YearView after school holidays feature
 
 ### Dependencies
 - React 19, TypeScript, Vite, Zustand (with persist)

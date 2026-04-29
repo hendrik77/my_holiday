@@ -29,7 +29,9 @@ export function downloadCSV(
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `urlaub-${year}.csv`;
+  const now = new Date();
+  const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+  a.download = `urlaub-${year}_${ts}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

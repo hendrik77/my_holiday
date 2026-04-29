@@ -8,6 +8,8 @@ import {
   countWorkDays,
   countVacationWorkDays,
   countVacationWorkDaysInYear,
+  countCarryOverUsed,
+  computeAutoCarryOver,
   hasOverlap,
   getDaysInMonth,
   getFirstDayOfMonth,
@@ -375,5 +377,110 @@ describe('formatDate', () => {
 
   it('pads single-digit day and month', () => {
     expect(formatDate('2026-01-05')).toBe('05.01.2026');
+  });
+});
+
+describe('countCarryOverUsed', () => {
+  // In 2026 the carry-over deadline is 2026-03-31 (Tuesday, not a holiday in HE)
+
+  it('returns 0 when there are no periods', () => {
+    expect(countCarryOverUsed([], 2026, HE, 5)).toBe(0);
+  });
+
+  it('returns 0 when carryOverDays is 0', () => {
+    const periods = [{ startDate: '2026-01-05', endDate: '2026-01-09' }];
+    expect(countCarryOverUsed(periods, 2026, HE, 0)).toBe(0);
+  });
+
+  it('counts work days of a vacation entirely before the deadline', () => {
+    // Mon 2026-03-02 – Fri 2026-03-06 = 5 work days, all before Mar 31
+    const periods = [{ startDate: '2026-03-02', endDate: '2026-03-06' }];
+    expect(countCarryOverUsed(periods, 2026, HE, 10)).toBe(5);
+  });
+
+  it('counts work days of a vacation on the deadline itself', () => {
+    // 2026-03-31 is a Tuesday = 1 work day
+    const periods = [{ startDate: '2026-03-31', endDate: '2026-03-31' }];
+    expect(countCarryOverUsed(periods, 2026, HE, 10)).toBe(1);
+  });
+
+  it('ignores vacation days entirely after the deadline', () => {
+    const periods = [{ startDate: '2026-04-01', endDate: '2026-04-05' }];
+    expect(countCarryOverUsed(periods, 2026, HE, 10)).toBe(0);
+  });
+
+  it('counts only the pre-deadline portion of a vacation spanning the deadline', () => {
+    // 2026-03-30 Mon, 2026-03-31 Tue = 2 days before/on deadline; 2026-04-01 and on = after
+    const periods = [{ startDate: '2026-03-30', endDate: '2026-04-05' }];
+    expect(countCarryOverUsed(periods, 2026, HE, 10)).toBe(2);
+  });
+
+  it('caps the result at carryOverDays', () => {
+    // 5 work days booked before deadline, but only 3 carry-over days
+    const periods = [{ startDate: '2026-03-02', endDate: '2026-03-06' }];
+    expect(countCarryOverUsed(periods, 2026, HE, 3)).toBe(3);
+  });
+
+  it('sums multiple periods before the deadline', () => {
+    const periods = [
+      { startDate: '2026-01-05', endDate: '2026-01-07' }, // Mon–Wed = 3 days
+      { startDate: '2026-02-02', endDate: '2026-02-03' }, // Mon–Tue = 2 days
+    ];
+    expect(countCarryOverUsed(periods, 2026, HE, 10)).toBe(5);
+  });
+
+  it('counts a half-day vacation before the deadline as 0.5', () => {
+    const periods = [{ startDate: '2026-03-10', endDate: '2026-03-10', halfDay: true }];
+    expect(countCarryOverUsed(periods, 2026, HE, 5)).toBe(0.5);
+  });
+
+  it('does not count public holidays within the period', () => {
+    // Karfreitag 2026-04-03 is after deadline anyway, but Neujahr 2026-01-01 is a holiday
+    // Book Jan 1–2: Jan 1 is Neujahr (holiday), Jan 2 (Fri) is work day = 1 day
+    const periods = [{ startDate: '2026-01-01', endDate: '2026-01-02' }];
+    expect(countCarryOverUsed(periods, 2026, HE, 5)).toBe(1);
+  });
+});
+
+describe('computeAutoCarryOver', () => {
+  // Computes carry-over for year N from year N-1 data.
+  // 2025-01-06 is a Monday; 2025-02-07 is a Friday.
+
+  it('returns 0 when there are no periods in the previous year', () => {
+    expect(computeAutoCarryOver([], 2025, HE, 30)).toBe(0);
+  });
+
+  it('returns the unused remainder when some days were not taken', () => {
+    // 25 work days (Jan 6 – Feb 7) + 2 days (Feb 10–11) = 27 used; budget 30 → 3 remaining
+    const periods = [
+      { startDate: '2025-01-06', endDate: '2025-02-07' },
+      { startDate: '2025-02-10', endDate: '2025-02-11' },
+    ];
+    expect(computeAutoCarryOver(periods, 2025, HE, 30)).toBe(3);
+  });
+
+  it('returns 0 when all days were used', () => {
+    // Exactly 5 work days used against a budget of 5
+    const periods = [{ startDate: '2025-01-06', endDate: '2025-01-10' }];
+    expect(computeAutoCarryOver(periods, 2025, HE, 5)).toBe(0);
+  });
+
+  it('returns 0 when more days were taken than budget (over-used)', () => {
+    // 5 work days taken against a budget of 3 → max(0, 3-5) = 0
+    const periods = [{ startDate: '2025-01-06', endDate: '2025-01-10' }];
+    expect(computeAutoCarryOver(periods, 2025, HE, 3)).toBe(0);
+  });
+
+  it('ignores periods from years other than the target year', () => {
+    // Period is in 2026, but we are computing carry-over from 2025 → no 2025 data → 0
+    const periods = [{ startDate: '2026-01-05', endDate: '2026-01-09' }];
+    expect(computeAutoCarryOver(periods, 2025, HE, 30)).toBe(0);
+  });
+
+  it('clips a period that spans the year boundary correctly', () => {
+    // Dec 29 2025 (Mon) – Jan 2 2026 (Fri): 3 work days in 2025 (Dec 29, 30, 31 — but Dec 31 is special half-day)
+    // Dec 29 Mon=1, Dec 30 Tue=1, Dec 31 Wed=0.5 → 2.5 days in 2025; budget 5 → remaining 2.5
+    const periods = [{ startDate: '2025-12-29', endDate: '2026-01-02' }];
+    expect(computeAutoCarryOver(periods, 2025, HE, 5)).toBe(2.5);
   });
 });

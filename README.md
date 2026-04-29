@@ -5,6 +5,7 @@ A vacation day planner for Germany. Plan your annual vacation days with automati
 ## Features
 
 - **Configurable budget** — set your annual vacation allowance (default: 30 days)
+- **Carry-over tracker** — enter days carried over from last year; Dashboard shows how many have been used, how many remain, and warns when the March 31 deadline approaches
 - **All 16 German states** — select your Bundesland; public holidays computed via [`feiertagejs`](https://www.npmjs.com/package/feiertagejs)
 - **Half-day booking** — mark single days as half days (0.5 instead of 1.0); Dec 24 and Dec 31 always count as 0.5
 - **Smart work-day counting** — only counts Monday–Friday, excludes weekends and public holidays; periods spanning multiple years are correctly clipped to the selected year
@@ -54,6 +55,7 @@ Tests follow the RED-GREEN principle — see [`RULES.md`](./RULES.md).
 Click the ⚙️ gear icon in the navigation bar to open settings:
 
 - **Urlaubstage pro Jahr** — set your annual vacation budget (1–60, default: 30)
+- **Übertrag vom Vorjahr** — auto-calculated when switching years (unused days from the previous year); can be overridden manually (0–60); see [Carry-over tracker](#carry-over-tracker) below
 - **Bundesland** — choose your state to get the correct public holidays (default: Hessen)
 
 ### Adding a vacation
@@ -84,6 +86,23 @@ Half-day toggles are disabled for multi-day ranges. When toggling half-day on wi
 - Click any existing vacation block in the month view to open the edit modal
 - Use the ✎ (edit) and ✕ (delete) buttons in the list view or in the month view's vacation list
 - All changes persist automatically
+
+### Carry-over tracker
+
+In Germany, unused vacation days can typically be carried over into the new year but must be used by **March 31** (this is the statutory default; some contracts allow until June 30 — the app uses March 31).
+
+**Automatic calculation:** when you navigate to a new year (e.g. 2026 → 2027), the app automatically computes carry-over as `max(0, annual budget − days used in the previous year)`. If you had no vacation data for the previous year the carry-over defaults to 0.
+
+**Manual override:** open **Settings** (⚙️) and edit the **Übertrag vom Vorjahr** field (0–60). The override persists until you switch years again.
+
+Once set, the Dashboard shows a carry-over card below the main progress bar:
+
+- Progress bar: how many carry-over days have been consumed (vacations booked on or before March 31 count against carry-over first)
+- Remaining days and deadline date
+- **Warning** — if carry-over days are still unused and March 31 is ≤30 days away
+- **Expired** — if March 31 has passed with unused carry-over days (displayed in red)
+
+Carry-over days are "used first": work days from vacations before the deadline reduce the carry-over bucket before touching your regular annual budget.
 
 ### Changing years
 
@@ -174,6 +193,7 @@ VacationPeriod {
 {
   year: number;              // Currently selected year
   totalDays: number;         // Annual vacation budget (default: 30, editable in settings)
+  carryOverDays: number;     // Days carried over from previous year (default: 0, deadline: March 31)
   state: GermanState;        // Bundesland code (default: 'HE' for Hessen)
   periods: VacationPeriod[]; // All planned vacations
   view: 'dashboard' | 'year' | 'month' | 'list';
@@ -185,7 +205,7 @@ VacationPeriod {
 
 - **Zustand store** is the single source of truth
 - The `persist` middleware syncs the entire state to `localStorage` under the key `my-holiday-storage`
-- All mutations go through store actions: `addPeriod`, `updatePeriod`, `removePeriod`, `importData`, `setState`, `setTotalDays`
+- All mutations go through store actions: `addPeriod`, `updatePeriod`, `removePeriod`, `importData`, `setState`, `setTotalDays`, `setCarryOverDays`
 - Work-day counts are **derived** (computed on render, not stored) — this guarantees they stay correct even if the holiday data or counting logic changes
 - Vacation day coverage is computed as `Set<string>` of ISO date strings for fast lookup in calendar views
 

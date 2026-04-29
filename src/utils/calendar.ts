@@ -35,6 +35,63 @@ export function getHolidayName(date: Date, state: GermanState): string | null {
   return map.get(toISODate(date)) ?? null;
 }
 
+/**
+ * Compute the carry-over days to bring into `year` from the previous year.
+ * Returns max(0, totalDays − workDaysUsedInPrevYear).
+ * Returns 0 if there is no vacation data for the previous year (avoids
+ * inflating carry-over when the user simply hasn't entered data yet).
+ */
+export function computeAutoCarryOver(
+  periods: { startDate: string; endDate: string; halfDay?: boolean }[],
+  prevYear: number,
+  state: GermanState,
+  totalDays: number
+): number {
+  const yearStart = `${prevYear}-01-01`;
+  const yearEnd = `${prevYear}-12-31`;
+  const prevYearPeriods = periods.filter(
+    (p) => p.endDate >= yearStart && p.startDate <= yearEnd
+  );
+  if (prevYearPeriods.length === 0) return 0;
+  const used = prevYearPeriods.reduce(
+    (sum, p) => sum + countVacationWorkDaysInYear(p, prevYear, state),
+    0
+  );
+  return Math.max(0, totalDays - used);
+}
+
+/** ISO date of the carry-over deadline for a given year (always March 31) */
+export function carryOverDeadline(year: number): string {
+  return `${year}-03-31`;
+}
+
+/**
+ * Count how many carry-over days have been consumed.
+ * Sums work days in periods that fall on or before March 31 of the given year,
+ * capped at carryOverDays.
+ */
+export function countCarryOverUsed(
+  periods: { startDate: string; endDate: string; halfDay?: boolean }[],
+  year: number,
+  state: GermanState,
+  carryOverDays: number
+): number {
+  if (carryOverDays === 0) return 0;
+  const yearStart = `${year}-01-01`;
+  const deadline = carryOverDeadline(year);
+  let total = 0;
+  for (const p of periods) {
+    const clippedStart = p.startDate > yearStart ? p.startDate : yearStart;
+    const clippedEnd = p.endDate < deadline ? p.endDate : deadline;
+    if (clippedStart > clippedEnd) continue;
+    total += countVacationWorkDays(
+      { startDate: clippedStart, endDate: clippedEnd, halfDay: p.halfDay && p.startDate === p.endDate },
+      state
+    );
+  }
+  return Math.min(total, carryOverDays);
+}
+
 /** Check if a date is a work day (Mon–Fri, not a public holiday) */
 export function isWorkDay(date: Date, state: GermanState): boolean {
   const day = date.getDay();

@@ -10,13 +10,15 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ onClose }: SettingsModalProps) {
-  const { totalDays, state, language, theme, setTotalDays, setState, setLanguage, setTheme } = useStore();
+  const { totalDays, carryOverDays, state, language, theme, setTotalDays, setCarryOverDays, setState, setLanguage, setTheme } = useStore();
   const { t } = useT();
   const [days, setDays] = useState(String(totalDays));
+  const [carryOver, setCarryOver] = useState(String(carryOverDays));
   const [selectedState, setSelectedState] = useState<GermanState>(state);
   const [selectedLanguage, setSelectedLanguage] = useState<Language>(language);
   const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark' | 'auto'>(theme);
   const [error, setError] = useState<string | null>(null);
+  const [carryOverError, setCarryOverError] = useState<string | null>(null);
 
   const handleSave = () => {
     const num = parseInt(days, 10);
@@ -24,7 +26,13 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
       setError(t('settings.daysError'));
       return;
     }
+    const co = parseInt(carryOver, 10);
+    if (isNaN(co) || co < 0 || co > 60) {
+      setCarryOverError(t('settings.carryOverError'));
+      return;
+    }
     setTotalDays(num);
+    setCarryOverDays(co);
     setState(selectedState);
     setLanguage(selectedLanguage);
     setTheme(selectedTheme);
@@ -51,6 +59,20 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               onChange={(e) => { setDays(e.target.value); setError(null); }}
             />
             {error && <div className="form-hint" style={{ color: 'var(--color-primary)' }}>{error}</div>}
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">{t('settings.carryOver')}</label>
+            <input
+              type="number"
+              className="form-input"
+              min={0}
+              max={60}
+              value={carryOver}
+              onChange={(e) => { setCarryOver(e.target.value); setCarryOverError(null); }}
+            />
+            <div className="form-hint">{t('settings.carryOverHint')}</div>
+            {carryOverError && <div className="form-hint" style={{ color: 'var(--color-primary)' }}>{carryOverError}</div>}
           </div>
 
           <div className="form-group">

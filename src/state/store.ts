@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { VacationState, VacationActions } from '../types';
 import type { GermanState } from '../data/holidays';
 import type { Language } from '../i18n/translations';
+import { computeAutoCarryOver } from '../utils/calendar';
 
 const MAX_UNDO = 50;
 
@@ -18,6 +19,7 @@ export const useStore = create<Store>()(
       // State
       year: new Date().getFullYear(),
       totalDays: 30,
+      carryOverDays: 0,
       state: 'HE' as GermanState,
       language: 'de' as Language,
       theme: 'auto' as const,
@@ -41,8 +43,13 @@ export const useStore = create<Store>()(
         })),
 
       // Actions
-      setYear: (year) => set({ year }),
+      setYear: (year) => {
+        const { periods, totalDays, state } = get();
+        const carryOverDays = computeAutoCarryOver(periods, year - 1, state, totalDays);
+        set({ year, carryOverDays });
+      },
       setTotalDays: (totalDays) => set({ totalDays }),
+      setCarryOverDays: (carryOverDays) => set({ carryOverDays }),
       setView: (view) => set({ view }),
       setSelectedMonth: (month) => set({ selectedMonth: month }),
 

@@ -245,6 +245,64 @@
   color: var(--color-text-secondary);
 }
 
+/* Carry-over card */
+.carry-over-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.carry-over-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.carry-over-label {
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.carry-over-deadline {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.carry-over-progress {
+  height: 6px;
+}
+
+.carry-over-alert {
+  font-size: 13px;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius);
+  margin-top: 2px;
+}
+
+.carry-over-alert.warning {
+  background: #fff8e1;
+  color: #7a5800;
+}
+
+.carry-over-alert.expired {
+  background: #fdecea;
+  color: var(--color-primary);
+}
+
+[data-theme='dark'] .carry-over-alert.warning {
+  background: #332d00;
+  color: #ffd54f;
+}
+
+[data-theme='dark'] .carry-over-alert.expired {
+  background: #3a0a0a;
+  color: #ff6b6b;
+}
+
 /* Quick upcoming */
 .upcoming-title {
   font-size: 16px;

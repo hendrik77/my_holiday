@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../state/store';
-import { countVacationWorkDaysInYear, toISODate, formatDateRange } from '../utils/calendar';
+import { countVacationWorkDaysInYear, countCarryOverUsed, carryOverDeadline, toISODate, formatDate, formatDateRange } from '../utils/calendar';
 import { VacationModal } from './VacationModal';
 import { useT } from '../i18n/useT';
 
+const CARRY_OVER_WARNING_DAYS = 30;
+
 export function Dashboard() {
-  const { periods, totalDays, year, state } = useStore();
+  const { periods, totalDays, carryOverDays, year, state } = useStore();
   const { t } = useT();
   const [showAdd, setShowAdd] = useState(false);
 
@@ -20,11 +22,27 @@ export function Dashboard() {
   const isOver = usedDays > totalDays;
 
   const todayISO = toISODate(new Date());
+
+  const carryOverUsed = useMemo(() => {
+    return countCarryOverUsed(periods, year, state, carryOverDays);
+  }, [periods, year, state, carryOverDays]);
+
+  const carryOverRemaining = carryOverDays - carryOverUsed;
+  const deadline = carryOverDeadline(year);
+  const isDeadlinePassed = todayISO > deadline;
+  const daysToDeadline = Math.round(
+    (new Date(deadline).getTime() - new Date(todayISO).getTime()) / (1000 * 60 * 60 * 24)
+  );
+  const carryOverWarn = carryOverRemaining > 0 && !isDeadlinePassed && daysToDeadline <= CARRY_OVER_WARNING_DAYS;
+  const carryOverExpired = carryOverRemaining > 0 && isDeadlinePassed;
+  const carryOverUsedPct = carryOverDays > 0 ? Math.min((carryOverUsed / carryOverDays) * 100, 100) : 0;
+
   const upcoming = useMemo(() => {
+    const today = toISODate(new Date());
     return periods
-      .filter((p) => p.endDate >= todayISO)
+      .filter((p) => p.endDate >= today)
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
-  }, [periods, todayISO]);
+  }, [periods]);
 
   const formatUsed = usedDays % 1 === 0 ? usedDays : usedDays.toFixed(1).replace('.', ',');
 
@@ -67,6 +85,40 @@ export function Dashboard() {
           <span>{t('dashboard.remainingLabel', { remaining: Math.max(0, remainingDays) })}</span>
         </div>
       </div>
+
+      {carryOverDays > 0 && (
+        <div className="carry-over-card">
+          <div className="carry-over-header">
+            <span className="carry-over-label">{t('carryOver.label')}</span>
+            <span className="carry-over-deadline">{t('carryOver.deadline', { date: formatDate(deadline) })}</span>
+          </div>
+          <div className="progress-bar carry-over-progress">
+            <div
+              className={`progress-fill ${carryOverExpired ? 'over' : ''}`}
+              style={{ width: `${carryOverUsedPct}%` }}
+            />
+          </div>
+          <div className="progress-labels">
+            <span>{t('carryOver.used', { used: carryOverUsed, total: carryOverDays })}</span>
+            <span>{t(carryOverRemaining === 1 ? 'carryOver.remaining' : 'carryOver.remaining_plural', { remaining: carryOverRemaining })}</span>
+          </div>
+          {(carryOverWarn || carryOverExpired) && (
+            <div className={`carry-over-alert ${carryOverExpired ? 'expired' : 'warning'}`}>
+              {carryOverExpired
+                ? t('carryOver.expired', {
+                    remaining: carryOverRemaining,
+                    days_label: t(carryOverRemaining === 1 ? 'carryOver.days_one' : 'carryOver.days_other'),
+                    date: formatDate(deadline),
+                  })
+                : t('carryOver.expiringSoon', {
+                    remaining: carryOverRemaining,
+                    days_label: t(carryOverRemaining === 1 ? 'carryOver.days_one' : 'carryOver.days_other'),
+                    days: daysToDeadline,
+                  })}
+            </div>
+          )}
+        </div>
+      )}
 
       <div>
         <h3 className="upcoming-title">{t('dashboard.upcoming')}</h3>

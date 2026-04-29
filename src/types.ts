@@ -17,6 +17,7 @@ export interface VacationState {
   state: GermanState;
   language: Language;
   theme: 'light' | 'dark' | 'auto';
+  carryOverDays: number;
   periods: VacationPeriod[];
   view: ViewType;
   selectedMonth: number; // 0-11
@@ -35,6 +36,7 @@ export interface VacationActions {
   addPeriod: (period: Omit<VacationPeriod, 'id'>) => void;
   updatePeriod: (id: string, updates: Partial<VacationPeriod>) => void;
   removePeriod: (id: string) => void;
+  setCarryOverDays: (days: number) => void;
   importData: (totalDays: number, periods: Omit<VacationPeriod, 'id'>[]) => void;
   setState: (state: GermanState) => void;
   setLanguage: (language: Language) => void;

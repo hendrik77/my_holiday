@@ -4,6 +4,15 @@ All notable changes to My Holiday.
 
 ---
 
+## 1.0.2 (2026-04-29)
+
+### Added
+- **Test coverage** — 89 tests, 92% coverage (up from 78% / 67 tests)
+- Tests for `getHolidayName`, `getDaysInMonth`, `getFirstDayOfMonth`, `formatDateRange`, `formatDate`, `escapeCSV`
+- CSV import edge cases: escaped quotes, English half-day headers, missing columns
+
+---
+
 ## 1.0.1 (2026-04-29)
 
 ### Added

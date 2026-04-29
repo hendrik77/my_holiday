@@ -3,11 +3,16 @@ import type { VacationPeriod } from '../types';
 import {
   isWorkDay,
   isPublicHoliday,
+  getHolidayName,
   isSpecialHalfDay,
   countWorkDays,
   countVacationWorkDays,
   countVacationWorkDaysInYear,
   hasOverlap,
+  getDaysInMonth,
+  getFirstDayOfMonth,
+  formatDateRange,
+  formatDate,
   toISODate,
   parseISODate,
 } from './calendar';
@@ -15,6 +20,16 @@ import type { GermanState } from '../data/holidays';
 
 const HE: GermanState = 'HE';
 const BY: GermanState = 'BY';
+
+describe('getHolidayName', () => {
+  it('returns name for a known holiday', () => {
+    expect(getHolidayName(new Date(2026, 3, 3), HE)).toBe('Karfreitag');
+  });
+
+  it('returns null for a non-holiday', () => {
+    expect(getHolidayName(new Date(2026, 2, 10), HE)).toBeNull();
+  });
+});
 
 describe('isPublicHoliday', () => {
   it('recognises nationwide holidays', () => {
@@ -304,5 +319,61 @@ describe('countVacationWorkDaysInYear', () => {
     // Dec 31 2026 (Thu, 0.5 special) - single day
     const period = { startDate: '2026-12-31', endDate: '2026-12-31', halfDay: true };
     expect(countVacationWorkDaysInYear(period, 2026, HE)).toBe(0.5);
+  });
+});
+
+describe('getDaysInMonth', () => {
+  it('returns all days in January (31)', () => {
+    const days = getDaysInMonth(2026, 0);
+    expect(days).toHaveLength(31);
+    expect(days[0].getDate()).toBe(1);
+    expect(days[30].getDate()).toBe(31);
+  });
+
+  it('returns all days in February (28 for non-leap)', () => {
+    const days = getDaysInMonth(2026, 1);
+    expect(days).toHaveLength(28);
+  });
+
+  it('returns 29 days for February in leap year', () => {
+    const days = getDaysInMonth(2024, 1);
+    expect(days).toHaveLength(29);
+  });
+});
+
+describe('getFirstDayOfMonth', () => {
+  it('returns correct day for known date', () => {
+    // 2026-01-01 is Thursday (4)
+    expect(getFirstDayOfMonth(2026, 0)).toBe(4);
+    // 2026-03-01 is Sunday (0)
+    expect(getFirstDayOfMonth(2026, 2)).toBe(0);
+  });
+});
+
+describe('formatDateRange', () => {
+  it('formats single day', () => {
+    expect(formatDateRange('2026-07-15', '2026-07-15')).toBe('15.07.2026');
+  });
+
+  it('formats same month range', () => {
+    expect(formatDateRange('2026-07-01', '2026-07-10')).toBe('01.–10.07.2026');
+  });
+
+  it('formats same year, different months', () => {
+    expect(formatDateRange('2026-03-15', '2026-07-20')).toBe('15.03.–20.07.2026');
+  });
+
+  it('formats different years', () => {
+    expect(formatDateRange('2026-12-28', '2027-01-03')).toBe('28.12.2026 – 03.01.2027');
+  });
+});
+
+describe('formatDate', () => {
+  it('formats a date', () => {
+    expect(formatDate('2026-07-15')).toBe('15.07.2026');
+  });
+
+  it('pads single-digit day and month', () => {
+    expect(formatDate('2026-01-05')).toBe('05.01.2026');
   });
 });

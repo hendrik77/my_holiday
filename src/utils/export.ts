@@ -39,7 +39,7 @@ export function downloadCSV(
 }
 
 /** Escape a CSV field: wrap in quotes if it contains delimiter, quote, or newline */
-function escapeCSV(value: string): string {
+export function escapeCSV(value: string): string {
   if (value.includes(';') || value.includes('"') || value.includes('\n')) {
     return `"${value.replace(/"/g, '""')}"`;
   }

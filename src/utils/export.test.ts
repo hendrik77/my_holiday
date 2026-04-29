@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseImportCSV } from './export';
+import { parseImportCSV, escapeCSV } from './export';
 
 // Minimal t-function for testing — returns the key as-is
 const t = (key: string, params?: Record<string, string | number>) => {
@@ -123,5 +123,61 @@ describe('parseImportCSV', () => {
     const csv = 'Startdatum;Enddatum;Notiz\n2026-07-01;2026-07-05;"Urlaub; mit Familie"';
     const result = parseImportCSV(csv, t);
     expect(result.periods[0].note).toBe('Urlaub; mit Familie');
+  });
+
+  it('handles alternative half-day header names', () => {
+    const csv = 'Startdatum;Enddatum;Halbtag\n2026-03-10;2026-03-10;Ja';
+    const result = parseImportCSV(csv, t);
+    expect(result.periods[0].halfDay).toBe(true);
+  });
+
+  it('handles missing start/end values in a row', () => {
+    const csv = 'Startdatum;Enddatum\n;2026-01-15\n2026-03-01;';
+    const result = parseImportCSV(csv, t);
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.periods).toHaveLength(0);
+  });
+
+  it('returns noEntries error when data found but no valid periods', () => {
+    const csv = 'Startdatum;Enddatum\n;\n;';
+    const result = parseImportCSV(csv, t);
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
+
+  it('handles escaped quotes in quoted fields', () => {
+    const csv = 'Startdatum;Enddatum;Notiz\n2026-07-01;2026-07-05;"Urlaub ""Sommer"" 2026"';
+    const result = parseImportCSV(csv, t);
+    expect(result.periods[0].note).toBe('Urlaub "Sommer" 2026');
+  });
+
+  it('handles "half day" English header', () => {
+    const csv = 'Startdatum;Enddatum;Half Day\n2026-03-10;2026-03-10;Yes';
+    const result = parseImportCSV(csv, t);
+    expect(result.periods[0].halfDay).toBe(true);
+  });
+
+  it('rejects CSV with start column but no end column', () => {
+    const csv = 'Startdatum;Irgendwas\n2026-03-10;2026-03-15';
+    const result = parseImportCSV(csv, t);
+    expect(result.periods).toHaveLength(0);
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
+});
+
+describe('escapeCSV', () => {
+  it('returns plain text unchanged', () => {
+    expect(escapeCSV('Sommerurlaub')).toBe('Sommerurlaub');
+  });
+
+  it('escapes semicolons', () => {
+    expect(escapeCSV('Urlaub; Sommer')).toBe('"Urlaub; Sommer"');
+  });
+
+  it('escapes double quotes', () => {
+    expect(escapeCSV('Urlaub "Sommer"')).toBe('"Urlaub ""Sommer"""');
+  });
+
+  it('escapes newlines', () => {
+    expect(escapeCSV('Zeile 1\nZeile 2')).toBe('"Zeile 1\nZeile 2"');
   });
 });

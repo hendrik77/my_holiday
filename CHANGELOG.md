@@ -4,6 +4,18 @@ All notable changes to My Holiday.
 
 ---
 
+## 1.0.1 (2026-04-29)
+
+### Added
+- **Timestamp in export filename** — exports now named `urlaub-2026_2026-04-29_1430.csv` to prevent overwrites
+
+### Fixed
+- **Vacation day highlighting** — all vacation days in month view now get a red tint background (previously only the first day showed a tiny label)
+- **i18n arrays** — weekday and month name arrays now correctly returned via `tRaw()` instead of breaking with `.map is not a function`
+- **Missing `useT` import** — restored in YearView after school holidays feature inadvertently dropped it
+
+---
+
 ## 1.0.0 (2026-04-28)
 
 ### Core Features
@@ -19,7 +31,7 @@ All notable changes to My Holiday.
 - **LocalStorage persistence** — all data survives page reloads
 
 ### Import / Export
-- **CSV export** — UTF-8 with BOM, semicolon-delimited, Excel-compatible; filename includes timestamp
+- **CSV export** — UTF-8 with BOM, semicolon-delimited, Excel-compatible
 - **CSV import** — accepts ISO, German, and US date formats; flexible column mapping
 
 ### Internationalisation
@@ -33,18 +45,10 @@ All notable changes to My Holiday.
 ### Other
 - **School holidays** — striped overlay on calendar for the selected state (2025–2026 data)
 - **Undo/redo** — Ctrl+Z / Ctrl+Y, toast notifications with undo button on delete
+- **Overlap detection** — `hasOverlap()` prevents conflicting vacation bookings
 - **Test suite** — 67 tests covering calendar logic, CSV parsing, translations, holidays
-
-### Bug Fixes
-- **Vacation day highlighting** — all vacation days now get a red tint background in month view (was only first day)
-- **i18n arrays** — weekday and month name arrays correctly handled via `tRaw()` (was breaking with `.map()`)
-- **Missing import** — `useT` import restored in YearView after school holidays feature
 
 ### Dependencies
 - React 19, TypeScript, Vite, Zustand (with persist)
 - `feiertagejs` — German public holidays for all 16 states
 - `vitest` — test runner
-
----
-
-*First release — feature-complete vacation planner for Germany.*

@@ -9,7 +9,7 @@ import {
   toISODate,
 } from '../utils/calendar';
 import { isSchoolHoliday } from '../data/schoolHolidays';
-import { useT } from '../i18n/context';
+import { useT } from '../i18n/useT';
 
 export function YearView() {
   const { year, periods, state, setView, setSelectedMonth } = useStore();

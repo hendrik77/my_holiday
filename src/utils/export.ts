@@ -184,7 +184,7 @@ export function parseImportCSV(
       startDate,
       endDate,
       note,
-      halfDay,
+      halfDay: halfDay && startDate === endDate,
     });
   }
 

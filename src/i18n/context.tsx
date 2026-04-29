@@ -1,14 +1,7 @@
-import { createContext, useContext, useCallback, type ReactNode } from 'react';
+import { useCallback, type ReactNode } from 'react';
 import { useStore } from '../state/store';
 import { translations, type Language } from './translations';
-
-type TranslationParams = Record<string, string | number>;
-
-const I18nContext = createContext<{
-  t: (key: string, params?: TranslationParams) => string;
-  tRaw: <T = string | string[]>(key: string) => T;
-  lang: Language;
-}>({ t: (k) => k, tRaw: (k) => k as never, lang: 'de' });
+import { I18nContext, type TranslationParams } from './useT';
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const language = useStore((s) => s.language);
@@ -72,8 +65,4 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       {children}
     </I18nContext.Provider>
   );
-}
-
-export function useT() {
-  return useContext(I18nContext);
 }

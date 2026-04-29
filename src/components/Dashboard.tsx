@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../state/store';
-import { countVacationWorkDaysInYear, parseISODate, formatDateRange } from '../utils/calendar';
+import { countVacationWorkDaysInYear, toISODate, formatDateRange } from '../utils/calendar';
 import { VacationModal } from './VacationModal';
-import { useT } from '../i18n/context';
+import { useT } from '../i18n/useT';
 
 export function Dashboard() {
   const { periods, totalDays, year, state } = useStore();
@@ -19,17 +19,12 @@ export function Dashboard() {
   const usedPercent = Math.min((usedDays / totalDays) * 100, 100);
   const isOver = usedDays > totalDays;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const todayISO = toISODate(new Date());
   const upcoming = useMemo(() => {
     return periods
-      .filter((p) => {
-        const end = parseISODate(p.endDate);
-        end.setHours(23, 59, 59, 999);
-        return end >= today;
-      })
+      .filter((p) => p.endDate >= todayISO)
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
-  }, [periods, today.toISOString()]);
+  }, [periods, todayISO]);
 
   const formatUsed = usedDays % 1 === 0 ? usedDays : usedDays.toFixed(1).replace('.', ',');
 

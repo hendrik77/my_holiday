@@ -3,7 +3,7 @@ import { useStore } from '../state/store';
 import type { ViewType } from '../types';
 import { downloadCSV, parseImportCSV } from '../utils/export';
 import { SettingsModal } from './SettingsModal';
-import { useT } from '../i18n/context';
+import { useT } from '../i18n/useT';
 
 const views: { key: ViewType; labelKey: string }[] = [
   { key: 'dashboard', labelKey: 'nav.overview' },

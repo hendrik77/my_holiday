@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../state/store';
 import { GERMAN_STATES } from '../data/holidays';
 import type { GermanState } from '../data/holidays';
-import { useT } from '../i18n/context';
+import { useT } from '../i18n/useT';
 import type { Language } from '../i18n/translations';
 
 interface SettingsModalProps {

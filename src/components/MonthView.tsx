@@ -13,8 +13,8 @@ import {
 import { isSchoolHoliday } from '../data/schoolHolidays';
 import type { VacationPeriod } from '../types';
 import { VacationModal } from './VacationModal';
-import { showToast } from './Toast';
-import { useT } from '../i18n/context';
+import { showToast } from './toastStore';
+import { useT } from '../i18n/useT';
 
 export function MonthView() {
   const {

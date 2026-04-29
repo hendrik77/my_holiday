@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useStore } from '../state/store';
 import type { VacationPeriod } from '../types';
 import { countVacationWorkDays, hasOverlap } from '../utils/calendar';
-import { useT } from '../i18n/context';
+import { useT } from '../i18n/useT';
 
 interface VacationModalProps {
   onClose: () => void;
@@ -34,19 +34,17 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
     } catch {
       return 0;
     }
-  }, [startDate, endDate, halfDay]);
+  }, [startDate, endDate, halfDay, state]);
 
-  useEffect(() => {
-    if (endDate < startDate) {
-      setEndDate(startDate);
-    }
-  }, [startDate, endDate]);
+  const handleStartDateChange = (newStart: string) => {
+    setStartDate(newStart);
+    if (endDate < newStart || halfDay) setEndDate(newStart);
+  };
 
-  useEffect(() => {
-    if (halfDay && startDate !== endDate) {
-      setEndDate(startDate);
-    }
-  }, [halfDay, startDate, endDate]);
+  const handleHalfDayToggle = (checked: boolean) => {
+    setHalfDay(checked);
+    if (checked && startDate !== endDate) setEndDate(startDate);
+  };
 
   const handleSave = () => {
     if (hasOverlap(startDate, endDate, periods, initial?.id)) {
@@ -86,7 +84,7 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
                 type="date"
                 className="form-input"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => handleStartDateChange(e.target.value)}
               />
             </div>
             <div className="form-group">
@@ -116,7 +114,7 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
             <input
               type="checkbox"
               checked={halfDay}
-              onChange={(e) => setHalfDay(e.target.checked)}
+              onChange={(e) => handleHalfDayToggle(e.target.checked)}
               disabled={!isSingleDay && !halfDay}
             />
             <span>{t('vacationModal.halfDay')}</span>

@@ -3,8 +3,8 @@ import { useStore } from '../state/store';
 import { countVacationWorkDaysInYear, formatDateRange } from '../utils/calendar';
 import type { VacationPeriod } from '../types';
 import { VacationModal } from './VacationModal';
-import { showToast } from './Toast';
-import { useT } from '../i18n/context';
+import { showToast } from './toastStore';
+import { useT } from '../i18n/useT';
 
 export function ListView() {
   const { periods, year, totalDays, state, removePeriod } = useStore();

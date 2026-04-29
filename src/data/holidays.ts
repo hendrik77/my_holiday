@@ -1,7 +1,7 @@
 import { getHolidays } from 'feiertagejs';
 
 /** German state codes supported by feiertagejs */
-export type GermanState = 'BW' | 'BY' | 'BE' | 'BB' | 'HB' | 'HH' | 'MV' | 'NI' | 'NW' | 'RP' | 'SL' | 'SN' | 'ST' | 'SH' | 'TH';
+export type GermanState = 'BW' | 'BY' | 'BE' | 'BB' | 'HB' | 'HH' | 'HE' | 'MV' | 'NI' | 'NW' | 'RP' | 'SL' | 'SN' | 'ST' | 'SH' | 'TH';
 
 /** State code → display name mapping */
 export const GERMAN_STATES: { code: GermanState; name: string }[] = [

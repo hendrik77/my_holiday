@@ -10,11 +10,12 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ onClose }: SettingsModalProps) {
-  const { totalDays, state, language, setTotalDays, setState, setLanguage } = useStore();
+  const { totalDays, state, language, theme, setTotalDays, setState, setLanguage, setTheme } = useStore();
   const { t } = useT();
   const [days, setDays] = useState(String(totalDays));
   const [selectedState, setSelectedState] = useState<GermanState>(state);
   const [selectedLanguage, setSelectedLanguage] = useState<Language>(language);
+  const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark' | 'auto'>(theme);
   const [error, setError] = useState<string | null>(null);
 
   const handleSave = () => {
@@ -26,6 +27,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     setTotalDays(num);
     setState(selectedState);
     setLanguage(selectedLanguage);
+    setTheme(selectedTheme);
     onClose();
   };
 

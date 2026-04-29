@@ -3,6 +3,7 @@ import { useStore } from '../state/store';
 import { countVacationWorkDaysInYear, formatDateRange } from '../utils/calendar';
 import type { VacationPeriod } from '../types';
 import { VacationModal } from './VacationModal';
+import { showToast } from './Toast';
 import { useT } from '../i18n/context';
 
 export function ListView() {

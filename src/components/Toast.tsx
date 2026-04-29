@@ -29,7 +29,6 @@ export function showToast(message: string, onUndo?: () => void) {
 export function ToastContainer() {
   const [toasts, setToasts] = useState<ToastMessage[]>(currentToasts);
   const { t } = useT();
-  const undo = useStore((s) => s.undo);
 
   useEffect(() => {
     const listener = () => setToasts([...currentToasts]);

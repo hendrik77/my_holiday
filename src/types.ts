@@ -1,5 +1,5 @@
-import type { GermanState } from '../data/holidays';
-import type { Language } from '../i18n/translations';
+import type { GermanState } from './data/holidays';
+import type { Language } from './i18n/translations';
 
 export interface VacationPeriod {
   id: string;

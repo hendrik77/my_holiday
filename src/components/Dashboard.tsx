@@ -5,7 +5,7 @@ import { VacationModal } from './VacationModal';
 import { useT } from '../i18n/context';
 
 export function Dashboard() {
-  const { periods, totalDays, year, state, setView } = useStore();
+  const { periods, totalDays, year, state } = useStore();
   const { t } = useT();
   const [showAdd, setShowAdd] = useState(false);
 

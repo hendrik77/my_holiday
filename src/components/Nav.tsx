@@ -21,7 +21,7 @@ export function Nav() {
   const [showSettings, setShowSettings] = useState(false);
 
   const handleExport = () => {
-    downloadCSV(periods, totalDays, year, state, t);
+    downloadCSV(periods, year, state, t);
   };
 
   const handleImport = () => {

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { VacationState, VacationActions, VacationPeriod, ViewType } from '../types';
+import type { VacationState, VacationActions } from '../types';
 import type { GermanState } from '../data/holidays';
 import type { Language } from '../i18n/translations';
 

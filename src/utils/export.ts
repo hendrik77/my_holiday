@@ -2,12 +2,9 @@ import type { VacationPeriod } from '../types';
 import type { GermanState } from '../data/holidays';
 import { countVacationWorkDays } from './calendar';
 
-const CSV_HEADER = 'Startdatum;Enddatum;Notiz;Halber Tag;Arbeitstage';
-
 /** Export vacation data as a CSV file and trigger download */
 export function downloadCSV(
   periods: VacationPeriod[],
-  totalDays: number,
   year: number,
   state: GermanState,
   t: (key: string, params?: Record<string, string | number>) => string

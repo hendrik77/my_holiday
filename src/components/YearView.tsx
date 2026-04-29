@@ -31,8 +31,6 @@ export function YearView() {
     return set;
   }, [periods]);
 
-  const todayStr = toISODate(new Date());
-
   return (
     <div>
       <h2 style={{ marginBottom: 'var(--space-lg)' }}>{t('nav.yearView')} {year}</h2>
@@ -80,7 +78,6 @@ export function YearView() {
                   const isVacation = vacationDays.has(iso);
                   const isHoliday = isPublicHoliday(d, state);
                   const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-                  const isToday = iso === todayStr;
 
                   let cls = 'month-card-day';
                   if (isVacation) {

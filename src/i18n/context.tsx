@@ -2,12 +2,6 @@ import { createContext, useContext, useCallback, type ReactNode } from 'react';
 import { useStore } from '../state/store';
 import { translations, type Language } from './translations';
 
-type NestedKeyOf<T, K extends keyof T = keyof T> = K extends string
-  ? T[K] extends Record<string, unknown>
-    ? `${K}.${NestedKeyOf<T[K]>}`
-    : K
-  : never;
-
 type TranslationParams = Record<string, string | number>;
 
 const I18nContext = createContext<{

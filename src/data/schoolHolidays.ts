@@ -6,8 +6,6 @@ export interface SchoolHolidayPeriod {
   end: string;
 }
 
-type StateData = Record<string, SchoolHolidayPeriod[]>;
-
 /**
  * School holidays per state per year.
  * Source: Kultusministerkonferenz (kmk.org) — 2025/2026 published dates.

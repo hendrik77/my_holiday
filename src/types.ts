@@ -1,12 +1,23 @@
 import type { GermanState } from './data/holidays';
 import type { Language } from './i18n/translations';
 
+export type VacationType =
+  | 'urlaub'
+  | 'bildungsurlaub'
+  | 'kur'
+  | 'sabbatical'
+  | 'unbezahlterUrlaub'
+  | 'mutterschaftsurlaub'
+  | 'elternzeit'
+  | 'sonderurlaub';
+
 export interface VacationPeriod {
   id: string;
   startDate: string; // ISO date YYYY-MM-DD
   endDate: string;   // ISO date YYYY-MM-DD
   note: string;
   halfDay?: boolean; // only valid when startDate === endDate
+  type?: VacationType; // defaults to 'urlaub' when absent
 }
 
 export type ViewType = 'dashboard' | 'year' | 'month' | 'list';
@@ -26,6 +37,14 @@ export interface VacationState {
   _redoStack: VacationPeriod[][];
   canUndo: boolean;
   canRedo: boolean;
+  // Employment
+  employmentStartDate: string; // ISO date; empty string = not set
+  employmentEndDate: string;   // ISO date; empty string = still employed
+  // Carry-over policy
+  carryOverDeadline: string;    // month-day, e.g. '03-31'
+  carryOverMaxDays: number | null; // null = no cap
+  // Bildungsurlaub
+  bildungsUrlaubDays: number; // 0 = feature disabled
 }
 
 export interface VacationActions {
@@ -46,4 +65,9 @@ export interface VacationActions {
   _pushUndo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  setEmploymentStartDate: (date: string) => void;
+  setEmploymentEndDate: (date: string) => void;
+  setCarryOverDeadline: (deadline: string) => void;
+  setCarryOverMaxDays: (days: number | null) => void;
+  setBildungsUrlaubDays: (days: number) => void;
 }

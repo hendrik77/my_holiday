@@ -26,6 +26,14 @@ export const useStore = create<Store>()(
       periods: [],
       view: 'dashboard',
       selectedMonth: new Date().getMonth(),
+      // Employment
+      employmentStartDate: '',
+      employmentEndDate: '',
+      // Carry-over policy
+      carryOverDeadline: '03-31',
+      carryOverMaxDays: null,
+      // Bildungsurlaub
+      bildungsUrlaubDays: 0,
 
       // Undo/redo stacks (not persisted)
       _undoStack: [],
@@ -109,6 +117,11 @@ export const useStore = create<Store>()(
       setState: (state) => set({ state }),
       setLanguage: (language) => set({ language }),
       setTheme: (theme) => set({ theme }),
+      setEmploymentStartDate: (employmentStartDate) => set({ employmentStartDate }),
+      setEmploymentEndDate: (employmentEndDate) => set({ employmentEndDate }),
+      setCarryOverDeadline: (carryOverDeadline) => set({ carryOverDeadline }),
+      setCarryOverMaxDays: (carryOverMaxDays) => set({ carryOverMaxDays }),
+      setBildungsUrlaubDays: (bildungsUrlaubDays) => set({ bildungsUrlaubDays }),
     }),
     {
       name: 'my-holiday-storage',

@@ -325,6 +325,15 @@
   border-radius: var(--radius);
 }
 
+.upcoming-item--clickable {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.upcoming-item--clickable:hover {
+  background: var(--color-border);
+}
+
 .upcoming-range {
   font-weight: 500;
   color: var(--color-text);

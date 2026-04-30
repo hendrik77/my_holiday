@@ -3,6 +3,7 @@ import { useStore } from '../state/store';
 import { countVacationWorkDaysInYear, countCarryOverUsed, carryOverDeadline, toISODate, formatDate, formatDateRange } from '../utils/calendar';
 import { VacationModal } from './VacationModal';
 import { useT } from '../i18n/useT';
+import type { VacationPeriod } from '../types';
 
 const CARRY_OVER_WARNING_DAYS = 30;
 
@@ -10,6 +11,7 @@ export function Dashboard() {
   const { periods, totalDays, carryOverDays, year, state } = useStore();
   const { t } = useT();
   const [showAdd, setShowAdd] = useState(false);
+  const [editingPeriod, setEditingPeriod] = useState<VacationPeriod | null>(null);
 
   const usedDays = useMemo(() => {
     return periods.reduce((sum, p) => {
@@ -136,7 +138,7 @@ export function Dashboard() {
                   ? t('dashboard.days_half')
                   : t(days === 1 ? 'dashboard.days_one' : 'dashboard.days_other', { count: days });
               return (
-                <div key={p.id} className="upcoming-item">
+                <div key={p.id} className="upcoming-item upcoming-item--clickable" onClick={() => setEditingPeriod(p)}>
                   <div>
                     <div className="upcoming-range">
                       {formatDateRange(p.startDate, p.endDate)}
@@ -156,6 +158,7 @@ export function Dashboard() {
         )}
       </div>
 
+      {editingPeriod && <VacationModal initial={editingPeriod} onClose={() => setEditingPeriod(null)} />}
       {showAdd && <VacationModal onClose={() => setShowAdd(false)} />}
     </div>
   );

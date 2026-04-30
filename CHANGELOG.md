@@ -4,6 +4,14 @@ All notable changes to My Holiday.
 
 ---
 
+## 1.0.4 (2026-04-30)
+
+### Added
+- **Carry-over tracker** — enter days carried over from the previous year; auto-calculated on year switch (`max(0, budget − days used in previous year)`); Dashboard shows progress bar, deadline (March 31), expiry warning (≤30 days) and expired notice; manual override in settings
+- **Click-to-edit on Dashboard** — clicking any upcoming vacation opens the edit modal directly, without switching views
+
+---
+
 ## 1.0.3 (2026-04-29)
 
 ### Fixed

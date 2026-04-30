@@ -45,7 +45,7 @@ Tests follow the RED-GREEN principle — see [`RULES.md`](./RULES.md).
 
 | Tab | What it does |
 |---|---|
-| **Übersicht** | Summary cards (used, remaining, total days), progress bar, list of upcoming vacations |
+| **Übersicht** | Summary cards (used, remaining, total days), progress bar, carry-over tracker, list of upcoming vacations — click any upcoming entry to edit it |
 | **Jahresansicht** | 12 mini month calendars. Full vacation days are filled red, half days have a striped pattern. Public holidays in red text. Click any month to jump to its detail view. |
 | **Monatsansicht** | Full-size calendar for a single month. Navigate with `‹` `›` arrows. Public holidays are labeled. |
 | **Liste** | Table of all planned vacations with date range, work-day count, note, and edit/delete buttons. |
@@ -83,8 +83,9 @@ Half-day toggles are disabled for multi-day ranges. When toggling half-day on wi
 
 ### Editing or deleting
 
-- Click any existing vacation block in the month view to open the edit modal
-- Use the ✎ (edit) and ✕ (delete) buttons in the list view or in the month view's vacation list
+- Click any upcoming vacation on the **Dashboard** to open the edit modal directly
+- Click any existing vacation block in the **month view** to open the edit modal
+- Use the ✎ (edit) and ✕ (delete) buttons in the **list view** or in the month view's vacation list
 - All changes persist automatically
 
 ### Carry-over tracker

@@ -14,17 +14,19 @@ Version 2 adds a real backend, richer data model, and several long-requested fea
 
 | # | Feature | Status |
 |---|---------|--------|
-| SP-1 | **Type definitions + i18n** — `VacationType`, employment fields, all new translation strings | ✅ Done |
-| SP-2 | **Pro-rata & leave-reduction utilities** (TDD) — `computeProRataEntitlement`, `countFullCalendarMonths`, `computeLeaveReduction` | 🔲 Pending |
-| SP-3 | **ICS generation utility** (TDD) — RFC 5545 `.ics` file generator | 🔲 Pending |
+| SP-1 | **Type definitions + i18n** — `VacationType`, employment fields, all new translation strings | 🔲 Pending |
+| SP-2 | **Pro-rata & leave-reduction utilities** (TDD) — `computeProRataEntitlement`, `countFullCalendarMonths`, `computeLeaveReduction` | ✅ Done |
+| SP-3 | **ICS generation utility** (TDD) — RFC 5545 `.ics` file generator | ✅ Done |
 | SP-4 | **VISION.md** — long-term roadmap document | ✅ Done |
-| SP-5 | **Backend: Express + SQLite** — REST API, `periods` + `settings` tables, `changed_at` tracking | 🔲 Pending |
-| SP-6 | **Migration script** — standalone `scripts/migrate-v1.ts`, v1 CSV → v2 SQLite | 🔲 Pending |
+| SP-5 | **Backend: Express + SQLite** — REST API, `periods` + `settings` tables, `changed_at` tracking, API tests | 🔲 Pending |
+| SP-6 | **Migration script** — standalone `scripts/migrate-v1.ts`, v1 CSV → v2 SQLite, idempotency tests | 🔲 Pending |
 | SP-7 | **First-run wizard + employment dates** — onboarding modal, settings fields | 🔲 Pending |
 | SP-8 | **Vacation types UI** — type selector in modal, colour badges, budget rules | 🔲 Pending |
 | SP-9 | **iCal export** — Nav button + server endpoint | 🔲 Pending |
-| SP-10 | **Frontend API wiring** — replace Zustand persist + localStorage with TanStack Query + REST | 🔲 Pending |
+| SP-10 | **Frontend API wiring** — replace Zustand persist + localStorage with TanStack Query + REST; component-level integration tests | 🔲 Pending |
 | SP-11 | **README + CHANGELOG** — document all v2 features | 🔲 Pending |
+| SP-12 | **English i18n backfill** — add missing `firstRun`, `employment`, `carryOverPolicy`, `leaveReduction`, `bildungsUrlaub` keys to `en` translations | ✅ Done |
+| SP-13 | **End-to-end smoke tests** — Playwright tests for critical paths: first-run wizard → plan → export → settings | 🔲 Pending |
 
 ### Key Design Decisions
 
@@ -45,19 +47,31 @@ Version 2 adds a real backend, richer data model, and several long-requested fea
 ### Dependency Order
 
 ```
-Phase 1 (parallel):  SP-1 ✅  SP-2  SP-3  SP-4 ✅
-Phase 2 (after SP-1): SP-5  SP-6
-Phase 3 (after SP-1 + SP-2 + SP-5): SP-7  SP-8
+Phase 0 (fix):       SP-12 (English i18n — blocks SP-7/SP-8 rendering in en)
+Phase 1 (parallel):  SP-2 ✅  SP-3 ✅  SP-4 ✅
+Phase 2 (after SP-12): SP-5  SP-6
+Phase 3 (after SP-2 + SP-5 + SP-12): SP-7  SP-8
 Phase 4 (after SP-3 + SP-5 + SP-8): SP-9
-Phase 5 (all complete): SP-10  SP-11
+Phase 5 (all complete): SP-10  SP-11  SP-13
 ```
+
+### Risk Mitigations
+
+| Risk | Mitigation | Task |
+|------|-----------|------|
+| SP-1 marked done but English i18n is missing 5 key sections — v2 UI would crash in English mode | Backfill `en` translation keys before any UI work that references them | **SP-12** |
+| SP-5 backend has no test plan — REST API could regress silently | `supertest`-based API tests covering all CRUD endpoints, error paths, and the ICS export route; run as part of `npm test` | **SP-5** (embedded) |
+| SP-6 migration has no idempotency or error-path coverage | Unit tests: re-running migration on the same CSV → no duplicates; missing columns → clear error; empty file → empty DB; corrupt dates → skip with warnings | **SP-6** (embedded) |
+| SP-10 touches every component — replacing Zustand with TanStack Query is the largest single change in v2 | Component-level integration tests with mocked API responses (via `msw`); test each view in loading, empty, error, and happy states before wiring production API | **SP-10** (embedded) |
+| No end-to-end validation across backend + frontend | Playwright smoke tests: (1) first-run wizard completes, (2) plan a vacation → appears on dashboard, (3) export ICS → import into calendar app, (4) settings round-trip | **SP-13** |
 
 ### Running v2 (once SP-5 is done)
 
 ```bash
 npm run dev          # starts frontend :5173 + API server :3001
 npm run build        # compiles frontend + server
-npm test             # vitest unit tests
+npm test             # vitest unit + API tests
+npm run test:e2e     # Playwright end-to-end tests
 npx tsx scripts/migrate-v1.ts ./urlaub-2026.csv   # one-time migration
 ```
 

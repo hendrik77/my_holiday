@@ -1,10 +1,10 @@
 import { useCallback, type ReactNode } from 'react';
-import { useStore } from '../state/store';
+import { useUIStore } from '../state/store';
 import { translations, type Language } from './translations';
 import { I18nContext, type TranslationParams } from './useT';
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const language = useStore((s) => s.language);
+  const language = useUIStore((s) => s.language);
 
   const resolve = useCallback(
     (key: string) => {

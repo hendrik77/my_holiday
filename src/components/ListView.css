@@ -1,0 +1,62 @@
+/* === List View === */
+.list-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.list-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.list-table th {
+  background: var(--color-surface);
+  padding: var(--space-md) var(--space-lg);
+  text-align: left;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.list-table td {
+  padding: var(--space-md) var(--space-lg);
+  font-size: 14px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.list-table tr:last-child td {
+  border-bottom: none;
+}
+
+.list-table tr:hover td {
+  background: var(--color-surface);
+}
+
+.list-note {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+}
+
+.list-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+

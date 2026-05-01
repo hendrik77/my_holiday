@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { useStore } from '../state/store';
+import { useUIStore } from '../state/store';
+import { usePeriods, useSettings } from '../api/hooks';
 import {
   getFirstDayOfMonth,
   getDaysInMonth,
@@ -10,9 +11,13 @@ import {
 } from '../utils/calendar';
 import { isSchoolHoliday } from '../data/schoolHolidays';
 import { useT } from '../i18n/useT';
+import './Calendar.css';
 
 export function YearView() {
-  const { year, periods, state, setView, setSelectedMonth } = useStore();
+  const { year, setView, setSelectedMonth } = useUIStore();
+  const { data: periods = [] } = usePeriods(year);
+  const { data: settings } = useSettings();
+  const state = (settings?.state as 'HE') || 'HE';
   const { t, tRaw } = useT();
   const months = tRaw<string[]>('monthView.months');
   const weekdays = tRaw<string[]>('monthView.weekdays');

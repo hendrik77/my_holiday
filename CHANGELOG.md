@@ -4,6 +4,66 @@ All notable changes to My Holiday.
 
 ---
 
+## v2 (in development)
+
+### Added (SP-7)
+- **First-run wizard** — 4-step onboarding modal shown when `employmentStartDate` is empty
+  - Step 1: Employment dates (start, end, "still employed" toggle)
+  - Step 2: Bundesland selection
+  - Step 3: Annual vacation days (1–60)
+  - Step 4: Carry-over policy (deadline March 31 / June 30, optional max cap)
+- **7 component tests** for FirstRunWizard (render, navigation, finish callback)
+- Wizard CSS styles (`.wizard-modal`, `.wizard-steps`, `.wizard-footer`)
+
+### Added (SP-8)
+- **Type selector** in VacationModal — dropdown with all 8 vacation types
+- **Colour-coded type badges** — each type has a distinct colour in dashboard upcoming list
+- **Bildungsurlaub counter** — Dashboard shows budget + usage when `bildungsUrlaubDays > 0`
+- Type stored on add/update: `addPeriod` and `updatePeriod` now include `type` field
+
+### Added (SP-9)
+- **📅 iCal button** in Nav — generates RFC 5545 `.ics` file client-side and triggers download
+- **Server ICS endpoint** — `GET /api/v1/export.ics?year=YYYY` (added in SP-5)
+- Translation keys `nav.exportIcs` / `nav.exportIcsTitle` in de + en
+
+### Changed (SP-10)
+- **TanStack Query frontend** — replaced Zustand persist + localStorage with `@tanstack/react-query` hooks backed by Express REST API
+- **New API layer** — `src/api/client.ts` (fetch wrappers) + `src/api/hooks.ts` (query/mutation hooks)
+- **Slim Zustand store** — reduced to UI-only state (view, year, selectedMonth, theme, language, undo/redo)
+- **No more localStorage** — all data persisted to SQLite via the API
+- Components updated: Nav, Dashboard, MonthView, ListView, YearView, VacationModal, SettingsModal, FirstRunWizard, App, I18nContext
+- All 215 tests still passing
+
+### Added (SP-13)
+- **Playwright E2E smoke tests** — 5 tests covering: first-run wizard completion, vacation planning flow, view switching, settings modal
+- `playwright.config.ts` with dual webServer config (Vite + Express)
+- New script: `npm run test:e2e`
+
+### Changed (SP-14)
+- **Dynamic school holidays** — `src/data/schoolHolidays.ts` now fetches from `ferien-api.de` (free REST API, no key needed); hardcoded 2025–2026 data retained as fallback; async preloading with sync `isSchoolHoliday()` check
+
+### Added (SP-15)
+- **Component-level tests** — 6 Dashboard tests + 2 ListView tests using React Testing Library with mocked API hooks; total: 221 tests (12 test files)
+
+### Changed (SP-16)
+- **CSS refactor** — split 1090-line `App.css` into 8 co-located CSS files: `Nav.css`, `Dashboard.css`, `Calendar.css`, `ListView.css`, `Modal.css`, `Toast.css`, `TypeBadges.css`, `App.css` (layout only)
+- Design tokens remain in `index.css`
+- All components import their own CSS
+- **Express + SQLite backend** — REST API with 7 endpoints: CRUD for vacation periods, settings management, iCalendar export
+- **better-sqlite3** database at `data/my-holiday.db` with `periods` and `settings` tables
+- **`changed_at` tracking** — every period mutation records an ISO timestamp
+- **API tests** — 15 supertest-based integration tests covering all CRUD endpoints, error paths, and ICS export
+- **29 new tests** total (16 DB unit tests + 13 API tests), bringing total to 200
+- Server start scripts: `npm run server`, `npm run dev:server`
+
+### Added (SP-6)
+- **Migration script** — `scripts/migrate-v1.ts` imports v1 CSV exports into v2 SQLite
+- **Idempotent** — re-running on the same CSV won't create duplicates (matched by startDate, endDate, note, halfDay, type)
+- **8 migration tests** covering: valid CSV, idempotency, empty file, missing header, corrupt dates, English headers, preserving existing data
+- Total tests: **208**
+
+---
+
 ## 1.0.4 (2026-04-30)
 
 ### Added

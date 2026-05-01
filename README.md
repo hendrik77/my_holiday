@@ -32,6 +32,23 @@ npm run dev
 
 Opens at `http://localhost:5173`.
 
+### Starting the API server (v2)
+
+```bash
+npm run server              # start API on :3001
+npm run dev:server          # start with auto-reload
+npm run dev                 # frontend only (v1 compatible)
+```
+
+### Migrating from v1 (CSV)
+
+```bash
+npx tsx scripts/migrate-v1.ts ./urlaub-2026.csv              # default DB path
+npx tsx scripts/migrate-v1.ts ./urlaub-2026.csv --db :memory:  # custom DB
+```
+
+The migration is **idempotent** — running it twice won't create duplicates. It matches existing periods by `(startDate, endDate, note, halfDay, type)`.
+
 ### Running tests
 
 ```bash
@@ -149,6 +166,7 @@ Nationwide holidays (all states): Neujahr, Karfreitag, Ostermontag, Tag der Arbe
 | Framework | React 18 + TypeScript |
 | Build | Vite |
 | State | Zustand (with `persist` middleware for localStorage) |
+| Backend (v2) | Express + better-sqlite3 (SQLite) |
 | Holidays | [`feiertagejs`](https://www.npmjs.com/package/feiertagejs) — zero-dependency German holiday computation |
 | Styling | Plain CSS with custom properties (no runtime CSS-in-JS) |
 | Routing | None — single-page with tab-based view switching |
@@ -179,7 +197,29 @@ src/
 ├── App.css                    # All component styles (single stylesheet, BEM-like naming)
 ├── index.css                  # Design tokens (CSS custom properties) and global reset
 └── main.tsx                   # React entry point
-```
+
+server/
+├── index.ts                   # Express server entry point (port 3001)
+├── routes.ts                  # REST API routes (/api/v1/periods, /api/v1/settings, /api/v1/export.ics)
+├── db.ts                      # SQLite database (better-sqlite3): schema, CRUD operations
+└── types.ts                   # Server-specific types (PeriodRow, Settings, CreatePeriodInput)
+
+scripts/
+└── migrate-v1.ts              # CLI: import v1 CSV exports into SQLite (idempotent)
+
+### REST API (v2)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/periods?year=YYYY` | List periods overlapping the given year |
+| `POST` | `/api/v1/periods` | Create a vacation period |
+| `PUT` | `/api/v1/periods/:id` | Update a vacation period |
+| `DELETE` | `/api/v1/periods/:id` | Delete a vacation period |
+| `GET` | `/api/v1/settings` | Get all settings |
+| `PUT` | `/api/v1/settings` | Update settings |
+| `GET` | `/api/v1/export.ics?year=YYYY` | Download iCalendar (.ics) file |
+
+All data is stored in `data/my-holiday.db` (SQLite, gitignored).
 
 ### Data Model
 

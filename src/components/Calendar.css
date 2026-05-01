@@ -1,0 +1,268 @@
+/* === Year View === */
+.year-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-lg);
+}
+
+/* === Month Card (Year View) === */
+.month-card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-md);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.month-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-mid);
+}
+
+.month-card-header {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: var(--space-sm);
+  text-align: center;
+}
+
+.month-card-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.month-card-day-header {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 2px 0;
+}
+
+.month-card-day {
+  font-size: 11px;
+  text-align: center;
+  padding: 2px 0;
+  border-radius: 2px;
+  color: var(--color-text-secondary);
+}
+
+.month-card-day.weekend {
+  color: #c5ccd3;
+}
+
+.month-card-day.holiday {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.month-card-day.vacation {
+  background: var(--color-primary);
+  color: #ffffff;
+  border-radius: 2px;
+}
+
+.month-card-day.vacation-half {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 33%, #ffffff 33%, #ffffff 40%, var(--color-primary) 40%, var(--color-primary) 60%, #ffffff 60%, #ffffff 67%, var(--color-primary) 67%, var(--color-primary) 100%);
+  color: #ffffff;
+  border-radius: 2px;
+  text-shadow: 0 0 2px rgba(0,0,0,0.5);
+}
+
+/* === Month View === */
+.month-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.month-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.month-view-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.month-view-month {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 500;
+}
+
+.month-view-nav button {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.month-view-nav button:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.month-grid-header {
+  display: contents;
+}
+
+.month-grid-weekday {
+  background: var(--color-surface);
+  padding: var(--space-sm);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.month-grid-day {
+  aspect-ratio: 1;
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: all 0.1s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.month-grid-day:nth-child(7n) {
+  border-right: none;
+}
+
+.month-grid-day.other-month {
+  background: var(--color-surface);
+  cursor: default;
+  opacity: 0.4;
+}
+
+.month-grid-day.weekend:not(.other-month) {
+  background: rgba(244, 248, 252, 0.5);
+}
+
+.month-grid-day.vacation:not(.other-month) {
+  background: rgba(219, 0, 27, 0.1);
+}
+
+.month-grid-day.school-holiday:not(.other-month) {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 3px,
+    rgba(56, 96, 190, 0.06) 3px,
+    rgba(56, 96, 190, 0.06) 6px
+  );
+}
+
+.month-grid-day:hover:not(.other-month) {
+  background: rgba(219, 0, 27, 0.04);
+}
+
+.month-grid-day.selected {
+  background: rgba(219, 0, 27, 0.08);
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+  border-radius: 0;
+}
+
+.month-grid-day.selection-range {
+  background: rgba(219, 0, 27, 0.06);
+}
+
+.month-grid-day-number {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text);
+}
+
+.month-grid-day.weekend .month-grid-day-number {
+  color: var(--color-text-secondary);
+}
+
+.month-grid-day.holiday .month-grid-day-number {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.month-grid-day.today .month-grid-day-number {
+  background: var(--color-primary);
+  color: #ffffff;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.holiday-label {
+  font-size: 10px;
+  color: var(--color-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vacation-indicator {
+  font-size: 9px;
+  background: var(--color-primary);
+  color: #ffffff;
+  padding: 1px 4px;
+  border-radius: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: auto;
+}
+
+/* Selection mode hint */
+.selection-hint {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.selection-hint button {
+  padding: 4px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.selection-hint button:hover {
+  border-color: var(--color-primary);
+}
+

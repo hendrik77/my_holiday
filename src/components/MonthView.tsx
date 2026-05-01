@@ -1,26 +1,23 @@
 import { useMemo, useState, useCallback } from 'react';
-import { useStore } from '../state/store';
+import { useUIStore } from '../state/store';
+import { usePeriods, useSettings, useDeletePeriod } from '../api/hooks';
 import {
-  getFirstDayOfMonth,
-  getDaysInMonth,
-  isPublicHoliday,
-  getHolidayName,
-  toISODate,
-  parseISODate,
-  countWorkDays,
-  countVacationWorkDaysInYear,
+  getFirstDayOfMonth, getDaysInMonth, isPublicHoliday, getHolidayName,
+  toISODate, parseISODate, countWorkDays, countVacationWorkDaysInYear,
 } from '../utils/calendar';
 import { isSchoolHoliday } from '../data/schoolHolidays';
 import type { VacationPeriod } from '../types';
 import { VacationModal } from './VacationModal';
 import { showToast } from './toastStore';
 import { useT } from '../i18n/useT';
+import './Calendar.css';
 
 export function MonthView() {
-  const {
-    year, selectedMonth, periods, state,
-    setSelectedMonth, setView, setYear, removePeriod,
-  } = useStore();
+  const { year, selectedMonth, setSelectedMonth, setView, setYear } = useUIStore();
+  const { data: periods = [] } = usePeriods(year);
+  const { data: settings } = useSettings();
+  const state = (settings?.state as 'HE') || 'HE';
+  const deletePeriod = useDeletePeriod();
   const { t, tRaw } = useT();
 
   const [selectStart, setSelectStart] = useState<string | null>(null);
@@ -28,7 +25,6 @@ export function MonthView() {
 
   const months = tRaw<string[]>('monthView.months');
   const weekdays = tRaw<string[]>('monthView.weekdays');
-
   const todayStr = toISODate(new Date());
   const days = useMemo(() => getDaysInMonth(year, selectedMonth), [year, selectedMonth]);
   const firstDay = getFirstDayOfMonth(year, selectedMonth);
@@ -40,44 +36,34 @@ export function MonthView() {
       const start = parseISODate(p.startDate);
       const end = parseISODate(p.endDate);
       const current = new Date(start);
-      while (current <= end) {
-        map.set(toISODate(current), p);
-        current.setDate(current.getDate() + 1);
-      }
+      while (current <= end) { map.set(toISODate(current), p); current.setDate(current.getDate() + 1); }
     }
     return map;
   }, [periods]);
 
   const goToPrevMonth = () => {
     if (selectedMonth === 0) { setYear(year - 1); setSelectedMonth(11); }
-    else { setSelectedMonth(selectedMonth - 1); }
+    else setSelectedMonth(selectedMonth - 1);
   };
-
   const goToNextMonth = () => {
     if (selectedMonth === 11) { setYear(year + 1); setSelectedMonth(0); }
-    else { setSelectedMonth(selectedMonth + 1); }
+    else setSelectedMonth(selectedMonth + 1);
   };
 
-  const handleDayClick = useCallback(
-    (iso: string) => {
-      const existing = dayToPeriod.get(iso);
-      if (existing && !selectStart) { setEditingPeriod(existing); return; }
+  const handleDayClick = useCallback((iso: string) => {
+    const existing = dayToPeriod.get(iso);
+    if (existing && !selectStart) { setEditingPeriod(existing); return; }
+    if (!selectStart) { setSelectStart(iso); }
+    else {
+      const start = parseISODate(selectStart);
+      const end = parseISODate(iso);
+      const rangeStart = start <= end ? selectStart : iso;
+      const rangeEnd = start <= end ? iso : selectStart;
+      setSelectStart(null);
+      setEditingPeriod({ id: '', startDate: rangeStart, endDate: rangeEnd, note: '' });
+    }
+  }, [selectStart, dayToPeriod]);
 
-      if (!selectStart) {
-        setSelectStart(iso);
-      } else {
-        const start = parseISODate(selectStart);
-        const end = parseISODate(iso);
-        const rangeStart = start <= end ? selectStart : iso;
-        const rangeEnd = start <= end ? iso : selectStart;
-        setSelectStart(null);
-        setEditingPeriod({ id: '', startDate: rangeStart, endDate: rangeEnd, note: '' });
-      }
-    },
-    [selectStart, dayToPeriod]
-  );
-
-  // Build grid cells
   const cells: { date: Date | null; iso: string | null }[] = [];
   const prevMonthDays = firstDayAdjusted;
   const prevMonthLastDay = new Date(year, selectedMonth, 0).getDate();
@@ -85,7 +71,7 @@ export function MonthView() {
     const d = new Date(year, selectedMonth - 1, prevMonthLastDay - i);
     cells.push({ date: d, iso: toISODate(d) });
   }
-  for (const d of days) { cells.push({ date: d, iso: toISODate(d) }); }
+  for (const d of days) cells.push({ date: d, iso: toISODate(d) });
   const remaining = 7 - (cells.length % 7);
   if (remaining < 7) {
     for (let i = 1; i <= remaining; i++) {
@@ -94,54 +80,31 @@ export function MonthView() {
     }
   }
 
-  const selectionRange = useMemo(() => {
-    if (!selectStart) return new Set<string>();
-    return new Set([selectStart]);
-  }, [selectStart]);
-
-  const selectedDaysInfo = useMemo(() => {
-    if (!selectStart) return null;
-    const days = countWorkDays(parseISODate(selectStart), parseISODate(selectStart), state);
-    return t(days === 1 ? 'monthView.workday_one' : 'monthView.workday_other', { count: days });
-  }, [selectStart, state, t]);
+  const selectionRange = useMemo(() => selectStart ? new Set([selectStart]) : new Set<string>(), [selectStart]);
 
   return (
     <div className="month-view">
       <div className="month-view-header">
         <div className="month-view-nav">
-          <button onClick={goToPrevMonth} title={t('nav.prevYear')}>‹</button>
+          <button onClick={goToPrevMonth}>‹</button>
           <h2 className="month-view-month">{months[selectedMonth]} {year}</h2>
-          <button onClick={goToNextMonth} title={t('nav.nextYear')}>›</button>
+          <button onClick={goToNextMonth}>›</button>
         </div>
-        <button className="btn btn-secondary btn-sm" onClick={() => setView('year')}>
-          {t('monthView.yearView')}
-        </button>
+        <button className="btn btn-secondary btn-sm" onClick={() => setView('year')}>{t('monthView.yearView')}</button>
       </div>
 
       {selectStart && (
         <div className="selection-hint">
-          <span>
-            {t('monthView.selectionHint', {
-              start: new Date(selectStart).toLocaleDateString('de-DE'),
-              days: selectedDaysInfo || '',
-            })}
-          </span>
+          <span>{t('monthView.selectionHint', { start: new Date(selectStart).toLocaleDateString('de-DE'), days: '' })}</span>
           <button onClick={() => setSelectStart(null)}>{t('monthView.cancel')}</button>
         </div>
       )}
 
       <div className="month-grid">
-        {weekdays.map((d) => (
-          <div key={d} className="month-grid-weekday">{d}</div>
-        ))}
-
+        {weekdays.map((d) => (<div key={d} className="month-grid-weekday">{d}</div>))}
         {cells.map((cell, idx) => {
-          if (!cell.date || !cell.iso) {
-            return <div key={`empty-${idx}`} className="month-grid-day other-month" />;
-          }
-
-          const d = cell.date;
-          const iso = cell.iso;
+          if (!cell.date || !cell.iso) return <div key={`empty-${idx}`} className="month-grid-day other-month" />;
+          const d = cell.date; const iso = cell.iso;
           const isCurrentMonth = d.getMonth() === selectedMonth;
           const isWeekend = d.getDay() === 0 || d.getDay() === 6;
           const isHoliday = isPublicHoliday(d, state);
@@ -150,7 +113,6 @@ export function MonthView() {
           const isSelected = selectionRange.has(iso);
           const period = dayToPeriod.get(iso);
           const isVacation = !!period;
-
           const prevDay = new Date(d); prevDay.setDate(prevDay.getDate() - 1);
           const prevPeriod = dayToPeriod.get(toISODate(prevDay));
           const isVacationStart = isVacation && (!prevPeriod || prevPeriod.id !== period.id);
@@ -167,32 +129,23 @@ export function MonthView() {
           return (
             <div key={iso} className={cls} onClick={() => isCurrentMonth && handleDayClick(iso)}>
               <div className="month-grid-day-number">{d.getDate()}</div>
-              {isHoliday && isCurrentMonth && holidayName && (
-                <div className="holiday-label">{holidayName}</div>
-              )}
+              {isHoliday && isCurrentMonth && holidayName && <div className="holiday-label">{holidayName}</div>}
               {isVacation && isCurrentMonth && isVacationStart && (
-                <div className="vacation-indicator" title={period.note || 'Urlaub'}>
-                  {period.halfDay ? '½ ' : ''}{period.note || 'Urlaub'}
-                </div>
+                <div className="vacation-indicator" title={period.note || 'Urlaub'}>{period.halfDay ? '½ ' : ''}{period.note || 'Urlaub'}</div>
               )}
             </div>
           );
         })}
       </div>
 
-      {/* School holiday legend */}
-      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 'var(--space-xs)' }}>
-        ⚜ = Schulferien
-      </div>
+      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 'var(--space-xs)' }}>⚜ = Schulferien</div>
 
       {periods.filter((p) => {
         const start = parseISODate(p.startDate);
         const end = parseISODate(p.endDate);
-        return (
-          (start.getFullYear() === year && start.getMonth() === selectedMonth) ||
-          (end.getFullYear() === year && end.getMonth() === selectedMonth) ||
-          (start <= new Date(year, selectedMonth + 1, 0) && end >= new Date(year, selectedMonth, 1))
-        );
+        const monthStart = new Date(year, selectedMonth, 1);
+        const monthEnd = new Date(year, selectedMonth + 1, 0);
+        return start <= monthEnd && end >= monthStart;
       }).length > 0 && (
         <div style={{ marginTop: 'var(--space-md)' }}>
           <h4 style={{ marginBottom: 'var(--space-sm)' }}>{t('monthView.vacationsThisMonth')}</h4>
@@ -205,35 +158,18 @@ export function MonthView() {
               return start <= monthEnd && end >= monthStart;
             }).map((p) => {
               const days = countVacationWorkDaysInYear(p, year, state);
-              const daysLabel = days === 0.5
-                ? '0,5 Arbeitstage'
-                : `${days} ${days === 1 ? t('monthView.workday_one') : t('monthView.workday_other')}`;
+              const daysLabel = days === 0.5 ? '0,5 Arbeitstage' : `${days} ${days === 1 ? t('monthView.workday_one') : t('monthView.workday_other')}`;
               return (
                 <div key={p.id} className="upcoming-item">
                   <div>
-                    <div className="upcoming-range">
-                      {new Date(p.startDate).toLocaleDateString('de-DE')}
-                      {' – '}
-                      {new Date(p.endDate).toLocaleDateString('de-DE')}
-                      {p.halfDay && ' (½)'}
-                    </div>
-                    {p.note && (
-                      <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                        {p.note}
-                      </div>
-                    )}
+                    <div className="upcoming-range">{new Date(p.startDate).toLocaleDateString('de-DE')} – {new Date(p.endDate).toLocaleDateString('de-DE')}{p.halfDay && ' (½)'}</div>
+                    {p.note && <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 2 }}>{p.note}</div>}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
                     <span className="upcoming-days">{daysLabel}</span>
                     <div className="list-actions">
                       <button className="btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); setEditingPeriod(p); }}>✎</button>
-                      <button className="btn-danger btn-sm" onClick={(e) => {
-                        e.stopPropagation();
-                        removePeriod(p.id);
-                        showToast(t('toast.deleted'), () => {
-                          useStore.getState().undo();
-                        });
-                      }}>✕</button>
+                      <button className="btn-danger btn-sm" onClick={(e) => { e.stopPropagation(); deletePeriod.mutate(p.id); showToast(t('toast.deleted')); }}>✕</button>
                     </div>
                   </div>
                 </div>
@@ -247,11 +183,7 @@ export function MonthView() {
         <VacationModal
           initial={editingPeriod.id ? editingPeriod : undefined}
           onClose={() => setEditingPeriod(null)}
-          presetDates={
-            !editingPeriod.id && editingPeriod.startDate && editingPeriod.endDate
-              ? { startDate: editingPeriod.startDate, endDate: editingPeriod.endDate }
-              : undefined
-          }
+          presetDates={!editingPeriod.id && editingPeriod.startDate && editingPeriod.endDate ? { startDate: editingPeriod.startDate, endDate: editingPeriod.endDate } : undefined}
         />
       )}
     </div>

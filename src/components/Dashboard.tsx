@@ -1,14 +1,23 @@
 import { useMemo, useState } from 'react';
-import { useStore } from '../state/store';
+import { useUIStore } from '../state/store';
+import { usePeriods, useSettings } from '../api/hooks';
 import { countVacationWorkDaysInYear, countCarryOverUsed, carryOverDeadline, toISODate, formatDate, formatDateRange } from '../utils/calendar';
 import { VacationModal } from './VacationModal';
 import { useT } from '../i18n/useT';
+import './Dashboard.css';
+import './TypeBadges.css';
 import type { VacationPeriod } from '../types';
 
 const CARRY_OVER_WARNING_DAYS = 30;
 
 export function Dashboard() {
-  const { periods, totalDays, carryOverDays, year, state } = useStore();
+  const year = useUIStore((s) => s.year);
+  const { data: periods = [] } = usePeriods(year);
+  const { data: settings } = useSettings();
+  const totalDays = settings?.totalDays ?? 30;
+  const carryOverDays = settings?.carryOverDays ?? 0;
+  const bildungsUrlaubDays = settings?.bildungsUrlaubDays ?? 0;
+  const state = (settings?.state as 'HE') || 'HE';
   const { t } = useT();
   const [showAdd, setShowAdd] = useState(false);
   const [editingPeriod, setEditingPeriod] = useState<VacationPeriod | null>(null);
@@ -39,6 +48,13 @@ export function Dashboard() {
   const carryOverExpired = carryOverRemaining > 0 && isDeadlinePassed;
   const carryOverUsedPct = carryOverDays > 0 ? Math.min((carryOverUsed / carryOverDays) * 100, 100) : 0;
 
+  const bildungsUrlaubUsed = useMemo(() => {
+    if (bildungsUrlaubDays === 0) return 0;
+    return periods
+      .filter((p) => p.type === 'bildungsurlaub')
+      .reduce((sum, p) => sum + countVacationWorkDaysInYear(p, year, state), 0);
+  }, [periods, year, state, bildungsUrlaubDays]);
+
   const upcoming = useMemo(() => {
     const today = toISODate(new Date());
     return periods
@@ -52,18 +68,16 @@ export function Dashboard() {
     <div className="dashboard">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2>{t('dashboard.title', { year })}</h2>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
-          {t('dashboard.addVacation')}
-        </button>
+        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>{t('dashboard.addVacation')}</button>
       </div>
 
       <div className="stats-grid">
-        <div className={`stat-card used`}>
+        <div className="stat-card used">
           <div className="stat-label">{t('dashboard.used')}</div>
           <div className={`stat-value ${isOver ? 'over' : ''}`}>{formatUsed}</div>
           <div className="stat-sub">{t('dashboard.days')}</div>
         </div>
-        <div className={`stat-card remaining`}>
+        <div className="stat-card remaining">
           <div className="stat-label">{t('dashboard.remaining')}</div>
           <div className="stat-value">{Math.max(0, remainingDays)}</div>
           <div className="stat-sub">{t('dashboard.days')}</div>
@@ -77,10 +91,7 @@ export function Dashboard() {
 
       <div>
         <div className="progress-bar">
-          <div
-            className={`progress-fill ${isOver ? 'over' : ''}`}
-            style={{ width: `${usedPercent}%` }}
-          />
+          <div className={`progress-fill ${isOver ? 'over' : ''}`} style={{ width: `${usedPercent}%` }} />
         </div>
         <div className="progress-labels">
           <span>{t('dashboard.usedLabel', { used: formatUsed })}</span>
@@ -95,10 +106,7 @@ export function Dashboard() {
             <span className="carry-over-deadline">{t('carryOver.deadline', { date: formatDate(deadline) })}</span>
           </div>
           <div className="progress-bar carry-over-progress">
-            <div
-              className={`progress-fill ${carryOverExpired ? 'over' : ''}`}
-              style={{ width: `${carryOverUsedPct}%` }}
-            />
+            <div className={`progress-fill ${carryOverExpired ? 'over' : ''}`} style={{ width: `${carryOverUsedPct}%` }} />
           </div>
           <div className="progress-labels">
             <span>{t('carryOver.used', { used: carryOverUsed, total: carryOverDays })}</span>
@@ -107,18 +115,23 @@ export function Dashboard() {
           {(carryOverWarn || carryOverExpired) && (
             <div className={`carry-over-alert ${carryOverExpired ? 'expired' : 'warning'}`}>
               {carryOverExpired
-                ? t('carryOver.expired', {
-                    remaining: carryOverRemaining,
-                    days_label: t(carryOverRemaining === 1 ? 'carryOver.days_one' : 'carryOver.days_other'),
-                    date: formatDate(deadline),
-                  })
-                : t('carryOver.expiringSoon', {
-                    remaining: carryOverRemaining,
-                    days_label: t(carryOverRemaining === 1 ? 'carryOver.days_one' : 'carryOver.days_other'),
-                    days: daysToDeadline,
-                  })}
+                ? t('carryOver.expired', { remaining: carryOverRemaining, days_label: t(carryOverRemaining === 1 ? 'carryOver.days_one' : 'carryOver.days_other'), date: formatDate(deadline) })
+                : t('carryOver.expiringSoon', { remaining: carryOverRemaining, days_label: t(carryOverRemaining === 1 ? 'carryOver.days_one' : 'carryOver.days_other'), days: daysToDeadline })}
             </div>
           )}
+        </div>
+      )}
+
+      {bildungsUrlaubDays > 0 && (
+        <div className="bildungsurlaub-card">
+          <span className="bildungsurlaub-label">{t('bildungsUrlaub.counterLabel')}</span>
+          <div className="progress-bar">
+            <div className="progress-fill" style={{ width: `${Math.min((bildungsUrlaubUsed / bildungsUrlaubDays) * 100, 100)}%`, background: 'var(--color-secondary)' }} />
+          </div>
+          <div className="progress-labels">
+            <span>{t('bildungsUrlaub.counterUsed', { used: bildungsUrlaubUsed, total: bildungsUrlaubDays })}</span>
+            <span>{bildungsUrlaubDays - bildungsUrlaubUsed} übrig</span>
+          </div>
         </div>
       )}
 
@@ -133,22 +146,17 @@ export function Dashboard() {
           <div className="upcoming-list">
             {upcoming.map((p) => {
               const days = countVacationWorkDaysInYear(p, year, state);
-              const daysLabel =
-                days === 0.5
-                  ? t('dashboard.days_half')
-                  : t(days === 1 ? 'dashboard.days_one' : 'dashboard.days_other', { count: days });
+              const daysLabel = days === 0.5 ? t('dashboard.days_half') : t(days === 1 ? 'dashboard.days_one' : 'dashboard.days_other', { count: days });
+              const typeLabel = p.type && p.type !== 'urlaub' ? t(`vacationTypes.${p.type}`) : null;
               return (
                 <div key={p.id} className="upcoming-item upcoming-item--clickable" onClick={() => setEditingPeriod(p)}>
                   <div>
                     <div className="upcoming-range">
                       {formatDateRange(p.startDate, p.endDate)}
                       {p.halfDay && ' (½)'}
+                      {typeLabel && <span className={`type-badge type-badge--${p.type || 'urlaub'}`}>{typeLabel}</span>}
                     </div>
-                    {p.note && (
-                      <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                        {p.note}
-                      </div>
-                    )}
+                    {p.note && <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 2 }}>{p.note}</div>}
                   </div>
                   <div className="upcoming-days">{daysLabel}</div>
                 </div>

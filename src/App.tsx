@@ -1,16 +1,21 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Nav } from './components/Nav';
 import { Dashboard } from './components/Dashboard';
 import { YearView } from './components/YearView';
 import { MonthView } from './components/MonthView';
 import { ListView } from './components/ListView';
 import { ToastContainer } from './components/Toast';
-import { useStore } from './state/store';
+import { FirstRunWizard } from './components/FirstRunWizard';
+import { useUIStore } from './state/store';
+import { useSettings } from './api/hooks';
 import './App.css';
 
 function App() {
-  const view = useStore((s) => s.view);
-  const theme = useStore((s) => s.theme);
+  const view = useUIStore((s) => s.view);
+  const { data: settings } = useSettings();
+  const theme = settings?.theme || useUIStore((s) => s.theme);
+  const employmentStartDate = settings?.employmentStartDate;
+  const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -28,6 +33,13 @@ function App() {
     }
   }, [theme]);
 
+  // Show first-run wizard when settings loaded and employment start date is not set
+  useEffect(() => {
+    if (settings && !employmentStartDate) {
+      setShowWizard(true);
+    }
+  }, [settings, employmentStartDate]);
+
   return (
     <div className="app">
       <Nav />
@@ -38,6 +50,7 @@ function App() {
         {view === 'list' && <ListView />}
       </main>
       <ToastContainer />
+      {showWizard && <FirstRunWizard onClose={() => setShowWizard(false)} />}
     </div>
   );
 }

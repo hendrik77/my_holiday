@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react';
-import { useStore } from '../state/store';
+import { useUIStore } from '../state/store';
 import type { ViewType } from '../types';
 import { downloadCSV, parseImportCSV } from '../utils/export';
+import { generateICS } from '../utils/ics';
+import { usePeriods, useCreatePeriod, useSettings } from '../api/hooks';
 import { SettingsModal } from './SettingsModal';
-import { useT } from '../i18n/useT';
+true
 
 const views: { key: ViewType; labelKey: string }[] = [
   { key: 'dashboard', labelKey: 'nav.overview' },
@@ -13,20 +15,37 @@ const views: { key: ViewType; labelKey: string }[] = [
 ];
 
 export function Nav() {
-  const { view, year, setView, setYear, setSelectedMonth, periods, totalDays, state, importData } =
-    useStore();
+  const { view, year, setView, setYear, setSelectedMonth } = useUIStore();
+  const { data: periods = [] } = usePeriods(year);
+  const { data: settings } = useSettings();
+  const createPeriod = useCreatePeriod();
   const { t } = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
   const handleExport = () => {
+    const totalDays = settings?.totalDays ?? 30;
+    const state = (settings?.state as 'HE') || 'HE';
     downloadCSV(periods, year, state, t);
   };
 
-  const handleImport = () => {
-    fileInputRef.current?.click();
+  const handleExportIcs = () => {
+    const ics = generateICS(periods, year);
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    a.download = `urlaub-${year}_${ts}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
+
+  const handleImport = () => { fileInputRef.current?.click(); };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -42,7 +61,9 @@ export function Nav() {
           t('nav.importConfirm', { count: result.periods.length })
         );
         if (confirmed) {
-          importData(totalDays, result.periods);
+          for (const p of result.periods) {
+            createPeriod.mutate(p);
+          }
           setImportError(null);
         }
       }
@@ -53,11 +74,8 @@ export function Nav() {
         setImportError(null);
       }
     };
-    reader.onerror = () => {
-      setImportError(t('nav.importErrorRead'));
-    };
+    reader.onerror = () => { setImportError(t('nav.importErrorRead')); };
     reader.readAsText(file, 'UTF-8');
-
     e.target.value = '';
   };
 
@@ -82,60 +100,17 @@ export function Nav() {
         </div>
 
         <div className="nav-year">
-          <button
-            className="nav-year-btn"
-            onClick={() => {
-              const newYear = year - 1;
-              setYear(newYear);
-              setSelectedMonth(0);
-            }}
-            title={t('nav.prevYear')}
-          >
-            ‹
-          </button>
+          <button className="nav-year-btn" onClick={() => { setYear(year - 1); setSelectedMonth(0); }} title={t('nav.prevYear')}>‹</button>
           <span className="nav-year-label">{year}</span>
-          <button
-            className="nav-year-btn"
-            onClick={() => {
-              const newYear = year + 1;
-              setYear(newYear);
-              setSelectedMonth(0);
-            }}
-            title={t('nav.nextYear')}
-          >
-            ›
-          </button>
+          <button className="nav-year-btn" onClick={() => { setYear(year + 1); setSelectedMonth(0); }} title={t('nav.nextYear')}>›</button>
         </div>
 
         <div className="nav-io">
-          <button
-            className="nav-io-btn"
-            onClick={() => setShowSettings(true)}
-            title={t('nav.settings')}
-          >
-            ⚙️
-          </button>
-          <button
-            className="nav-io-btn"
-            onClick={handleImport}
-            title={t('nav.importTitle')}
-          >
-            {t('nav.import')}
-          </button>
-          <button
-            className="nav-io-btn"
-            onClick={handleExport}
-            title={t('nav.exportTitle')}
-          >
-            {t('nav.export')}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
-          />
+          <button className="nav-io-btn" onClick={() => setShowSettings(true)} title={t('nav.settings')}>⚙️</button>
+          <button className="nav-io-btn" onClick={handleImport} title={t('nav.importTitle')}>{t('nav.import')}</button>
+          <button className="nav-io-btn" onClick={handleExport} title={t('nav.exportTitle')}>{t('nav.export')}</button>
+          <button className="nav-io-btn" onClick={handleExportIcs} title={t('nav.exportIcsTitle')}>{t('nav.exportIcs')}</button>
+          <input ref={fileInputRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={handleFileChange} />
         </div>
       </div>
 

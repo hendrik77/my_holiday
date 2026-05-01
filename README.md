@@ -157,12 +157,14 @@ Nationwide holidays (all states): Neujahr, Karfreitag, Ostermontag, Tag der Arbe
 
 ```
 src/
-├── types.ts                   # Shared TypeScript interfaces
+├── types.ts                   # Shared TypeScript interfaces (VacationType, VacationPeriod, VacationState)
 ├── data/
 │   └── holidays.ts            # feiertagejs wrapper + GermanState type + state list
 ├── utils/
 │   ├── calendar.ts            # Work-day counting, half-day logic, date formatting
-│   └── export.ts              # CSV export/import (handwritten parser, no deps)
+│   ├── entitlement.ts         # Pro-rata vacation entitlement & leave reduction (§ 4/§ 17 BUrlG)
+│   ├── export.ts              # CSV export/import (handwritten parser, no deps)
+│   └── ics.ts                 # RFC 5545 iCalendar (.ics) file generation
 ├── state/
 │   └── store.ts               # Zustand store (state + actions, persisted to localStorage)
 ├── components/
@@ -182,23 +184,34 @@ src/
 ### Data Model
 
 ```typescript
+VacationType = 'urlaub' | 'bildungsurlaub' | 'kur' | 'sabbatical'
+  | 'unbezahlterUrlaub' | 'mutterschaftsurlaub' | 'elternzeit' | 'sonderurlaub'
+
 VacationPeriod {
-  id: string;          // Unique ID (generated)
+  id: string;          // Unique ID (UUID in v2, generated)
   startDate: string;   // ISO date YYYY-MM-DD
   endDate: string;     // ISO date YYYY-MM-DD
   note: string;        // Optional label
   halfDay?: boolean;   // Single-day half-day booking (Dec 24/31 always count as 0.5)
+  type?: VacationType; // Vacation type (defaults to 'urlaub')
 }
 
-// State (persisted)
+// State (persisted) — 🆕 = v2 additions
 {
-  year: number;              // Currently selected year
-  totalDays: number;         // Annual vacation budget (default: 30, editable in settings)
-  carryOverDays: number;     // Days carried over from previous year (default: 0, deadline: March 31)
-  state: GermanState;        // Bundesland code (default: 'HE' for Hessen)
-  periods: VacationPeriod[]; // All planned vacations
+  year: number;                    // Currently selected year
+  totalDays: number;               // Annual vacation budget (default: 30)
+  carryOverDays: number;           // Days carried over from previous year
+  state: GermanState;              // Bundesland code (default: 'HE')
+  language: Language;              // 'de' | 'en'
+  theme: 'light' | 'dark' | 'auto';
+  periods: VacationPeriod[];       // All planned vacations
   view: 'dashboard' | 'year' | 'month' | 'list';
-  selectedMonth: number;     // 0–11, active month in month view
+  selectedMonth: number;           // 0–11, active month in month view
+  🆕 employmentStartDate: string;  // Employment start (ISO date; empty = not set)
+  🆕 employmentEndDate: string;    // Employment end (ISO date; empty = still employed)
+  🆕 carryOverDeadline: string;    // Month-day, e.g. '03-31'
+  🆕 carryOverMaxDays: number | null; // null = no cap
+  🆕 bildungsUrlaubDays: number;   // Bildungsurlaub budget (0 = disabled)
 }
 ```
 
@@ -246,7 +259,32 @@ No runtime CSS-in-JS library is used — this keeps the bundle small.
 
 Four views share the same URL. The active view is a piece of Zustand state (`view`). This avoids routing complexity for what is essentially a single-screen tool, and makes view state survive page reloads (since it's persisted).
 
-**5. Click-to-select in month view**
+**5. Pro-rata vacation entitlement (§ 4 BUrlG)**
+
+When employment does not span a full calendar year, vacation entitlement is calculated pro-rata:
+- **6+ complete months** in the year → full entitlement
+- **< 6 months** → `floor(months / 12 × totalDays)` per complete calendar month
+
+Only complete calendar months count (a month where you were employed from the 1st to the last day). Partial months are ignored.
+
+Leave reductions (§ 17 BUrlG / § 17 BEEG): unpaid leave (`unbezahlterUrlaub`) and parental leave (`elternzeit`) each reduce entitlement by `1/12` per full calendar month of leave. Partial months never combine across periods.
+
+**6. Vacation types**
+
+Eight vacation types distinguish how time off affects your budget:
+
+| Type | Budget impact |
+|------|--------------|
+| `urlaub` | Consumes main vacation budget |
+| `bildungsurlaub` | Separate counter (default 0, enabled in settings) |
+| `kur`, `sabbatical`, `mutterschaftsurlaub`, `sonderurlaub` | Informational only |
+| `unbezahlterUrlaub`, `elternzeit` | Reduces vacation entitlement (§ 17) |
+
+**7. iCal export**
+
+Vacation periods can be exported as RFC 5545 `.ics` files for calendar apps (Apple Calendar, Outlook, Google Calendar). All-day events with correct `DTSTART`/`DTEND`, proper text escaping, and line folding.
+
+**8. Click-to-select in month view**
 
 Instead of a traditional date range picker, the month view uses a two-click flow:
 1. Click a day → selection mode activates (hint banner appears)
@@ -254,15 +292,15 @@ Instead of a traditional date range picker, the month view uses a two-click flow
 
 Clicking an existing vacation block opens the edit modal directly. This keeps vacation planning fast and visual.
 
-**6. feiertagejs for holiday computation**
+**9. feiertagejs for holiday computation**
 
 All public holidays are computed via [`feiertagejs`](https://www.npmjs.com/package/feiertagejs), a zero-dependency TypeScript library that handles all 16 German states with their specific holidays, movable Easter-dependent dates, and even region-specific holidays (e.g. Augsburger Friedensfest).
 
-**7. CSV import/export with handwritten parser**
+**10. CSV import/export with handwritten parser**
 
 CSV files use UTF-8 with BOM for correct Excel handling, semicolons as delimiters (German Excel convention), and support flexible date formats on import (`YYYY-MM-DD`, `DD.MM.YYYY`, `MM/DD/YYYY`). The parser is handwritten (~80 lines) — no library dependency.
 
-**8. Vacation period display**
+**11. Vacation period display**
 
 - Full vacation days are highlighted with a solid `--color-primary` background
 - Half-day vacations show a diagonal stripe pattern in the year view and a `(½)` suffix in lists

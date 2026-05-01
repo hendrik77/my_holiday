@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useStore } from '../state/store';
+import { useUIStore } from '../state/store';
 import { useT } from '../i18n/useT';
 import {
   dismissToast,
@@ -18,11 +18,11 @@ export function ToastContainer() {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        useStore.getState().undo();
+        useUIStore.getState()._popUndo();
       }
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
         e.preventDefault();
-        useStore.getState().redo();
+        useUIStore.getState()._popRedo();
       }
     };
     window.addEventListener('keydown', handler);

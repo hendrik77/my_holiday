@@ -1,4 +1,6 @@
 import Database from 'better-sqlite3';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import type { PeriodRow, CreatePeriodInput, Settings, SettingsUpdate } from './types';
 
 /** Initialize the database schema */
@@ -40,6 +42,7 @@ export function initDb(db: Database.Database): void {
 
 /** Create a production database instance (SQLite file) */
 export function createDb(dbPath: string): Database.Database {
+  mkdirSync(dirname(dbPath), { recursive: true });
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   initDb(db);

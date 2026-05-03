@@ -3,7 +3,7 @@ import { useUIStore } from '../state/store';
 import { usePeriods, useSettings, useDeletePeriod } from '../api/hooks';
 import {
   getFirstDayOfMonth, getDaysInMonth, isPublicHoliday, getHolidayName,
-  toISODate, parseISODate, countWorkDays, countVacationWorkDaysInYear,
+  toISODate, parseISODate, countVacationWorkDaysInYear,
 } from '../utils/calendar';
 import { isSchoolHoliday } from '../data/schoolHolidays';
 import type { VacationPeriod } from '../types';

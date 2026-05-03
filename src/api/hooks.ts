@@ -7,7 +7,7 @@ import {
   fetchSettings,
   updateSettings,
 } from './client';
-import type { PeriodRow, Settings, SettingsUpdate } from '../../server/types';
+import type { PeriodRow, SettingsUpdate } from '../../server/types';
 import type { CreatePeriodInput } from '../../server/types';
 
 // ── Periods ──────────────────────────────────────────────────────
@@ -24,8 +24,7 @@ export function useCreatePeriod() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreatePeriodInput) => createPeriod(input),
-    onSuccess: (_data, _vars) => {
-      // Invalidate all period queries to refetch
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['periods'] });
     },
   });

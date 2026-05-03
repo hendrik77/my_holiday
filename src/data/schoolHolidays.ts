@@ -52,8 +52,6 @@ export async function fetchSchoolHolidays(
   state: GermanState,
   year: number
 ): Promise<SchoolHolidayPeriod[]> {
-  const key = `${state}-${year}`;
-
   try {
     const res = await fetch(`${API_BASE}/${state}/${year}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

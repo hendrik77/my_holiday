@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+
 import { Nav } from './components/Nav';
 import { Dashboard } from './components/Dashboard';
 import { YearView } from './components/YearView';
@@ -12,10 +13,12 @@ import './App.css';
 
 function App() {
   const view = useUIStore((s) => s.view);
+  const storeTheme = useUIStore((s) => s.theme);
   const { data: settings } = useSettings();
-  const theme = settings?.theme || useUIStore((s) => s.theme);
+  const theme = settings?.theme || storeTheme;
   const employmentStartDate = settings?.employmentStartDate;
-  const [showWizard, setShowWizard] = useState(false);
+  const [wizardDismissed, setWizardDismissed] = useState(false);
+  const showWizard = !!settings && !employmentStartDate && !wizardDismissed;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -33,13 +36,6 @@ function App() {
     }
   }, [theme]);
 
-  // Show first-run wizard when settings loaded and employment start date is not set
-  useEffect(() => {
-    if (settings && !employmentStartDate) {
-      setShowWizard(true);
-    }
-  }, [settings, employmentStartDate]);
-
   return (
     <div className="app">
       <Nav />
@@ -50,7 +46,7 @@ function App() {
         {view === 'list' && <ListView />}
       </main>
       <ToastContainer />
-      {showWizard && <FirstRunWizard onClose={() => setShowWizard(false)} />}
+      {showWizard && <FirstRunWizard onClose={() => setWizardDismissed(true)} />}
     </div>
   );
 }

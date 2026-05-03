@@ -5,7 +5,7 @@ import { downloadCSV, parseImportCSV } from '../utils/export';
 import { generateICS } from '../utils/ics';
 import { usePeriods, useCreatePeriod, useSettings } from '../api/hooks';
 import { SettingsModal } from './SettingsModal';
-true
+import { useT } from '../i18n/useT';
 
 const views: { key: ViewType; labelKey: string }[] = [
   { key: 'dashboard', labelKey: 'nav.overview' },
@@ -25,7 +25,6 @@ export function Nav() {
   const [showSettings, setShowSettings] = useState(false);
 
   const handleExport = () => {
-    const totalDays = settings?.totalDays ?? 30;
     const state = (settings?.state as 'HE') || 'HE';
     downloadCSV(periods, year, state, t);
   };

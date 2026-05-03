@@ -95,7 +95,7 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
             <input type="text" className="form-input" placeholder={t('vacationModal.notePlaceholder')} value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
           <div className="form-group">
-            <label className="form-label">Typ</label>
+            <label className="form-label">{t('vacationModal.type')}</label>
             <select className="form-input" value={type} onChange={(e) => setType(e.target.value as VacationType)}>
               {VACATION_TYPES.map((vt) => (
                 <option key={vt} value={vt}>{t(`vacationTypes.${vt}`)}</option>

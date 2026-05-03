@@ -56,7 +56,7 @@ function rowToPeriod(row: Record<string, unknown>): PeriodRow {
     endDate: row.end_date as string,
     note: row.note as string,
     halfDay: (row.half_day as number) === 1,
-    type: (row.type as string) || 'urlaub',
+    type: ((row.type as string) || 'urlaub') as PeriodRow['type'],
     changedAt: row.changed_at as string,
   };
 }

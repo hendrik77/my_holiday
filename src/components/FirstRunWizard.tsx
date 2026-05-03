@@ -16,6 +16,7 @@ export function FirstRunWizard({ onClose }: Props) {
   const updateSettings = useUpdateSettings();
 
   const [step, setStep] = useState(0);
+  const [stepError, setStepError] = useState<string | null>(null);
 
   const [emplStart, setEmplStart] = useState('');
   const [emplEnd, setEmplEnd] = useState('');
@@ -29,8 +30,15 @@ export function FirstRunWizard({ onClose }: Props) {
   const canGoBack = step > 0;
   const isLastStep = step === TOTAL_STEPS - 1;
 
-  const handleNext = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS - 1));
-  const handleBack = () => setStep((s) => Math.max(s - 1, 0));
+  const handleNext = () => {
+    if (step === 0 && !emplStart) {
+      setStepError(t('firstRun.startDateRequired'));
+      return;
+    }
+    setStepError(null);
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS - 1));
+  };
+  const handleBack = () => { setStepError(null); setStep((s) => Math.max(s - 1, 0)); };
 
   const handleFinish = () => {
     updateSettings.mutate({
@@ -40,8 +48,10 @@ export function FirstRunWizard({ onClose }: Props) {
       totalDays: parseInt(days, 10) || 30,
       carryOverDeadline: deadline,
       carryOverMaxDays: noCarryOverCap ? null : (parseInt(maxCarryOver, 10) || null),
+    }, {
+      onSuccess: onClose,
+      onError: () => setStepError(t('firstRun.saveError')),
     });
-    onClose();
   };
 
   return (
@@ -94,7 +104,7 @@ export function FirstRunWizard({ onClose }: Props) {
             <div className="wizard-step">
               <h4 className="wizard-step-title">{t('firstRun.step2')}</h4>
               <div className="form-group">
-                <label className="form-label">Bundesland</label>
+                <label className="form-label">{t('settings.state')}</label>
                 <select
                   className="form-input"
                   value={selectedState}
@@ -166,6 +176,8 @@ export function FirstRunWizard({ onClose }: Props) {
             </div>
           )}
         </div>
+
+        {stepError && <div className="form-error" style={{ padding: '0 var(--space-xl)' }}>{stepError}</div>}
 
         <div className="modal-footer wizard-footer">
           <div>

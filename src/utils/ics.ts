@@ -30,18 +30,25 @@ function escapeText(value: string): string {
  * Continuation lines start with a single space.
  */
 function foldLine(line: string): string {
-  if (line.length <= 75) return line;
+  const enc = new TextEncoder();
+  if (enc.encode(line).length <= 75) return line;
 
   const result: string[] = [];
-  let remaining = line;
+  let currentLine = '';
+  let currentBytes = 0;
 
-  while (remaining.length > 75) {
-    result.push(remaining.slice(0, 75));
-    remaining = ' ' + remaining.slice(75);
+  for (const char of line) {
+    const charBytes = enc.encode(char).length;
+    if (currentBytes + charBytes > 75) {
+      result.push(currentLine);
+      currentLine = ' ' + char;
+      currentBytes = 1 + charBytes;
+    } else {
+      currentLine += char;
+      currentBytes += charBytes;
+    }
   }
-  if (remaining.length > 0) {
-    result.push(remaining);
-  }
+  if (currentLine.length > 0) result.push(currentLine);
 
   return result.join('\r\n');
 }
@@ -60,9 +67,9 @@ function toICSDate(date: Date): string {
  * Format a Date as ICS DATE-TIME value in UTC: YYYYMMDDTHHMMSSZ
  */
 function toICSDateTime(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
   const h = String(date.getUTCHours()).padStart(2, '0');
   const min = String(date.getUTCMinutes()).padStart(2, '0');
   const s = String(date.getUTCSeconds()).padStart(2, '0');

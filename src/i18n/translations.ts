@@ -75,6 +75,7 @@ export const translations = {
       halfDay: 'Halber Tag (½ Arbeitstag)',
       halfDayHint: 'Ein halber Tag kann nur für einzelne Tage gebucht werden.',
       workdayHint: 'WE, Feiertage nicht gezählt; 24.12. & 31.12. zählen als ½ Tag',
+      type: 'Typ',
       cancel: 'Abbrechen',
       save: 'Speichern',
       plan: 'Urlaub planen',
@@ -150,6 +151,8 @@ export const translations = {
       back: 'Zurück',
       finish: 'Fertigstellen',
       hint: 'Lass uns dein Profil einrichten.',
+      saveError: 'Einstellungen konnten nicht gespeichert werden.',
+      startDateRequired: 'Bitte gib ein Beschäftigungsstartdatum ein.',
     },
     employment: {
       startDate: 'Beschäftigt seit',
@@ -249,6 +252,7 @@ export const translations = {
       halfDay: 'Half Day (½ work day)',
       halfDayHint: 'Half days can only be booked for single days.',
       workdayHint: 'Weekends & holidays excluded; Dec 24 & Dec 31 count as ½ day',
+      type: 'Type',
       cancel: 'Cancel',
       save: 'Save',
       plan: 'Plan Vacation',
@@ -324,6 +328,8 @@ export const translations = {
       back: 'Back',
       finish: 'Finish',
       hint: "Let's set up your profile.",
+      saveError: 'Could not save settings.',
+      startDateRequired: 'Please enter an employment start date.',
     },
     employment: {
       startDate: 'Employed since',

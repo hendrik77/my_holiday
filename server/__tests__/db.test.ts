@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { initDb, getAllPeriods, getPeriodsByYear, createPeriod, updatePeriod, deletePeriod, getSettings, updateSettings } from '../db';
-import type { PeriodRow, SettingsRow } from '../types';
 
 const TEST_DB_PATH = ':memory:';
 

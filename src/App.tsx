@@ -13,9 +13,8 @@ import './App.css';
 
 function App() {
   const view = useUIStore((s) => s.view);
-  const storeTheme = useUIStore((s) => s.theme);
+  const theme = useUIStore((s) => s.theme);
   const { data: settings } = useSettings();
-  const theme = settings?.theme || storeTheme;
   const employmentStartDate = settings?.employmentStartDate;
   const [wizardDismissed, setWizardDismissed] = useState(false);
   const showWizard = !!settings && !employmentStartDate && !wizardDismissed;

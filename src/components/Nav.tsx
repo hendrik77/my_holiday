@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import './Nav.css';
 import { useUIStore } from '../state/store';
 import type { ViewType } from '../types';
 import { downloadCSV, parseImportCSV } from '../utils/export';

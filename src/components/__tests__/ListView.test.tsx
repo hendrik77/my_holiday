@@ -42,10 +42,9 @@ describe('ListView', () => {
     expect(screen.getByText('Arbeitstage')).toBeDefined();
   });
 
-  it('shows total row', () => {
+  it('shows total vacation row', () => {
     renderListView();
-    const totals = screen.getAllByText('Gesamt');
-    expect(totals.length).toBeGreaterThan(0);
+    expect(screen.getByText('Gesamt (Urlaub)')).toBeDefined();
   });
 
   it('shows year iCal export button in header', () => {

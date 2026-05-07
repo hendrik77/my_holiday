@@ -34,11 +34,16 @@ export function Dashboard() {
   const [showAdd, setShowAdd] = useState(false);
   const [editingPeriod, setEditingPeriod] = useState<VacationPeriod | null>(null);
 
+  const urlaubPeriods = useMemo(
+    () => periods.filter((p) => !p.type || p.type === 'urlaub'),
+    [periods],
+  );
+
   const usedDays = useMemo(() => {
-    return periods.reduce((sum, p) => {
+    return urlaubPeriods.reduce((sum, p) => {
       return sum + countVacationWorkDaysInYear(p, year, state);
     }, 0);
-  }, [periods, year, state]);
+  }, [urlaubPeriods, year, state]);
 
   const remainingDays = effectiveTotalDays - usedDays;
   const usedPercent = Math.min((usedDays / effectiveTotalDays) * 100, 100);
@@ -47,8 +52,8 @@ export function Dashboard() {
   const todayISO = toISODate(new Date());
 
   const carryOverUsed = useMemo(() => {
-    return countCarryOverUsed(periods, year, state, carryOverDays);
-  }, [periods, year, state, carryOverDays]);
+    return countCarryOverUsed(urlaubPeriods, year, state, carryOverDays);
+  }, [urlaubPeriods, year, state, carryOverDays]);
 
   const carryOverRemaining = carryOverDays - carryOverUsed;
   const deadline = carryOverDeadline(year);

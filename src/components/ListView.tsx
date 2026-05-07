@@ -2,23 +2,36 @@ import { useMemo, useState } from 'react';
 import { useUIStore } from '../state/store';
 import { usePeriods, useSettings, useDeletePeriod } from '../api/hooks';
 import { countVacationWorkDaysInYear, formatDateRange } from '../utils/calendar';
+import { computeProRataEntitlement, computeLeaveReduction } from '../utils/entitlement';
 import type { VacationPeriod } from '../types';
 import { VacationModal } from './VacationModal';
 import { showToast } from './toastStore';
 import { useT } from '../i18n/useT';
 import { generateICS, downloadSingleICS } from '../utils/ics';
 import './ListView.css';
+import './TypeBadges.css';
 
 export function ListView() {
   const year = useUIStore((s) => s.year);
   const { data: periods = [] } = usePeriods(year);
   const { data: settings } = useSettings();
-  const totalDays = settings?.totalDays ?? 30;
+  const baseTotalDays = settings?.totalDays ?? 30;
   const state = (settings?.state as 'HE') || 'HE';
   const deletePeriod = useDeletePeriod();
   const { t } = useT();
   const [editingPeriod, setEditingPeriod] = useState<VacationPeriod | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+
+  const effectiveTotalDays = useMemo(() => {
+    const proRata = computeProRataEntitlement(
+      settings?.employmentStartDate ?? '',
+      settings?.employmentEndDate ?? '',
+      year,
+      baseTotalDays,
+    );
+    const reduction = computeLeaveReduction(periods, year, baseTotalDays);
+    return Math.max(0, proRata - reduction);
+  }, [settings, year, periods, baseTotalDays]);
 
   const yearPeriods = useMemo(() => {
     const yearStart = `${year}-01-01`;
@@ -27,8 +40,12 @@ export function ListView() {
   }, [periods, year]);
 
   const totalUsed = useMemo(() => {
-    return yearPeriods.reduce((sum, p) => sum + countVacationWorkDaysInYear(p, year, state), 0);
+    return yearPeriods
+      .filter((p) => !p.type || p.type === 'urlaub')
+      .reduce((sum, p) => sum + countVacationWorkDaysInYear(p, year, state), 0);
   }, [yearPeriods, year, state]);
+
+  const formatDays = (n: number) => n % 1 === 0 ? String(n) : n.toFixed(1).replace('.', ',');
 
   const handleRemove = (p: VacationPeriod) => {
     deletePeriod.mutate(p.id);
@@ -83,9 +100,13 @@ export function ListView() {
               {yearPeriods.map((p) => {
                 const days = countVacationWorkDaysInYear(p, year, state);
                 const daysLabel = days === 0.5 ? '0,5' : String(days);
+                const typeLabel = p.type && p.type !== 'urlaub' ? t(`vacationTypes.${p.type}`) : null;
                 return (
                   <tr key={p.id}>
-                    <td style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{formatDateRange(p.startDate, p.endDate)}{p.halfDay && ' (½)'}</td>
+                    <td style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>
+                      {formatDateRange(p.startDate, p.endDate)}{p.halfDay && ' (½)'}
+                      {typeLabel && <span className={`type-badge type-badge--${p.type}`}>{typeLabel}</span>}
+                    </td>
                     <td><strong>{daysLabel}</strong> <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>{t(days === 1 ? 'dashboard.days_one' : 'dashboard.days_other', { count: days })}</span></td>
                     <td><span className="list-note">{p.note || '—'}</span></td>
                     <td>
@@ -101,9 +122,9 @@ export function ListView() {
             </tbody>
             <tfoot>
               <tr>
-                <td style={{ fontWeight: 500 }}>{t('listView.total')}</td>
-                <td><strong>{totalUsed % 1 === 0 ? totalUsed : totalUsed.toFixed(1).replace('.', ',')}</strong> <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>{t('listView.ofDays', { total: totalDays })}</span></td>
-                <td colSpan={2}><span style={{ color: totalUsed > totalDays ? 'var(--color-primary)' : 'var(--color-success)', fontSize: 13 }}>{totalUsed > totalDays ? t('listView.over', { over: totalUsed - totalDays }) : t('listView.remaining', { remaining: totalDays - totalUsed })}</span></td>
+                <td style={{ fontWeight: 500 }}>{t('listView.totalVacation')}</td>
+                <td><strong>{formatDays(totalUsed)}</strong> <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>{t('listView.ofDays', { total: formatDays(effectiveTotalDays) })}</span></td>
+                <td colSpan={2}><span style={{ color: totalUsed > effectiveTotalDays ? 'var(--color-primary)' : 'var(--color-success)', fontSize: 13 }}>{totalUsed > effectiveTotalDays ? t('listView.over', { over: formatDays(totalUsed - effectiveTotalDays) }) : t('listView.remaining', { remaining: formatDays(effectiveTotalDays - totalUsed) })}</span></td>
               </tr>
             </tfoot>
           </table>

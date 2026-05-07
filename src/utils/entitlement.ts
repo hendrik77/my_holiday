@@ -117,6 +117,7 @@ export function computeLeaveReduction(
   const reducingTypes: Array<VacationPeriod['type']> = [
     'unbezahlterUrlaub',
     'elternzeit',
+    'sabbatical',
   ];
 
   let totalFullMonths = 0;
@@ -132,6 +133,5 @@ export function computeLeaveReduction(
     totalFullMonths += months;
   }
 
-  // Each month reduces by totalDays / 12, floored
-  return Math.floor((totalFullMonths / 12) * totalDays);
+  return (totalFullMonths / 12) * totalDays;
 }

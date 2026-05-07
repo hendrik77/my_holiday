@@ -210,9 +210,9 @@ describe('computeLeaveReduction', () => {
   });
 
   it('reduces by 1/12 for one full calendar month of unpaid leave', () => {
-    // One full month of unpaid leave → 30/12 = 2.5 days → floor to 2
+    // One full month of unpaid leave → 30/12 = 2.5 days
     const periods = [makePeriod('2026-03-01', '2026-03-31', 'unbezahlterUrlaub')];
-    expect(computeLeaveReduction(periods, 2026, 30)).toBe(2);
+    expect(computeLeaveReduction(periods, 2026, 30)).toBe(2.5);
   });
 
   it('reduces by 2/12 for two full calendar months of unpaid leave', () => {
@@ -223,7 +223,7 @@ describe('computeLeaveReduction', () => {
 
   it('reduces by 1/12 for one full calendar month of parental leave', () => {
     const periods = [makePeriod('2026-06-01', '2026-06-30', 'elternzeit')];
-    expect(computeLeaveReduction(periods, 2026, 30)).toBe(2);
+    expect(computeLeaveReduction(periods, 2026, 30)).toBe(2.5);
   });
 
   it('does not count partial months (no combining)', () => {
@@ -251,15 +251,33 @@ describe('computeLeaveReduction', () => {
   });
 
   it('clips leave periods to the target year', () => {
-    // Period: Dec 15 2025 to Jan 31 2026 → within 2026: Jan 1-31 = 1 full month
+    // Period: Dec 15 2025 to Jan 31 2026 → within 2026: Jan 1-31 = 1 full month → 30/12 = 2.5
     const periods = [makePeriod('2025-12-15', '2026-01-31', 'unbezahlterUrlaub')];
-    expect(computeLeaveReduction(periods, 2026, 30)).toBe(2);
+    expect(computeLeaveReduction(periods, 2026, 30)).toBe(2.5);
   });
 
-  it('ignores leave reduction types that are not unpaid/parental', () => {
-    // sabbatical is not a reduction type according to plan ("All other types are informational")
-    const periods = [makePeriod('2026-03-01', '2026-03-31', 'sabbatical')];
+  it('ignores leave types that do not reduce entitlement (sonderurlaub)', () => {
+    const periods = [makePeriod('2026-03-01', '2026-03-31', 'sonderurlaub')];
     expect(computeLeaveReduction(periods, 2026, 30)).toBe(0);
+  });
+
+  it('reduces by 1/12 for one full calendar month of sabbatical', () => {
+    const periods = [makePeriod('2026-03-01', '2026-03-31', 'sabbatical')];
+    expect(computeLeaveReduction(periods, 2026, 30)).toBe(2.5);
+  });
+
+  it('does not count a partial month of sabbatical', () => {
+    const periods = [makePeriod('2026-03-05', '2026-03-31', 'sabbatical')];
+    expect(computeLeaveReduction(periods, 2026, 30)).toBe(0);
+  });
+
+  it('combines sabbatical with elternzeit reductions', () => {
+    // 1 month sabbatical + 1 month elternzeit = 2 months → floor(2/12*30) = 5
+    const periods = [
+      makePeriod('2026-03-01', '2026-03-31', 'sabbatical'),
+      makePeriod('2026-05-01', '2026-05-31', 'elternzeit'),
+    ];
+    expect(computeLeaveReduction(periods, 2026, 30)).toBe(5);
   });
 
   it('uses non-standard totalDays', () => {
@@ -268,9 +286,9 @@ describe('computeLeaveReduction', () => {
     expect(computeLeaveReduction(periods, 2026, 24)).toBe(2);
   });
 
-  it('floors fractional reductions', () => {
-    // 1 month of 25 days/yr → 25/12 = 2.083 → 2
+  it('returns exact fractional reduction', () => {
+    // 1 month of 25 days/yr → 25/12 ≈ 2.0833
     const periods = [makePeriod('2026-03-01', '2026-03-31', 'unbezahlterUrlaub')];
-    expect(computeLeaveReduction(periods, 2026, 25)).toBe(2);
+    expect(computeLeaveReduction(periods, 2026, 25)).toBeCloseTo(25 / 12, 10);
   });
 });

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useUIStore } from '../state/store';
 import { usePeriods, useSettings } from '../api/hooks';
 import { countVacationWorkDaysInYear, countCarryOverUsed, carryOverDeadline, toISODate, formatDate, formatDateRange } from '../utils/calendar';
+import { computeProRataEntitlement, computeLeaveReduction } from '../utils/entitlement';
 import { VacationModal } from './VacationModal';
 import { useT } from '../i18n/useT';
 import './Dashboard.css';
@@ -14,7 +15,18 @@ export function Dashboard() {
   const year = useUIStore((s) => s.year);
   const { data: periods = [] } = usePeriods(year);
   const { data: settings } = useSettings();
-  const totalDays = settings?.totalDays ?? 30;
+  const baseTotalDays = settings?.totalDays ?? 30;
+  const effectiveTotalDays = useMemo(() => {
+    const proRata = computeProRataEntitlement(
+      settings?.employmentStartDate ?? '',
+      settings?.employmentEndDate ?? '',
+      year,
+      baseTotalDays,
+    );
+    const reduction = computeLeaveReduction(periods, year, baseTotalDays);
+    return Math.max(0, proRata - reduction);
+  }, [settings, year, periods, baseTotalDays]);
+  const isAdjusted = effectiveTotalDays !== baseTotalDays;
   const carryOverDays = settings?.carryOverDays ?? 0;
   const bildungsUrlaubDays = settings?.bildungsUrlaubDays ?? 0;
   const state = (settings?.state as 'HE') || 'HE';
@@ -28,9 +40,9 @@ export function Dashboard() {
     }, 0);
   }, [periods, year, state]);
 
-  const remainingDays = totalDays - usedDays;
-  const usedPercent = Math.min((usedDays / totalDays) * 100, 100);
-  const isOver = usedDays > totalDays;
+  const remainingDays = effectiveTotalDays - usedDays;
+  const usedPercent = Math.min((usedDays / effectiveTotalDays) * 100, 100);
+  const isOver = usedDays > effectiveTotalDays;
 
   const todayISO = toISODate(new Date());
 
@@ -62,7 +74,10 @@ export function Dashboard() {
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
   }, [periods]);
 
-  const formatUsed = usedDays % 1 === 0 ? usedDays : usedDays.toFixed(1).replace('.', ',');
+  const formatDays = (n: number) => n % 1 === 0 ? String(n) : n.toFixed(1).replace('.', ',');
+  const formatUsed = formatDays(usedDays);
+  const formatEffective = formatDays(effectiveTotalDays);
+  const formatRemaining = formatDays(Math.max(0, remainingDays));
 
   return (
     <div className="dashboard">
@@ -79,13 +94,16 @@ export function Dashboard() {
         </div>
         <div className="stat-card remaining">
           <div className="stat-label">{t('dashboard.remaining')}</div>
-          <div className="stat-value">{Math.max(0, remainingDays)}</div>
+          <div className="stat-value">{formatRemaining}</div>
           <div className="stat-sub">{t('dashboard.days')}</div>
         </div>
         <div className="stat-card total">
           <div className="stat-label">{t('dashboard.total')}</div>
-          <div className="stat-value">{totalDays}</div>
-          <div className="stat-sub">{t('dashboard.vacationDays')}</div>
+          <div className="stat-value">{formatEffective}</div>
+          <div className="stat-sub">
+            {t('dashboard.vacationDays')}
+            {isAdjusted && <span className="stat-adjusted"> ({t('dashboard.adjusted')})</span>}
+          </div>
         </div>
       </div>
 
@@ -95,7 +113,7 @@ export function Dashboard() {
         </div>
         <div className="progress-labels">
           <span>{t('dashboard.usedLabel', { used: formatUsed })}</span>
-          <span>{t('dashboard.remainingLabel', { remaining: Math.max(0, remainingDays) })}</span>
+          <span>{t('dashboard.remainingLabel', { remaining: formatRemaining })}</span>
         </div>
       </div>
 

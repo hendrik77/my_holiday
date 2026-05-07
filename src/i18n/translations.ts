@@ -38,6 +38,7 @@ export const translations = {
       days_one: '{count} Tag',
       days_other: '{count} Tage',
       days_half: '0,5 Tage',
+      adjusted: 'angepasst',
     },
     monthView: {
       yearView: 'Jahresansicht',
@@ -226,6 +227,7 @@ export const translations = {
       days_one: '{count} day',
       days_other: '{count} days',
       days_half: '0.5 days',
+      adjusted: 'adjusted',
     },
     monthView: {
       yearView: 'Year View',

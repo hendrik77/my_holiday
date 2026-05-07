@@ -6,6 +6,7 @@ import type { VacationPeriod } from '../types';
 import { VacationModal } from './VacationModal';
 import { showToast } from './toastStore';
 import { useT } from '../i18n/useT';
+import { generateICS, downloadSingleICS } from '../utils/ics';
 import './ListView.css';
 
 export function ListView() {
@@ -34,11 +35,32 @@ export function ListView() {
     showToast(t('toast.deleted'));
   };
 
+  const handleExportIcs = () => {
+    const ics = generateICS(yearPeriods, year);
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const ts = new Date().toISOString().slice(0, 10);
+    a.download = `urlaub-${year}_${ts}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="list-view">
       <div className="list-header">
         <h2>{t('listView.title', { year })}</h2>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>{t('listView.addVacation')}</button>
+        <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+          {yearPeriods.length > 0 && (
+            <button className="btn btn-secondary" onClick={handleExportIcs} title={t('listView.exportIcsTitle')}>
+              {t('listView.exportIcs')}
+            </button>
+          )}
+          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>{t('listView.addVacation')}</button>
+        </div>
       </div>
 
       {yearPeriods.length === 0 ? (
@@ -68,6 +90,7 @@ export function ListView() {
                     <td><span className="list-note">{p.note || '—'}</span></td>
                     <td>
                       <div className="list-actions">
+                        <button className="btn-ghost btn-sm" title={t('listView.downloadIcs')} onClick={() => downloadSingleICS(p)}>📅</button>
                         <button className="btn-ghost btn-sm" onClick={() => setEditingPeriod(p)}>✎</button>
                         <button className="btn-danger btn-sm" onClick={() => handleRemove(p)}>✕</button>
                       </div>

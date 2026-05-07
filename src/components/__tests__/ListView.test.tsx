@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nProvider } from '../../i18n/context';
 import { ListView } from '../ListView';
@@ -46,5 +46,29 @@ describe('ListView', () => {
     renderListView();
     const totals = screen.getAllByText('Gesamt');
     expect(totals.length).toBeGreaterThan(0);
+  });
+
+  it('shows year iCal export button in header', () => {
+    renderListView();
+    expect(screen.getByTitle(/iCal.*exportieren|Export iCal/i)).toBeDefined();
+  });
+
+  it('shows per-row iCal download button for each period', () => {
+    renderListView();
+    const icalBtns = screen.getAllByTitle(/Als iCal herunterladen|Download as iCal/i);
+    expect(icalBtns.length).toBe(1);
+  });
+
+  it('year iCal button triggers download', () => {
+    const createObjectURL = vi.fn(() => 'blob:test');
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(globalThis, 'URL', {
+      value: { createObjectURL, revokeObjectURL },
+      writable: true,
+    });
+    renderListView();
+    const btn = screen.getByTitle(/iCal.*exportieren|Export iCal/i);
+    fireEvent.click(btn);
+    expect(createObjectURL).toHaveBeenCalled();
   });
 });

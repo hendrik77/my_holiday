@@ -1,19 +1,23 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useUIStore } from '../state/store';
-import { useSettings, useUpdateSettings } from '../api/hooks';
+import { useSettings, useUpdateSettings, useCreatePeriod, usePeriods } from '../api/hooks';
 import { GERMAN_STATES } from '../data/holidays';
 import type { GermanState } from '../data/holidays';
 import { useT } from '../i18n/useT';
+import { downloadCSV, parseImportCSV } from '../utils/export';
 import './Modal.css';
 import type { Language } from '../i18n/translations';
 
 interface SettingsModalProps { onClose: () => void; }
 
 export function SettingsModal({ onClose }: SettingsModalProps) {
-  const { theme, language, setTheme, setLanguage } = useUIStore();
+  const { theme, language, year, setTheme, setLanguage } = useUIStore();
   const { data: settings } = useSettings();
+  const { data: periods = [] } = usePeriods(year);
   const updateSettings = useUpdateSettings();
+  const createPeriod = useCreatePeriod();
   const { t } = useT();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [days, setDays] = useState(String(settings?.totalDays ?? 30));
   const [carryOver, setCarryOver] = useState(String(settings?.carryOverDays ?? 0));
@@ -22,6 +26,36 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark' | 'auto'>(theme);
   const [error, setError] = useState<string | null>(null);
   const [carryOverError, setCarryOverError] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  const handleExport = () => {
+    const state = (settings?.state as 'HE') || 'HE';
+    downloadCSV(periods, year, state, t);
+  };
+
+  const handleImport = () => { fileInputRef.current?.click(); };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = reader.result as string;
+      const result = parseImportCSV(text, t);
+      if (result.periods.length > 0) {
+        const confirmed = window.confirm(t('settings.importConfirm', { count: result.periods.length }));
+        if (confirmed) {
+          for (const p of result.periods) createPeriod.mutate(p);
+          setImportError(null);
+        }
+      }
+      if (result.errors.length > 0) setImportError(result.errors.join('\n'));
+      else setImportError(null);
+    };
+    reader.onerror = () => setImportError(t('settings.importErrorRead'));
+    reader.readAsText(file, 'UTF-8');
+    e.target.value = '';
+  };
 
   const handleSave = () => {
     const num = parseInt(days, 10);
@@ -75,6 +109,15 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               <option value="de">Deutsch</option>
               <option value="en">English</option>
             </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">{t('settings.importExport')}</label>
+            <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+              <button className="btn btn-secondary" onClick={handleImport} title={t('settings.importTitle')}>{t('settings.import')}</button>
+              <button className="btn btn-secondary" onClick={handleExport} title={t('settings.exportTitle')}>{t('settings.export')}</button>
+            </div>
+            {importError && <div className="form-hint" style={{ color: 'var(--color-primary)', whiteSpace: 'pre-line' }}>{importError}</div>}
+            <input ref={fileInputRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={handleFileChange} />
           </div>
         </div>
         <div className="modal-footer">

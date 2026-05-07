@@ -4,6 +4,7 @@ import { usePeriods, useSettings, useCreatePeriod, useUpdatePeriod } from '../ap
 import type { VacationPeriod, VacationType } from '../types';
 import { countVacationWorkDays, hasOverlap } from '../utils/calendar';
 import { useT } from '../i18n/useT';
+import { downloadSingleICS } from '../utils/ics';
 import './Modal.css';
 
 const VACATION_TYPES: VacationType[] = [
@@ -111,8 +112,17 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
           <div className="form-hint"><strong>{workDaysDisplay}</strong> {t('vacationModal.workdayHint')}</div>
         </div>
         <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>{t('vacationModal.cancel')}</button>
-          <button className="btn btn-primary" onClick={handleSave}>{isEditing ? t('vacationModal.save') : t('vacationModal.plan')}</button>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+            {isEditing && initial && (
+              <button className="btn btn-secondary" onClick={() => downloadSingleICS({ ...initial, startDate, endDate, note, halfDay, type })}>
+                {t('vacationModal.downloadIcs')}
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+            <button className="btn btn-secondary" onClick={onClose}>{t('vacationModal.cancel')}</button>
+            <button className="btn btn-primary" onClick={handleSave}>{isEditing ? t('vacationModal.save') : t('vacationModal.plan')}</button>
+          </div>
         </div>
       </div>
     </div>

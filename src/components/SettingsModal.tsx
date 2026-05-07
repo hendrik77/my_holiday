@@ -24,6 +24,8 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const [selectedState, setSelectedState] = useState<GermanState>((settings?.state as GermanState) || 'HE');
   const [selectedLanguage, setSelectedLanguage] = useState<Language>(language);
   const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark' | 'auto'>(theme);
+  const [emplStart, setEmplStart] = useState(settings?.employmentStartDate ?? '');
+  const [emplEnd, setEmplEnd] = useState(settings?.employmentEndDate ?? '');
   const [error, setError] = useState<string | null>(null);
   const [carryOverError, setCarryOverError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -63,7 +65,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     const co = parseInt(carryOver, 10);
     if (isNaN(co) || co < 0 || co > 60) { setCarryOverError(t('settings.carryOverError')); return; }
 
-    updateSettings.mutate({ totalDays: num, carryOverDays: co, state: selectedState });
+    updateSettings.mutate({ totalDays: num, carryOverDays: co, state: selectedState, employmentStartDate: emplStart, employmentEndDate: emplEnd });
     setLanguage(selectedLanguage);
     setTheme(selectedTheme);
     onClose();
@@ -94,6 +96,15 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               {GERMAN_STATES.map((s) => (<option key={s.code} value={s.code}>{t(`states.${s.code}`)}</option>))}
             </select>
             <div className="form-hint">{t('settings.stateHint')}</div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">{t('employment.startDate')}</label>
+            <input type="date" name="employmentStartDate" className="form-input" value={emplStart} onChange={(e) => setEmplStart(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">{t('employment.endDate')}</label>
+            <input type="date" name="employmentEndDate" className="form-input" value={emplEnd} onChange={(e) => setEmplEnd(e.target.value)} />
+            <div className="form-hint">{t('employment.endDateHint')}</div>
           </div>
           <div className="form-group">
             <label className="form-label">{t('settings.theme')}</label>

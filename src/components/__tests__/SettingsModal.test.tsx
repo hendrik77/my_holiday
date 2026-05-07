@@ -4,13 +4,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nProvider } from '../../i18n/context';
 import { SettingsModal } from '../SettingsModal';
 
+const mockMutate = vi.fn();
+
 vi.mock('../../api/hooks', () => ({
   useSettings: () => ({
-    data: { totalDays: 30, state: 'HE', carryOverDays: 0, carryOverDeadline: '03-31', carryOverMaxDays: null, employmentStartDate: '', employmentEndDate: '', bildungsUrlaubDays: 0 },
+    data: { totalDays: 30, state: 'HE', carryOverDays: 0, carryOverDeadline: '03-31', carryOverMaxDays: null, employmentStartDate: '2020-03-01', employmentEndDate: '', bildungsUrlaubDays: 0 },
     isLoading: false,
   }),
   usePeriods: () => ({ data: [], isLoading: false }),
-  useUpdateSettings: () => ({ mutate: vi.fn() }),
+  useUpdateSettings: () => ({ mutate: mockMutate }),
   useCreatePeriod: () => ({ mutate: vi.fn() }),
 }));
 
@@ -26,7 +28,7 @@ function renderModal(onClose = vi.fn()) {
 }
 
 describe('SettingsModal', () => {
-  afterEach(() => cleanup());
+  afterEach(() => { cleanup(); mockMutate.mockClear(); });
 
   it('renders the settings title', () => {
     renderModal();
@@ -45,5 +47,37 @@ describe('SettingsModal', () => {
     const clickSpy = vi.spyOn(fileInput, 'click');
     fireEvent.click(screen.getByTitle(/Urlaubsdaten aus CSV importieren|Import vacation data from CSV/));
     expect(clickSpy).toHaveBeenCalled();
+  });
+
+  it('shows employment start date field with existing value', () => {
+    renderModal();
+    expect(screen.getByText(/Beschäftigt seit|Employed since/)).toBeDefined();
+    const input = document.querySelector('input[name="employmentStartDate"]') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('2020-03-01');
+  });
+
+  it('shows employment end date field', () => {
+    renderModal();
+    expect(screen.getByText(/Beschäftigt bis|Employed until/)).toBeDefined();
+    expect(document.querySelector('input[name="employmentEndDate"]')).not.toBeNull();
+  });
+
+  it('saves employment dates on Save', () => {
+    renderModal();
+    fireEvent.click(screen.getByText(/Speichern|Save/));
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ employmentStartDate: '2020-03-01' })
+    );
+  });
+
+  it('saves changed employment start date', () => {
+    renderModal();
+    const input = document.querySelector('input[name="employmentStartDate"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '2019-06-15' } });
+    fireEvent.click(screen.getByText(/Speichern|Save/));
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ employmentStartDate: '2019-06-15' })
+    );
   });
 });

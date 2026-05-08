@@ -7,3 +7,7 @@ coverage
 data/*.db*
 test-results/
 playwright-report/
+
+.claude/
+.playwright/
+.playwright-cli/

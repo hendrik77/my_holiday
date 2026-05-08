@@ -1,4 +1,38 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+/** Walk the 4-step first-run wizard with valid defaults. Idempotent —
+ *  if a previous test already completed the wizard (settings persisted in
+ *  the shared test DB), this is a no-op apart from the page load. */
+async function completeWizard(page: Page): Promise<void> {
+  await page.goto('/');
+
+  const wizardHeading = page.locator('text=Willkommen bei My Holiday');
+  // Give the wizard up to 3s to appear; if it doesn't, settings are already
+  // persisted and we land directly on the dashboard.
+  try {
+    await wizardHeading.waitFor({ state: 'visible', timeout: 3000 });
+  } catch {
+    return;
+  }
+
+  // Step 0 → 1: fill required emplStart, advance, wait for step indicator.
+  const dateInput = page.locator('input[type="date"]').first();
+  await dateInput.fill('2020-01-01');
+  await page.click('text=Weiter');
+  await expect(page.locator('text=2 / 4')).toBeVisible();
+
+  // Step 1 → 2: keep default Bundesland (HE).
+  await page.click('text=Weiter');
+  await expect(page.locator('text=3 / 4')).toBeVisible();
+
+  // Step 2 → 3: keep default 30 vacation days.
+  await page.click('text=Weiter');
+  await expect(page.locator('text=4 / 4')).toBeVisible();
+
+  // Step 3 → finish: keep default carry-over policy, save settings.
+  await page.click('text=Fertigstellen');
+  await expect(wizardHeading).toBeHidden();
+}
 
 test.describe('My Holiday smoke tests', () => {
   test('app loads and shows welcome wizard', async ({ page }) => {
@@ -9,34 +43,13 @@ test.describe('My Holiday smoke tests', () => {
   });
 
   test('first-run wizard completes and lands on dashboard', async ({ page }) => {
-    await page.goto('/');
-
-    // Step 1: Employment — leave defaults, click Next
-    await page.click('text=Weiter');
-
-    // Step 2: Bundesland — leave default, click Next
-    await page.click('text=Weiter');
-
-    // Step 3: Vacation days — leave default 30, click Next
-    await page.click('text=Weiter');
-
-    // Step 4: Carry-over policy — leave defaults, click Finish
-    await page.click('text=Fertigstellen');
-
-    // Should land on Dashboard
-    await expect(page.locator('text=Übersicht')).toBeVisible();
+    await completeWizard(page);
+    // Should land on Dashboard — the heading is unique (the nav also has "Übersicht")
+    await expect(page.getByRole('heading', { name: /Übersicht/ })).toBeVisible();
   });
 
   test('plan a vacation via dashboard', async ({ page }) => {
-    await page.goto('/');
-
-    // Complete wizard first
-    for (let i = 0; i < 4; i++) {
-      const btn = page.locator('text=Weiter');
-      if (await btn.isVisible()) await btn.click();
-    }
-    const finishBtn = page.locator('text=Fertigstellen');
-    if (await finishBtn.isVisible()) await finishBtn.click();
+    await completeWizard(page);
 
     // Click "Plan Vacation"
     await page.click('text=+ Urlaub planen');
@@ -56,23 +69,15 @@ test.describe('My Holiday smoke tests', () => {
       await textInput.fill('E2E Test Sommerurlaub');
     }
 
-    // Submit
-    await page.click('text=Urlaub planen');
+    // Submit (scope to the modal — dashboard also has a "+ Urlaub planen" button)
+    await modal.getByRole('button', { name: 'Urlaub planen' }).click();
 
     // Vacation should appear in upcoming list
     await expect(page.locator('text=E2E Test Sommerurlaub')).toBeVisible();
   });
 
   test('switch views', async ({ page }) => {
-    await page.goto('/');
-
-    // Complete wizard
-    for (let i = 0; i < 4; i++) {
-      const btn = page.locator('text=Weiter');
-      if (await btn.isVisible()) await btn.click();
-    }
-    const finishBtn = page.locator('text=Fertigstellen');
-    if (await finishBtn.isVisible()) await finishBtn.click();
+    await completeWizard(page);
 
     // Click on "Jahresansicht"
     await page.click('text=Jahresansicht');
@@ -88,19 +93,12 @@ test.describe('My Holiday smoke tests', () => {
 
     // Back to Übersicht
     await page.click('text=Übersicht');
-    await expect(page.locator('text=Genutzt')).toBeVisible();
+    // "Genutzt" appears as a stat-card label and as part of "0 genutzt" — match exact.
+    await expect(page.getByText('Genutzt', { exact: true })).toBeVisible();
   });
 
   test('settings modal opens and can change values', async ({ page }) => {
-    await page.goto('/');
-
-    // Complete wizard
-    for (let i = 0; i < 4; i++) {
-      const btn = page.locator('text=Weiter');
-      if (await btn.isVisible()) await btn.click();
-    }
-    const finishBtn = page.locator('text=Fertigstellen');
-    if (await finishBtn.isVisible()) await finishBtn.click();
+    await completeWizard(page);
 
     // Open settings
     await page.click('button[title="Einstellungen"]');

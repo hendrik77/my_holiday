@@ -109,6 +109,37 @@ describe('generateICSForPeriod', () => {
     expect(result).toContain('DESCRIPTION:Line1\\nLine2');
   });
 
+  it('escapes carriage returns in text fields (RFC 5545 §3.3.11)', () => {
+    const result = generateICSForPeriod(
+      { id: 'test-9b', startDate: '2026-06-01', endDate: '2026-06-05', note: 'Line1\rLine2' },
+    );
+
+    expect(result).toContain('DESCRIPTION:Line1\\nLine2');
+  });
+
+  it('escapes CRLF as a single \\n in text fields', () => {
+    const result = generateICSForPeriod(
+      { id: 'test-9c', startDate: '2026-06-01', endDate: '2026-06-05', note: 'Line1\r\nLine2' },
+    );
+
+    expect(result).toContain('DESCRIPTION:Line1\\nLine2');
+  });
+
+  it('prevents ICS injection via CRLF in note (no raw line break in output)', () => {
+    const result = generateICSForPeriod(
+      {
+        id: 'test-9d',
+        startDate: '2026-06-01',
+        endDate: '2026-06-05',
+        note: 'Innocent\r\nSUMMARY:Injected',
+      },
+    );
+
+    const lines = result.split('\r\n');
+    const injected = lines.find((l) => l === 'SUMMARY:Injected');
+    expect(injected).toBeUndefined();
+  });
+
   it('folds long lines (>75 chars) according to RFC 5545', () => {
     const result = generateICSForPeriod(
       {

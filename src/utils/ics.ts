@@ -16,13 +16,15 @@ const TYPE_LABELS: Record<string, string> = {
 /**
  * Escape special characters for iCalendar text values.
  * RFC 5545 §3.3.11: escape \, ;, \n, \\
+ * CR / CRLF / LF are all encoded as a single literal \n to prevent
+ * line-break injection into the calendar stream.
  */
 function escapeText(value: string): string {
   return value
     .replace(/\\/g, '\\\\')
     .replace(/;/g, '\\;')
     .replace(/,/g, '\\,')
-    .replace(/\n/g, '\\n');
+    .replace(/\r\n|\r|\n/g, '\\n');
 }
 
 /**

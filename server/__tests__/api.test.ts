@@ -46,6 +46,63 @@ describe('API /api/v1', () => {
         .send({ totalDays: 28, state: 'BY' });
       expect(res.status).toBe(200);
     });
+
+    it('rejects unknown German state codes with 400', async () => {
+      const res = await request(app)
+        .put('/api/v1/settings')
+        .send({ state: 'XX' });
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects script-injection-like state strings with 400', async () => {
+      const res = await request(app)
+        .put('/api/v1/settings')
+        .send({ state: '<script>alert(1)</script>' });
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects malformed employmentStartDate with 400', async () => {
+      const res = await request(app)
+        .put('/api/v1/settings')
+        .send({ employmentStartDate: 'not-a-date' });
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects malformed employmentEndDate with 400', async () => {
+      const res = await request(app)
+        .put('/api/v1/settings')
+        .send({ employmentEndDate: '01/02/2026' });
+      expect(res.status).toBe(400);
+    });
+
+    it('accepts empty string for employmentStartDate (clears the value)', async () => {
+      const res = await request(app)
+        .put('/api/v1/settings')
+        .send({ employmentStartDate: '' });
+      expect(res.status).toBe(200);
+    });
+
+    it('rejects malformed carryOverDeadline with 400', async () => {
+      const res = await request(app)
+        .put('/api/v1/settings')
+        .send({ carryOverDeadline: 'not-a-deadline' });
+      expect(res.status).toBe(400);
+    });
+
+    it('accepts MM-DD carryOverDeadline', async () => {
+      const res = await request(app)
+        .put('/api/v1/settings')
+        .send({ carryOverDeadline: '03-31' });
+      expect(res.status).toBe(200);
+    });
+
+    it('accepts all 16 valid German state codes', async () => {
+      const codes = ['BW', 'BY', 'BE', 'BB', 'HB', 'HH', 'HE', 'MV', 'NI', 'NW', 'RP', 'SL', 'SN', 'ST', 'SH', 'TH'];
+      for (const code of codes) {
+        const res = await request(app).put('/api/v1/settings').send({ state: code });
+        expect(res.status).toBe(200);
+      }
+    });
   });
 
   describe('POST /api/v1/periods', () => {

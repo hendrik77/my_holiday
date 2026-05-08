@@ -16,6 +16,23 @@ npm run dev
 
 The frontend talks to the backend via REST API. Both must be running.
 
+### Configuration
+
+The backend reads these environment variables on startup:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `API_HOST` | `127.0.0.1` | Network interface to bind. Loopback by default — the API is **not** reachable from other devices on your LAN. Set to `0.0.0.0` to expose on all interfaces (only do this if you've added authentication). |
+| `API_PORT` | `3001` | TCP port |
+| `DB_PATH` | `data/my-holiday.db` | SQLite database file path |
+| `CORS_ORIGIN` | reflect any origin | Restrict cross-origin access in production, e.g. `CORS_ORIGIN=http://localhost:5173` |
+
+Example — expose to LAN with a custom port:
+
+```bash
+API_HOST=0.0.0.0 API_PORT=4000 npm run server
+```
+
 ## Running tests
 
 ```bash

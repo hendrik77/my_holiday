@@ -12,9 +12,14 @@ import {
 import { generateICS } from '../src/utils/ics';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MM_DD_RE = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 const VALID_TYPES = new Set([
   'urlaub', 'bildungsurlaub', 'kur', 'sabbatical',
   'unbezahlterUrlaub', 'mutterschaftsurlaub', 'elternzeit', 'sonderurlaub',
+]);
+const VALID_STATES = new Set([
+  'BW', 'BY', 'BE', 'BB', 'HB', 'HH', 'HE', 'MV',
+  'NI', 'NW', 'RP', 'SL', 'SN', 'ST', 'SH', 'TH',
 ]);
 
 function parseYear(raw: unknown): number | null {
@@ -24,6 +29,14 @@ function parseYear(raw: unknown): number | null {
 
 function isISODate(v: unknown): v is string {
   return typeof v === 'string' && ISO_DATE_RE.test(v);
+}
+
+function isISODateOrEmpty(v: unknown): v is string {
+  return typeof v === 'string' && (v === '' || ISO_DATE_RE.test(v));
+}
+
+function isMonthDay(v: unknown): v is string {
+  return typeof v === 'string' && MM_DD_RE.test(v);
 }
 
 export function createRouter(db: Database.Database): Router {
@@ -147,16 +160,48 @@ export function createRouter(db: Database.Database): Router {
       if (isNaN(n) || n < 1 || n > 365) { res.status(400).json({ error: 'totalDays must be 1–365' }); return; }
       allowed.totalDays = n;
     }
-    if (body.state !== undefined) allowed.state = String(body.state);
+    if (body.state !== undefined) {
+      if (typeof body.state !== 'string' || !VALID_STATES.has(body.state)) {
+        res.status(400).json({ error: 'state must be a valid German state code (e.g. BW, BY, HE)' });
+        return;
+      }
+      allowed.state = body.state;
+    }
     if (body.carryOverDays !== undefined) {
       const n = parseInt(body.carryOverDays, 10);
       if (isNaN(n) || n < 0) { res.status(400).json({ error: 'carryOverDays must be ≥ 0' }); return; }
       allowed.carryOverDays = n;
     }
-    if (body.carryOverDeadline !== undefined) allowed.carryOverDeadline = String(body.carryOverDeadline);
-    if (body.carryOverMaxDays !== undefined) allowed.carryOverMaxDays = body.carryOverMaxDays === null ? null : parseInt(body.carryOverMaxDays, 10);
-    if (body.employmentStartDate !== undefined) allowed.employmentStartDate = String(body.employmentStartDate);
-    if (body.employmentEndDate !== undefined) allowed.employmentEndDate = String(body.employmentEndDate);
+    if (body.carryOverDeadline !== undefined) {
+      if (!isMonthDay(body.carryOverDeadline)) {
+        res.status(400).json({ error: 'carryOverDeadline must be MM-DD (e.g. 03-31)' });
+        return;
+      }
+      allowed.carryOverDeadline = body.carryOverDeadline;
+    }
+    if (body.carryOverMaxDays !== undefined) {
+      if (body.carryOverMaxDays === null) {
+        allowed.carryOverMaxDays = null;
+      } else {
+        const n = parseInt(body.carryOverMaxDays, 10);
+        if (isNaN(n) || n < 0) { res.status(400).json({ error: 'carryOverMaxDays must be ≥ 0 or null' }); return; }
+        allowed.carryOverMaxDays = n;
+      }
+    }
+    if (body.employmentStartDate !== undefined) {
+      if (!isISODateOrEmpty(body.employmentStartDate)) {
+        res.status(400).json({ error: 'employmentStartDate must be an ISO date (YYYY-MM-DD) or empty' });
+        return;
+      }
+      allowed.employmentStartDate = body.employmentStartDate;
+    }
+    if (body.employmentEndDate !== undefined) {
+      if (!isISODateOrEmpty(body.employmentEndDate)) {
+        res.status(400).json({ error: 'employmentEndDate must be an ISO date (YYYY-MM-DD) or empty' });
+        return;
+      }
+      allowed.employmentEndDate = body.employmentEndDate;
+    }
     if (body.bildungsUrlaubDays !== undefined) {
       const n = parseInt(body.bildungsUrlaubDays, 10);
       if (isNaN(n) || n < 0) { res.status(400).json({ error: 'bildungsUrlaubDays must be ≥ 0' }); return; }

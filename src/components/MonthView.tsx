@@ -95,7 +95,7 @@ export function MonthView() {
 
       {selectStart && (
         <div className="selection-hint">
-          <span>{t('monthView.selectionHint', { start: new Date(selectStart).toLocaleDateString('de-DE'), days: '' })}</span>
+          <span>{t('monthView.selectionHint', { start: new Date(selectStart).toLocaleDateString('de-DE') })}</span>
           <button onClick={() => setSelectStart(null)}>{t('monthView.cancel')}</button>
         </div>
       )}

@@ -107,7 +107,7 @@ export function ListView() {
                       {formatDateRange(p.startDate, p.endDate)}{p.halfDay && ' (½)'}
                       {typeLabel && <span className={`type-badge type-badge--${p.type}`}>{typeLabel}</span>}
                     </td>
-                    <td><strong>{daysLabel}</strong> <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>{t(days === 1 ? 'dashboard.days_one' : 'dashboard.days_other', { count: days })}</span></td>
+                    <td><strong>{daysLabel}</strong> <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>{t(days === 1 ? 'listView.daysUnit_one' : 'listView.daysUnit_other')}</span></td>
                     <td><span className="list-note">{p.note || '—'}</span></td>
                     <td>
                       <div className="list-actions">

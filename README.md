@@ -33,6 +33,28 @@ Example — expose to LAN with a custom port:
 API_HOST=0.0.0.0 API_PORT=4000 npm run server
 ```
 
+## Docker
+
+The easiest way to run the app on a server, NAS, or Raspberry Pi.
+
+```bash
+# Build and start (data persisted in ./data/)
+docker-compose up
+
+# Or without Compose
+docker build -t my-holiday .
+mkdir -p data
+docker run -p 3001:3001 \
+  -v $(pwd)/data:/app/data \
+  -e DB_PATH=/app/data/my-holiday.db \
+  -e API_HOST=0.0.0.0 \
+  my-holiday
+```
+
+Open **http://localhost:3001** — the container serves both the frontend and the API on a single port.
+
+The SQLite database is stored in `./data/my-holiday.db` on the host. Removing and recreating the container leaves your data intact.
+
 ## Running tests
 
 ```bash

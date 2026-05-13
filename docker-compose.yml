@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./data:/app/data
+    environment:
+      NODE_ENV: production
+      DB_PATH: /app/data/my-holiday.db
+      API_HOST: "0.0.0.0"
+    restart: unless-stopped

@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import { fileURLToPath } from 'node:url';
+import { join, dirname } from 'node:path';
 import { createDb } from './db';
 import { createRouter } from './routes';
 
@@ -22,6 +24,13 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
 });
+
+if (process.env.NODE_ENV === 'production') {
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const distPath = join(__dirname, '../dist');
+  app.use(express.static(distPath));
+  app.use((_req, res) => res.sendFile(join(distPath, 'index.html')));
+}
 
 app.listen(PORT, HOST, () => {
   console.log(`My Holiday API running on http://${HOST}:${PORT}`);

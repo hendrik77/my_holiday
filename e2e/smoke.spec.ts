@@ -111,4 +111,57 @@ test.describe('My Holiday smoke tests', () => {
     await page.click('text=Abbrechen');
     await expect(modal).not.toBeVisible();
   });
+
+  test('vacation background is visible when school holiday overlaps (CSS regression)', async ({ page }) => {
+    await completeWizard(page);
+
+    // Navigate to month view so its CSS is fully loaded
+    await page.click('text=Monatsansicht');
+    await expect(page.locator('.month-grid')).toBeVisible();
+
+    // Inject a test cell with both classes and read computed styles.
+    // Regression: in light mode the school-holiday rule used to override vacation's background
+    // via the `background` shorthand, making the vacation colour invisible.
+    // After the fix vacation uses background-color and school-holiday uses background-image,
+    // so both coexist.
+    const lightResult = await page.evaluate(() => {
+      const el = document.createElement('div');
+      el.className = 'month-grid-day vacation school-holiday';
+      document.body.appendChild(el);
+      const style = window.getComputedStyle(el);
+      const result = { bgColor: style.backgroundColor, bgImage: style.backgroundImage };
+      document.body.removeChild(el);
+      return result;
+    });
+    // Vacation colour must not be transparent in light mode
+    expect(lightResult.bgColor).not.toBe('rgba(0, 0, 0, 0)');
+    // School-holiday stripe must also be present
+    expect(lightResult.bgImage).toContain('repeating-linear-gradient');
+
+    // Switch to dark mode and verify same behaviour
+    await page.click('button[title="Einstellungen"]');
+    const settingsModal = page.locator('.modal');
+    await expect(settingsModal).toBeVisible();
+    await settingsModal.locator('select').nth(1).selectOption('dark');
+    await settingsModal.getByRole('button', { name: 'Speichern' }).click();
+    await expect(settingsModal).not.toBeVisible();
+
+    const darkResult = await page.evaluate(() => {
+      const el = document.createElement('div');
+      el.className = 'month-grid-day vacation school-holiday';
+      document.body.appendChild(el);
+      const style = window.getComputedStyle(el);
+      const result = { bgColor: style.backgroundColor };
+      document.body.removeChild(el);
+      return result;
+    });
+    // Vacation colour must not be transparent in dark mode either
+    expect(darkResult.bgColor).not.toBe('rgba(0, 0, 0, 0)');
+
+    // Restore theme
+    await page.click('button[title="Einstellungen"]');
+    await expect(settingsModal).toBeVisible();
+    await settingsModal.locator('select').nth(1).selectOption('auto');
+    await settingsModal.getByRole('button', { name: 'Speichern' }).click();
+  });
 });

@@ -1,9 +1,11 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach, afterAll } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nProvider } from '../../i18n/context';
 import { VacationModal } from '../VacationModal';
 import type { VacationPeriod } from '../../types';
+
+let mockYear = 2026;
 
 vi.mock('../../api/hooks', () => ({
   usePeriods: () => ({ data: [], isLoading: false }),
@@ -13,6 +15,10 @@ vi.mock('../../api/hooks', () => ({
   }),
   useCreatePeriod: () => ({ mutate: vi.fn() }),
   useUpdatePeriod: () => ({ mutate: vi.fn() }),
+}));
+
+vi.mock('../../state/store', () => ({
+  useUIStore: <T,>(selector: (s: { year: number }) => T): T => selector({ year: mockYear }),
 }));
 
 const existingPeriod: VacationPeriod = {
@@ -64,5 +70,40 @@ describe('VacationModal', () => {
     const btn = screen.getByText(/Als iCal herunterladen|Download as iCal/);
     btn.click();
     expect(createObjectURL).toHaveBeenCalled();
+  });
+
+  describe('default dates', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 4, 9, 10, 0, 0)); // 2026-05-09
+    });
+
+    afterAll(() => {
+      vi.useRealTimers();
+    });
+
+    it("defaults start and end date to today when browsing the current year", () => {
+      mockYear = 2026;
+      renderModal({ onClose: vi.fn() });
+      const dateInputs = screen.getAllByDisplayValue('2026-05-09');
+      expect(dateInputs).toHaveLength(2);
+    });
+
+    it('defaults start and end date to Jan 1 when browsing a future year', () => {
+      mockYear = 2027;
+      renderModal({ onClose: vi.fn() });
+      const dateInputs = screen.getAllByDisplayValue('2027-01-01');
+      expect(dateInputs).toHaveLength(2);
+    });
+
+    it('still honors presetDates over the today fallback', () => {
+      mockYear = 2026;
+      renderModal({
+        onClose: vi.fn(),
+        presetDates: { startDate: '2026-09-10', endDate: '2026-09-12' },
+      });
+      expect(screen.getByDisplayValue('2026-09-10')).toBeDefined();
+      expect(screen.getByDisplayValue('2026-09-12')).toBeDefined();
+    });
   });
 });

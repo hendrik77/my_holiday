@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import { useUIStore } from '../state/store';
 import { usePeriods, useSettings, useCreatePeriod, useUpdatePeriod } from '../api/hooks';
 import type { VacationPeriod, VacationType } from '../types';
-import { countVacationWorkDays, hasOverlap } from '../utils/calendar';
+import { countVacationWorkDays, hasOverlap, toISODate } from '../utils/calendar';
 import { useT } from '../i18n/useT';
 import { downloadSingleICS } from '../utils/ics';
 import './Modal.css';
@@ -28,8 +28,10 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
   const { t } = useT();
   const isEditing = !!initial?.id;
 
-  const [startDate, setStartDate] = useState(initial?.startDate || presetDates?.startDate || `${year}-01-01`);
-  const [endDate, setEndDate] = useState(initial?.endDate || presetDates?.endDate || `${year}-01-05`);
+  const today = new Date();
+  const defaultDate = year === today.getFullYear() ? toISODate(today) : `${year}-01-01`;
+  const [startDate, setStartDate] = useState(initial?.startDate || presetDates?.startDate || defaultDate);
+  const [endDate, setEndDate] = useState(initial?.endDate || presetDates?.endDate || defaultDate);
   const [note, setNote] = useState(initial?.note || '');
   const [halfDay, setHalfDay] = useState(initial?.halfDay || false);
   const [type, setType] = useState<VacationType>(initial?.type || 'urlaub');

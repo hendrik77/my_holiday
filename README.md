@@ -4,6 +4,9 @@ A vacation day planner for Germany. Plan your annual vacation days with automati
 
 > **Security notice:** My Holiday has **no built-in authentication**. It is designed for single-user, localhost or home-network use only. Do not expose it to the internet without placing an authenticating reverse proxy (e.g. nginx + HTTP Basic Auth, Authelia, or similar) in front of it.
 
+## AI Development Team
+The development ov v1 was done by Pi Agent using DeepSeek and Claude Code Sonnet 4.6 for bug fixing. V2+ was done with Claude Code.
+
 ## Setup
 
 ```bash

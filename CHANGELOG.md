@@ -4,7 +4,7 @@ All notable changes to My Holiday.
 
 ---
 
-## [Unreleased]
+## v2.1.0 (2026-05-16)
 
 ### Added
 - **Docker distribution** — multi-stage `Dockerfile` (build + runtime), `docker-compose.yml`, `.dockerignore`; single container serves frontend + API on port 3001

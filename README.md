@@ -349,4 +349,4 @@ Documented in [`DESIGN.md`](./DESIGN.md), based on the Syskoplan Reply website:
 
 ## Development Plan
 
-See [`PLAN.md`](./PLAN.md) for the full v2 roadmap and [`VISION.md`](./VISION.md) for the long-term vision.
+See [`VISION.md`](./VISION.md) for the long-term vision.

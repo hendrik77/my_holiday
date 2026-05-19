@@ -4,7 +4,7 @@ All notable changes to My Holiday.
 
 ---
 
-## v2.1.1 (2026-05-19)
+## v2.2.0 (2026-05-19)
 
 ### Added
 - **ARCHITECTURE.md** — dedicated architecture document extracted from README; covers tech stack, file structure, REST API, data model, state flow, and key design decisions

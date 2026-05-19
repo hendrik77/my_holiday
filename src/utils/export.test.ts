@@ -162,6 +162,34 @@ describe('parseImportCSV', () => {
     expect(result.periods).toHaveLength(0);
     expect(result.errors.length).toBeGreaterThan(0);
   });
+
+  it('parses Type column (English header)', () => {
+    const csv = 'Start Date;End Date;Note;Type;Half Day;Work Days\n2026-07-01;2026-07-05;Bildung;bildungsurlaub;No;5';
+    const result = parseImportCSV(csv, t);
+    expect(result.errors).toEqual([]);
+    expect(result.periods[0].type).toBe('bildungsurlaub');
+  });
+
+  it('parses Typ column (German header alias)', () => {
+    const csv = 'Startdatum;Enddatum;Notiz;Typ\n2026-07-01;2026-07-05;Kur;kur';
+    const result = parseImportCSV(csv, t);
+    expect(result.errors).toEqual([]);
+    expect(result.periods[0].type).toBe('kur');
+  });
+
+  it('omits type when column is absent', () => {
+    const csv = 'Startdatum;Enddatum\n2026-07-01;2026-07-05';
+    const result = parseImportCSV(csv, t);
+    expect(result.errors).toEqual([]);
+    expect('type' in result.periods[0]).toBe(false);
+  });
+
+  it('omits type for unknown type values', () => {
+    const csv = 'Startdatum;Enddatum;Typ\n2026-07-01;2026-07-05;invalidtype';
+    const result = parseImportCSV(csv, t);
+    expect(result.errors).toEqual([]);
+    expect('type' in result.periods[0]).toBe(false);
+  });
 });
 
 describe('escapeCSV', () => {

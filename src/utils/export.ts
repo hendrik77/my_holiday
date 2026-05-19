@@ -1,4 +1,4 @@
-import type { VacationPeriod } from '../types';
+import type { VacationPeriod, VacationType } from '../types';
 import type { GermanState } from '../data/holidays';
 import { countVacationWorkDays } from './calendar';
 
@@ -16,8 +16,9 @@ export function downloadCSV(
     const workDays = countVacationWorkDays(p, state);
     const halfDayLabel = p.halfDay ? t('csv.yes') : t('csv.no');
     const note = escapeCSV(p.note || '');
+    const type = p.type ?? 'urlaub';
     rows.push(
-      `${p.startDate};${p.endDate};${note};${halfDayLabel};${workDays.toString().replace('.', ',')}`
+      `${p.startDate};${p.endDate};${note};${type};${halfDayLabel};${workDays.toString().replace('.', ',')}`
     );
   }
 
@@ -42,6 +43,11 @@ export function escapeCSV(value: string): string {
   }
   return value;
 }
+
+const VALID_TYPES: VacationType[] = [
+  'urlaub', 'bildungsurlaub', 'kur', 'sabbatical',
+  'unbezahlterUrlaub', 'mutterschaftsurlaub', 'elternzeit', 'sonderurlaub',
+];
 
 /** Parse a CSV string into an array of rows (each row is string[]) */
 function parseCSVRows(csv: string): string[][] {
@@ -138,6 +144,7 @@ export function parseImportCSV(
   const startCol = header.findIndex((h) => h === 'startdatum' || h === 'start date' || h === 'start');
   const endCol = header.findIndex((h) => h === 'enddatum' || h === 'end date' || h === 'ende' || h === 'end');
   const noteCol = header.findIndex((h) => h === 'notiz' || h === 'note' || h === 'bemerkung');
+  const typeCol = header.findIndex((h) => h === 'type' || h === 'typ' || h === 'urlaubstyp');
   const halfDayCol = header.findIndex((h) => h === 'halber tag' || h === 'halbtag' || h === 'half day' || h === 'halber');
 
   if (startCol === -1 || endCol === -1) {
@@ -174,6 +181,8 @@ export function parseImportCSV(
     }
 
     const note = noteCol >= 0 ? (row[noteCol] || '').trim() : '';
+    const rawType = typeCol >= 0 ? (row[typeCol] || '').trim() : '';
+    const type = VALID_TYPES.includes(rawType as VacationType) ? (rawType as VacationType) : undefined;
     let halfDay = false;
     if (halfDayCol >= 0) {
       const val = (row[halfDayCol] || '').trim().toLowerCase();
@@ -184,6 +193,7 @@ export function parseImportCSV(
       startDate,
       endDate,
       note,
+      ...(type !== undefined && { type }),
       halfDay: halfDay && startDate === endDate,
     });
   }

@@ -4,6 +4,18 @@ All notable changes to My Holiday.
 
 ---
 
+## v2.1.1 (2026-05-19)
+
+### Added
+- **ARCHITECTURE.md** — dedicated architecture document extracted from README; covers tech stack, file structure, REST API, data model, state flow, and key design decisions
+- **Vacation type in CSV export/import** — `Type` column added to `Start Date;End Date;Note;Type;Half Day;Work Days` format; valid type keys are round-tripped on import; unknown values fall back to `urlaub`
+
+### Changed
+- **README restructure** — screenshots added, Features grouped into categories, sections reordered (Features before Setup, Architecture replaced by link to ARCHITECTURE.md, AI Development Team moved to bottom), "Running tests" renamed to "Development"
+- **CSV column headers** — both DE and EN locales now use English column names for consistent round-tripping
+
+---
+
 ## v2.1.0 (2026-05-16)
 
 ### Added
@@ -21,57 +33,39 @@ All notable changes to My Holiday.
 
 ## v2.0.0 (2026-05-01)
 
-### Added (SP-7)
+### Added
 - **First-run wizard** — 4-step onboarding modal shown on clean install
   - Step 1: Employment dates (start, end, "still employed" toggle)
   - Step 2: Bundesland selection
   - Step 3: Annual vacation days (1–60)
   - Step 4: Carry-over policy (deadline March 31 / June 30, optional max cap)
 - 7 component tests for FirstRunWizard
-
-### Added (SP-8)
 - **8 vacation types** — `urlaub`, `bildungsurlaub`, `kur`, `sabbatical`, `unbezahlterUrlaub`, `mutterschaftsurlaub`, `elternzeit`, `sonderurlaub`
 - Colour-coded type badges in Dashboard upcoming list
 - Bildungsurlaub counter (own budget, configurable in settings)
 - Type stored on add/update
-
-### Added (SP-9)
 - **iCal export** — client-side RFC 5545 `.ics` download; server endpoint `GET /api/v1/export.ics?year=YYYY`
 - Per-period iCal download button in list view
-
-### Changed (SP-10)
-- **TanStack Query frontend** — replaced Zustand persist + localStorage with `@tanstack/react-query` hooks backed by Express REST API
-- New API layer: `src/api/client.ts` + `src/api/hooks.ts`
-- Slim Zustand store — UI-only state (view, year, month, theme, language)
-- All data persisted to SQLite via the API; no more localStorage
-
-### Added (SP-5)
 - **Express + SQLite backend** — REST API with 7 endpoints: CRUD for vacation periods, settings, iCal export
 - `better-sqlite3` database at `data/my-holiday.db` with `periods` and `settings` tables
 - `changed_at` tracking on every period mutation
 - 28 supertest + DB unit tests
-
-### Added (SP-6)
 - **Migration script** — `npx tsx scripts/migrate-v1.ts ./urlaub-2026.csv` imports v1 CSV → v2 SQLite; idempotent
 - 8 migration tests (valid CSV, idempotency, empty file, missing header, corrupt dates)
-
-### Added (SP-13)
 - **Playwright E2E smoke tests** — 5 tests: wizard, vacation planning, view switching, settings
 - `playwright.config.ts` with dual webServer (Vite + Express)
 - `npm run test:e2e` script
-
-### Changed (SP-14)
-- **Dynamic school holidays** — fetches from `ferien-api.de`; 2025–2026 data retained as offline fallback
-
-### Added (SP-15)
 - **Component tests** — React Testing Library for Dashboard, ListView, FirstRunWizard, SettingsModal, VacationModal; 221 tests total
-
-### Changed (SP-16)
-- **CSS refactor** — split 1090-line `App.css` into 8 co-located files; design tokens stay in `index.css`
-
-### Added (SP-2, SP-3)
 - **Pro-rata & leave-reduction utilities** — `computeProRataEntitlement`, `countFullCalendarMonths`, `computeLeaveReduction` (§ 4 BUrlG, § 17 BUrlG/BEEG); 44 tests
 - **ICS generation utility** — RFC 5545 with line folding, escaping, year clipping; 20 tests
+
+### Changed
+- **TanStack Query frontend** — replaced Zustand persist + localStorage with `@tanstack/react-query` hooks backed by Express REST API
+- New API layer: `src/api/client.ts` + `src/api/hooks.ts`
+- Slim Zustand store — UI-only state (view, year, month, theme, language)
+- All data persisted to SQLite via the API; no more localStorage
+- **Dynamic school holidays** — fetches from `ferien-api.de`; 2025–2026 data retained as offline fallback
+- **CSS refactor** — split 1090-line `App.css` into 8 co-located files; design tokens stay in `index.css`
 
 ### Fixed (post-release)
 - Employment start/end date fields added to SettingsModal (were missing from UI)
@@ -136,7 +130,7 @@ All notable changes to My Holiday.
 
 ## v1.0.0 (2026-04-28)
 
-### Features
+### Added
 - Vacation planning with start/end date, optional note, work-day counting
 - 30-day default budget (editable 1–60)
 - 16 German states with correct public holidays via `feiertagejs`

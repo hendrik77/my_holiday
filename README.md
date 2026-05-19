@@ -4,10 +4,49 @@ A vacation day planner for Germany. Plan your annual vacation days with automati
 
 > **Security notice:** My Holiday has **no built-in authentication**. It is designed for single-user, localhost or home-network use only. Do not expose it to the internet without placing an authenticating reverse proxy (e.g. nginx + HTTP Basic Auth, Authelia, or similar) in front of it.
 
-## AI Development Team
-The development of v1 was done by Pi Agent using DeepSeek and Claude Code Sonnet 4.6 for bug fixing. V2+ was done with Claude Code Sonnet 4.6.
+## Screenshots
+### Dashboard
+![Overview](docs/screenshots/dashboard.png)
+
+### Year Grid
+![Year View](docs/screenshots/year-view.png)
+
+## Features
+
+### Planning & Tracking
+
+- **Configurable budget** — set your annual vacation allowance (default: 30 days)
+- **Carry-over tracker** — enter days carried over from last year; Dashboard shows usage, warnings when the March 31 deadline approaches
+- **First-run wizard** — onboarding collects employment dates, Bundesland, vacation days, and carry-over policy
+- **Half-day booking** — mark single days as half days (0.5); Dec 24 and Dec 31 always count as 0.5
+- **Smart work-day counting** — only Monday–Friday, excludes weekends and public holidays; multi-year periods are correctly clipped
+- **Live work-day preview** — modal shows exactly how many work days a date range consumes
+- **Overlap prevention** — prevents booking conflicting vacations
+
+### Views
+
+- **Four views** — Dashboard summary, year grid (12 mini calendars), full month calendar, sortable list
+- **Click-to-plan** — select date ranges directly in the month view; click existing vacations to edit or delete
+
+### Data & Export
+
+- **CSV import/export** — backup your data or edit it in Excel; semicolon-delimited UTF-8 with BOM
+- **iCal export** — downloadable `.ics` files for calendar apps (Apple Calendar, Outlook, Google Calendar)
+- **School holidays** — overlay showing school breaks for your state (fetched from ferien-api.de)
+
+### Localisation & Accessibility
+
+- **All 16 German states** — select your state; public holidays computed via [`feiertagejs`](https://www.npmjs.com/package/feiertagejs)
+- **8 vacation types** — Vacation, Educational Leave, Spa / Rehab, Sabbatical, Unpaid Leave, Maternity Leave, Parental Leave, Special Leave with colour-coded badges and separate Educational Leave budget
+- **Dark mode** — light, dark, or auto (follows system preference)
+- **English & German** — switch language in settings
+- **Responsive** — works on desktop, tablet, and mobile
 
 ## Setup
+
+**Quickstart:** `docker-compose up` then open **http://localhost:3001** — no other steps needed. See the [Docker](#docker) section for full options including manual `docker run`.
+
+Or run locally with npm:
 
 ```bash
 npm install
@@ -60,80 +99,50 @@ Open **http://localhost:3001** — the container serves both the frontend and th
 
 The SQLite database is stored in `./data/my-holiday.db` on the host. Removing and recreating the container leaves your data intact.
 
-## Running tests
-
-```bash
-npm test              # unit + integration tests (221 tests)
-npm run test:watch    # watch mode
-npm run test:e2e      # Playwright end-to-end smoke tests
-```
-
-Tests follow the RED-GREEN principle.
-
-## Features
-
-- **Configurable budget** — set your annual vacation allowance (default: 30 days)
-- **Carry-over tracker** — enter days carried over from last year; Dashboard shows usage, warnings when the March 31 deadline approaches
-- **First-run wizard** — onboarding collects employment dates, Bundesland, vacation days, and carry-over policy
-- **All 16 German states** — select your Bundesland; public holidays computed via [`feiertagejs`](https://www.npmjs.com/package/feiertagejs)
-- **8 vacation types** — Urlaub, Bildungsurlaub, Kur, Sabbatical, unbezahlter Urlaub, Mutterschutz, Elternzeit, Sonderurlaub with colour-coded badges and separate Bildungsurlaub budget
-- **Half-day booking** — mark single days as half days (0.5); Dec 24 and Dec 31 always count as 0.5
-- **Smart work-day counting** — only Monday–Friday, excludes weekends and public holidays; multi-year periods are correctly clipped
-- **Four views** — Dashboard summary, year grid (12 mini calendars), full month calendar, sortable list
-- **Click-to-plan** — select date ranges directly in the month view; click existing vacations to edit or delete
-- **Live work-day preview** — modal shows exactly how many work days a date range consumes
-- **Overlap prevention** — prevents booking conflicting vacations
-- **CSV import/export** — backup your data or edit it in Excel; semicolon-delimited UTF-8 with BOM
-- **iCal export** — downloadable `.ics` files for calendar apps (Apple Calendar, Outlook, Google Calendar)
-- **Dark mode** — light, dark, or auto (follows system preference)
-- **English & German** — switch language in settings
-- **School holidays** — overlay showing school breaks for your state (fetched from ferien-api.de)
-- **Responsive** — works on desktop, tablet, and mobile
-
 ## How to Use
 
 ### Views
 
 | Tab | What it does |
 |---|---|
-| **Übersicht** | Summary cards (used, remaining, total days), progress bar, carry-over tracker, Bildungsurlaub counter, upcoming vacations — click any entry to edit |
-| **Jahresansicht** | 12 mini month calendars. Vacation days are filled red, half days have a striped pattern, public holidays in red text. Click a month to jump to its detail view |
-| **Monatsansicht** | Full-size calendar for a single month. Navigate with `‹` `›` arrows. Public holidays labeled, school holidays shown with stripes |
-| **Liste** | Sortable table of all vacation periods with date range, work-day count, note, type badge, and edit/delete buttons |
+| **Overview** | Summary cards (used, remaining, total days), progress bar, carry-over tracker, Educational Leave counter, upcoming vacations — click any entry to edit |
+| **Year View** | 12 mini month calendars. Vacation days are filled red, half days have a striped pattern, public holidays in red text. Click a month to jump to its detail view |
+| **Month View** | Full-size calendar for a single month. Navigate with `‹` `›` arrows. Public holidays labeled, school holidays shown with stripes |
+| **List** | Sortable table of all vacation periods with date range, work-day count, note, type badge, and edit/delete buttons |
 
 ### Settings
 
 Click the ⚙️ gear icon to open settings:
 
-- **Urlaubstage pro Jahr** — annual budget (1–60, default: 30)
-- **Übertrag vom Vorjahr** — carry-over days; auto-calculated on year switch, manually overridable (0–60)
-- **Bundesland** — determines public holidays for your region (default: Hessen)
-- **Farbschema** — light, dark, or auto
-- **Sprache** — Deutsch or English
+- **Vacation Days per Year** — annual budget (1–60, default: 30)
+- **Carry-over from Last Year (Days)** — carry-over days; auto-calculated on year switch, manually overridable (0–60)
+- **State** — determines public holidays for your region (default: Hessen)
+- **Color Scheme** — light, dark, or auto
+- **Language** — Deutsch or English
 
 ### Adding a vacation
 
-1. Click **+ Urlaub planen** (Dashboard or List view), or in **Monatsansicht** click a start date then an end date
+1. Click **+ Plan Vacation** (Dashboard or List view), or in **Month View** click a start date then an end date
 2. Enter an optional note (e.g. "Sommerurlaub")
-3. Choose a **vacation type** from the dropdown (default: Urlaub)
-4. Toggle **Halber Tag** for single-day bookings
+3. Choose a **vacation type** from the dropdown (default: Vacation)
+4. Toggle **Half Day (½ work day)** for single-day bookings
 5. The modal shows the live work-day count; overlapping vacations are blocked
-6. Click **Urlaub planen** to save
+6. Click **Plan Vacation** to save
 
 ### Vacation types
 
 | Type | Budget impact |
 |------|--------------|
-| `urlaub` | Consumes main vacation budget |
-| `bildungsurlaub` | Separate counter (must be enabled in settings) |
-| `kur`, `sabbatical`, `mutterschaftsurlaub`, `sonderurlaub` | Informational only |
-| `unbezahlterUrlaub`, `elternzeit` | Reduces vacation entitlement (§ 17 BUrlG) |
+| Vacation | Consumes main vacation budget |
+| Educational Leave | Separate counter (must be enabled in settings) |
+| Spa / Rehab, Sabbatical, Maternity Leave, Special Leave | Informational only |
+| Unpaid Leave, Parental Leave | Reduces vacation entitlement (§ 17 BUrlG) |
 
 ### Half-day rules
 
 | Rule | Counts as |
 |------|-----------|
-| User-toggled "Halber Tag" (single day only) | 0.5 |
+| User-toggled "Half Day (½ work day)" (single day only) | 0.5 |
 | December 24 (Christmas Eve) | 0.5 |
 | December 31 (New Year's Eve) | 0.5 |
 | Normal work day | 1.0 |
@@ -164,10 +173,10 @@ Use the `‹ 2026 ›` arrows in the navigation bar. Data is stored per year —
 
 ### Import / Export
 
-- **📤 Export** — downloads `urlaub-2026.csv` with columns: `Startdatum;Enddatum;Notiz;Halber Tag;Arbeitstage`
-- **📥 Import** — reads CSV (semicolon-delimited, UTF-8). Accepts `YYYY-MM-DD`, `DD.MM.YYYY`, and `MM/DD/YYYY` date formats
+- **📤 Export** — downloads `urlaub-2026.csv` with columns: `Start Date;End Date;Note;Type;Half Day;Work Days` (type exported as internal key, e.g. `urlaub`, `bildungsurlaub`)
+- **📥 Import** — reads CSV (semicolon-delimited, UTF-8). Accepts `YYYY-MM-DD`, `DD.MM.YYYY`, and `MM/DD/YYYY` date formats. Valid `Type` values: `urlaub`, `bildungsurlaub`, `kur`, `sabbatical`, `unbezahlterUrlaub`, `mutterschaftsurlaub`, `elternzeit`, `sonderurlaub` — unknown values fall back to `urlaub`
 - **📅 iCal** — downloads `urlaub-2026.ics` for import into calendar apps
-- The `Arbeitstage` column is for reference only — work days are always computed from the date range
+- The `Work Days` column is for reference only — work days are always computed from the date range
 
 ### Public holidays
 
@@ -202,135 +211,13 @@ npx tsx scripts/migrate-v1.ts ./urlaub-2026.csv
 
 The migration is **idempotent** — running it twice won't create duplicates.
 
-## Architecture (v2)
+## Architecture
 
-### Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | React 19 + TypeScript |
-| Build | Vite |
-| State | Zustand (UI state: view, year, theme, language) |
-| Data | TanStack Query + REST API |
-| Backend | Express + better-sqlite3 (SQLite, port 3001) |
-| Holidays | `feiertagejs` (public holidays) + ferien-api.de (school holidays) |
-| Styling | Plain CSS with custom properties, per-component CSS files |
-| Routing | None — tab-based view switching |
-| Tests | Vitest (unit/integration) + Playwright (E2E) |
-
-### Project Structure
-
-```
-src/
-├── types.ts                   # Shared TypeScript interfaces
-├── api/
-│   ├── client.ts              # REST API fetch wrappers
-│   └── hooks.ts               # TanStack Query hooks
-├── data/
-│   ├── holidays.ts            # feiertagejs wrapper + GermanState
-│   └── schoolHolidays.ts      # Dynamic school holidays (ferien-api.de)
-├── utils/
-│   ├── calendar.ts            # Work-day counting, half-day logic
-│   ├── entitlement.ts         # Pro-rata entitlement & leave reduction (§ 4/§ 17 BUrlG)
-│   ├── export.ts              # CSV export/import (handwritten parser)
-│   └── ics.ts                 # RFC 5545 iCalendar generator
-├── state/
-│   └── store.ts               # Zustand store (UI-only: view, year, theme, language, undo/redo)
-├── components/
-│   ├── Nav.tsx                # Navigation + import/export + settings
-│   ├── Dashboard.tsx          # Stats, progress bars, upcoming list
-│   ├── YearView.tsx           # 12-month grid with mini calendars
-│   ├── MonthView.tsx          # Full calendar with click-to-select
-│   ├── ListView.tsx           # Sortable table of all periods
-│   ├── VacationModal.tsx      # Add/edit form with type selector
-│   ├── SettingsModal.tsx      # Settings: state, days, theme, language
-│   ├── FirstRunWizard.tsx     # 4-step onboarding modal
-│   └── Toast.tsx              # Undo notifications
-├── App.tsx                    # Root component + theme management
-├── App.css                    # Layout + responsive styles only
-├── index.css                  # Design tokens + global reset
-└── main.tsx                   # Entry point (QueryClientProvider + I18nProvider)
-
-server/
-├── index.ts                   # Express server (port 3001)
-├── routes.ts                  # REST routes + ICS endpoint
-├── db.ts                      # SQLite schema + CRUD operations
-└── types.ts                   # Server-specific types
-
-scripts/
-└── migrate-v1.ts              # v1 CSV → v2 SQLite (idempotent)
-
-e2e/
-└── smoke.spec.ts              # Playwright E2E smoke tests
-```
-
-### REST API
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/periods?year=YYYY` | List periods for a year |
-| `POST` | `/api/v1/periods` | Create a vacation period |
-| `PUT` | `/api/v1/periods/:id` | Update a period |
-| `DELETE` | `/api/v1/periods/:id` | Delete a period |
-| `GET` | `/api/v1/settings` | Get all settings |
-| `PUT` | `/api/v1/settings` | Update settings |
-| `GET` | `/api/v1/export.ics?year=YYYY` | Download iCalendar file |
-
-All data is persisted to `data/my-holiday.db` (SQLite, gitignored).
-
-### Data Model
-
-```typescript
-VacationType = 'urlaub' | 'bildungsurlaub' | 'kur' | 'sabbatical'
-  | 'unbezahlterUrlaub' | 'mutterschaftsurlaub' | 'elternzeit' | 'sonderurlaub'
-
-VacationPeriod {
-  id: string;          // UUID (crypto.randomUUID())
-  startDate: string;   // ISO date YYYY-MM-DD
-  endDate: string;     // ISO date YYYY-MM-DD
-  note: string;
-  halfDay?: boolean;   // Single-day half-day booking
-  type?: VacationType; // Defaults to 'urlaub'
-  changedAt: string;   // ISO timestamp, updated on every edit
-}
-```
-
-### State Flow
-
-- **TanStack Query** manages server state: periods and settings are fetched from and mutated via the REST API
-- **Zustand** manages local UI state: active view, selected year/month, theme, language, undo/redo stacks
-- TanStack Query automatically invalidates and refetches period/setting queries after mutations
-- Work-day counts are **derived** (computed on render) — never stored, guaranteeing correctness
-
-### Key Design Decisions
-
-**1. Server-backed persistence**
-
-All vacation data and settings are stored in a local SQLite database. The Express backend exposes a REST API consumed by the frontend via TanStack Query. No localStorage, no manual sync.
-
-**2. Work-day counting is live-computed**
-
-`countVacationWorkDays()` iterates day-by-day applying weights: 1.0 for normal work days, 0.5 for user half-days, 0.5 for Dec 24/31, 0 for weekends and holidays. Never stored — always correct.
-
-**3. Per-component CSS files**
-
-Styles are split into co-located CSS files (`Nav.css`, `Dashboard.css`, `Calendar.css`, etc.). Design tokens live in `index.css`. No CSS-in-JS — keeps the bundle small.
-
-**4. View switching without a router**
-
-Four views share one URL. The active view is in Zustand state. No routing complexity for a single-screen tool.
-
-**5. Pro-rata vacation entitlement (§ 4 BUrlG)**
-
-Full entitlement after 6 complete months of employment in a year; otherwise 1/12 per complete month worked. Leave reductions (§ 17) apply for unpaid leave and parental leave.
-
-**6. Idempotent CSV migration**
-
-The migration script (`scripts/migrate-v1.ts`) matches periods by composite key `(startDate, endDate, note, halfDay, type)`. Rerunning safely skips existing records.
+For a full breakdown of the tech stack, file structure, REST API, data model, and key design decisions, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## Design System
 
-Documented in [`DESIGN.md`](./DESIGN.md), based on the Syskoplan Reply website:
+Documented in [`DESIGN.md`](./DESIGN.md):
 
 | Token | Value |
 |---|---|
@@ -349,6 +236,20 @@ Documented in [`DESIGN.md`](./DESIGN.md), based on the Syskoplan Reply website:
 | > 1024px | Full desktop: 4-column year grid, 3-column stats |
 | 640–1024px | Tablet: 3-column year grid, 2-column stats |
 | < 640px | Mobile: 2-column year grid, single-column stats, stacked nav |
+
+## Development
+
+```bash
+npm test              # unit + integration tests (257 tests)
+npm run test:watch    # watch mode
+npm run test:e2e      # Playwright end-to-end smoke tests
+```
+
+Development follows the RED-GREEN principle.
+
+## AI Development Team
+
+The development of v1 was done by Pi Agent using DeepSeek and Claude Code Sonnet 4.6 for bug fixing. V2+ was done with Claude Code Sonnet 4.6.
 
 ## Development Plan
 

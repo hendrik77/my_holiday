@@ -1,16 +1,13 @@
-# Design System Inspired by Syskoplan Reply
-
-> Auto-extracted from `https://www.reply.com/syskoplan-reply/de` on 2026-04-23
+# Design System
 
 ## 1. Visual Theme & Atmosphere
 
 Friendly, approachable design with rounded shapes and generous whitespace.
 
-The hero section leads with "Run SAP. Better. Faster. Smarter. With Us.".
+> **Note on fonts:** The font names in some sections below (e.g. "aawdfdgnxz", "Alaska") are artefacts from an earlier extraction and are not real typeface names. The app uses **Inter** (`'Inter', system-ui, -apple-system, sans-serif`) for both headings and body text, defined via `--font-heading` and `--font-body` in `src/index.css`.
 
 **Key Characteristics:**
-- aawdfdgnxz as the heading font
-- Alaska as the body font for all running text
+- Inter (system-ui fallback) as both heading and body font
 - Heading weight 500
 - Light/white background (#ffffff) as the primary canvas
 - Primary accent `#db001b` used for CTAs and brand highlights
@@ -48,8 +45,10 @@ The hero section leads with "Run SAP. Better. Faster. Smarter. With Us.".
 
 ## 3. Typography Rules
 
-- **Heading Font:** `aawdfdgnxz`, sans-serif
-- **Body Font:** `Alaska`, sans-serif
+> **App reality:** Both `--font-heading` and `--font-body` resolve to `Inter, system-ui, -apple-system, sans-serif`. The names below are from the source-site extraction and do not reflect what the app loads.
+
+- **Heading Font:** `aawdfdgnxz`, sans-serif *(source reference — app uses Inter)*
+- **Body Font:** `Alaska`, sans-serif *(source reference — app uses Inter)*
 
 ### Type Hierarchy
 
@@ -109,7 +108,11 @@ The hero section leads with "Run SAP. Better. Faster. Smarter. With Us.".
 }
 ```
 
-### Filled Button 2
+---
+
+> **Note on button variants 2–5 and the card below:** These are provided as reference only. Several contain errors (e.g. Filled Button 2 has white text on a white background) and none are used directly in the app. Use only the design tokens and the Primary / Filled Button patterns above when building new components.
+
+### Filled Button 2 *(source reference only)*
 
 ```css
 .btn-filled-2 {
@@ -222,7 +225,7 @@ The hero section leads with "Run SAP. Better. Faster. Smarter. With Us.".
 
 ### Do
 - Use `#ffffff` as the primary background color
-- Use `aawdfdgnxz` for all headings and `Alaska` for body text
+- Use **Inter** (or system-ui fallback) for all headings and body text
 - Use `#db001b` as the single dominant accent/CTA color
 - Maintain `20px` as the base spacing unit — all gaps should be multiples
 - Use rounded corners (`6px`+) consistently for all interactive elements
@@ -231,13 +234,13 @@ The hero section leads with "Run SAP. Better. Faster. Smarter. With Us.".
 
 ### Don't
 - Don't use colors outside the extracted palette without justification
-- Don't substitute aawdfdgnxz/Alaska with generic alternatives
+- Don't substitute Inter / system-ui with arbitrary font stacks
 - Don't use irregular spacing — stick to 20px grid
 - Don't use dark/black backgrounds — this is a light-themed design
 - Don't use sharp corners — they feel hostile in this rounded design language
 - Don't use pure black (#000000) for text — use `#151f27` instead
-- Don't add decorative elements not present in the original design — no badges, ribbons, banners, or ornaments unless the source site uses them
-- Don't invent UI patterns the source site doesn't have — if the original has no NEW badge, don't add one just because a red is in the palette
+- Don't add decorative elements not already present in the app — no badges, ribbons, banners, or ornaments without clear justification
+- Don't invent UI patterns that don't exist in the app — if there is no NEW badge anywhere, don't add one just because red is in the palette
 
 ## 8. Responsive Behavior
 
@@ -253,6 +256,8 @@ The hero section leads with "Run SAP. Better. Faster. Smarter. With Us.".
 
 ## 9. Agent Prompt Guide
 
+> These prompts are for AI coding assistants building new UI components. For general development rules and further reading, see [AGENTS.md](./AGENTS.md).
+
 ### Quick Color Reference
 
 ```
@@ -265,8 +270,8 @@ Border:      #f4f8fc
 
 ### Example Prompts
 
-1. "Build a hero section with a `#ffffff` background, `aawdfdgnxz` heading in `#151f27`, and a `#db001b` CTA button with 0px radius."
-2. "Create a pricing card using background `#ffffff`, border `#f4f8fc`, `Alaska` for text, and 60px padding."
+1. "Build a hero section with a `#ffffff` background, Inter heading in `#151f27`, and a `#db001b` CTA button with 6px radius."
+2. "Create a pricing card using background `#ffffff`, border `#f4f8fc`, Inter for text, and 60px padding."
 3. "Design a navigation bar — `#ffffff` background, `#151f27` links, `#db001b` for active state."
 4. "Build a feature grid with 3 columns, 60px gap, each card using the card component style."
 5. "Create a footer with `#151f27` background, `#ffffff` text, and 40px padding."

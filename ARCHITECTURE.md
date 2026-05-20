@@ -14,6 +14,69 @@
 | Routing | None — tab-based view switching |
 | Tests | Vitest (unit/integration) + Playwright (E2E) |
 
+## System Overview (C4)
+
+### Level 1 — System Context
+
+```mermaid
+flowchart TB
+    user["<b>Employee</b><br/><i>[Person]</i><br/>Plans vacation and tracks<br/>entitlement under German<br/>BUrlG rules"]
+
+    system["<b>My Holiday</b><br/><i>[Software System]</i><br/>Vacation planning &amp; entitlement<br/>tracker. Manages periods, computes<br/>work-day counts, exports ICS."]
+
+    ferien["<b>ferien-api.de</b><br/><i>[External System]</i><br/>Public REST API for German<br/>school holidays per state"]
+
+    calendar["<b>Calendar Application</b><br/><i>[External System]</i><br/>Apple Calendar, Google Calendar,<br/>Outlook — imports ICS files"]
+
+    user -- "Plans vacation,<br/>views entitlement<br/>[HTTPS]" --> system
+    system -- "Fetches school<br/>holidays<br/>[HTTPS/JSON]" --> ferien
+    system -- "Provides ICS<br/>export file<br/>[RFC 5545]" --> calendar
+    user -- "Imports planned<br/>vacation" --> calendar
+
+    classDef person fill:#08427B,stroke:#052E56,color:#fff
+    classDef sys fill:#1168BD,stroke:#0B4884,color:#fff
+    classDef external fill:#999999,stroke:#6B6B6B,color:#fff
+
+    class user person
+    class system sys
+    class ferien,calendar external
+```
+
+### Level 2 — Containers
+
+```mermaid
+flowchart TB
+    user["<b>Employee</b><br/><i>[Person]</i>"]
+
+    subgraph boundary["My Holiday [Software System]"]
+        spa["<b>Web Application</b><br/><i>[Container: React 19 + TypeScript + Vite]</i><br/>SPA serving Dashboard, Year, Month<br/>and List views. UI state in Zustand,<br/>server state in TanStack Query."]
+
+        api["<b>API Server</b><br/><i>[Container: Node.js + Express]</i><br/>REST endpoints for periods and<br/>settings. Generates ICS files.<br/>Listens on port 3001."]
+
+        db[("<b>Database</b><br/><i>[Container: SQLite via better-sqlite3]</i><br/>Persists vacation periods and<br/>user settings.<br/>data/my-holiday.db")]
+    end
+
+    ferien["<b>ferien-api.de</b><br/><i>[External System]</i>"]
+    calendar["<b>Calendar Application</b><br/><i>[External System]</i>"]
+
+    user -- "Uses<br/>[HTTPS]" --> spa
+    spa -- "REST calls<br/>[JSON/HTTPS]" --> api
+    spa -- "Fetches school<br/>holidays<br/>[JSON/HTTPS]" --> ferien
+    api -- "Reads &amp; writes<br/>[better-sqlite3]" --> db
+    api -- "Serves ICS file<br/>[RFC 5545]" --> calendar
+    user -- "Imports ICS" --> calendar
+
+    classDef person fill:#08427B,stroke:#052E56,color:#fff
+    classDef container fill:#438DD5,stroke:#2E6295,color:#fff
+    classDef external fill:#999999,stroke:#6B6B6B,color:#fff
+    classDef sysBoundary fill:none,stroke:#444,stroke-dasharray:5 5
+
+    class user person
+    class spa,api,db container
+    class ferien,calendar external
+    class boundary sysBoundary
+```
+
 ## Project Structure
 
 ```

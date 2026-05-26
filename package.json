@@ -17,7 +17,8 @@
     "test:e2e": "playwright test",
     "server": "tsx server/index.ts",
     "build:server": "esbuild server/index.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outfile=dist-server/index.js",
-    "build:cli": "esbuild cli/my-holiday.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outfile=dist-cli/my-holiday.js"
+    "build:cli": "esbuild cli/my-holiday.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outfile=dist-cli/my-holiday.js",
+    "typecheck:cli": "tsc -p tsconfig.cli.json"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.100.7",

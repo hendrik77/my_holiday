@@ -2,16 +2,14 @@
 import { Command } from 'commander'
 import { version } from '../package.json'
 
-const DEFAULT_API_URL = 'http://localhost:3001/api/v1'
-
 const program = new Command()
 
 program
   .name('my-holiday')
   .description('Command-line interface for the my-holiday vacation planner')
   .version(version)
-  .option('--api <url>', 'base URL of the my-holiday API', process.env.MY_HOLIDAY_API_URL ?? DEFAULT_API_URL)
-  .option('--token <token>', 'bearer token sent as the Authorization header', process.env.MY_HOLIDAY_API_TOKEN)
+  .option('--api <url>', 'API base URL (default: $MY_HOLIDAY_API_URL or http://localhost:3001/api/v1)')
+  .option('--token <token>', 'bearer token for the Authorization header (default: $MY_HOLIDAY_API_TOKEN)')
   .option('--json', 'emit machine-readable JSON', false)
 
 program.command('list').description('List vacation periods for a year')

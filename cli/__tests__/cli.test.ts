@@ -13,4 +13,14 @@ describe('my-holiday CLI', () => {
 
     expect(output.trim()).toBe(pkg.version)
   })
+
+  it('lists all subcommands in --help output', () => {
+    const output = execFileSync(process.execPath, [CLI_PATH, '--help'], {
+      encoding: 'utf8',
+    })
+
+    for (const command of ['list', 'add', 'remaining', 'export', 'migrate']) {
+      expect(output).toContain(command)
+    }
+  })
 })

@@ -178,19 +178,27 @@ src/utils/
 
 ### Phase 5 — Polish & docs
 
-**T5.1 — Global error handling & exit codes**
+**T5.1 — Global error handling, exit codes & client robustness**
 - **RED:** Spawn-based vitest that runs the built CLI as a subprocess:
   - network failure (unreachable `--api`) → exit 2, stderr contains "network"
   - server 500 → exit 2
   - validation error (`add` with bad date) → exit 1
   - success → exit 0
   - with `--json`, errors print to stdout as `{"error": {...}}`
-  Run — fails (no top-level handler).
-- **GREEN:** Wrap `cli/my-holiday.ts` entrypoint in a top-level `try/catch` mapping `ApiError` → 2, validation/usage errors → 1. Tests pass.
+  Plus `cli/api.ts` unit tests from the Phase 0 review:
+  - **(#4)** a 2xx response with a non-JSON body throws a wrapped, descriptive error — not a raw `SyntaxError`
+  - **(#5)** a base URL with a trailing slash joins cleanly with a leading-slash path (no `//periods`)
+  Run — fails (no top-level handler; `JSON.parse`/URL join not hardened).
+- **GREEN:**
+  - Wrap the `cli/my-holiday.ts` entrypoint in a top-level `try/catch` mapping `ApiError` → 2, network `TypeError` → 2, validation/usage errors → 1.
+  - Guard `JSON.parse` in `request()` (wrap non-JSON 2xx bodies) and normalize the base-URL ↔ path join.
+  Tests pass.
+- **(#3) Test infra:** spawn-based tests execute the gitignored `dist-cli/my-holiday.js`, so a clean `npm test` (without a prior build) fails with MODULE_NOT_FOUND. Add a `pretest` (or `pretest:cli`) hook that runs `npm run build:cli` so the suite is self-contained.
 
 **T5.2 — README + AGENTS.md**
 - No automated test — documentation only. Manual review checklist:
   - README "CLI" section lists install, env vars, every command, every flag
+  - README documents that `npm run build:cli` produces `dist-cli/my-holiday.js` and must run before using the CLI (ties into the #3 build hook)
   - AGENTS.md mentions the CLI and the `--help` / `--json` discovery path
 - **Done when:** `npm run lint` passes and both files render correctly.
 
@@ -221,7 +229,7 @@ src/utils/
 
 After all phases:
 
-1. `npm run build && npm run build:server && npm run build:cli && npm run lint` — all green.
+1. `npm run build && npm run build:server && npm run build:cli && npm run typecheck:cli && npm run lint` — all green.
 2. `npm test` — every test written in the RED step is now green; nothing regresses.
 3. `npm run test:e2e` — existing frontend e2e suite still green.
 4. Manual smoke:

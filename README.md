@@ -215,6 +215,10 @@ The migration is **idempotent** — running it twice won't create duplicates.
 
 For a full breakdown of the tech stack, file structure, REST API, data model, and key design decisions, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
+## Architecture Decision Records
+
+Significant architectural decisions are recorded as ADRs. See the [ADR overview](./docs/adr/README.md) for the full index.
+
 ## Design System
 
 Documented in [`DESIGN.md`](./DESIGN.md):

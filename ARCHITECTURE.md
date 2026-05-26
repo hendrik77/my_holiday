@@ -214,3 +214,7 @@ Translations live in `src/i18n/translations.ts` as a typed nested object with `d
 **7. Idempotent CSV migration**
 
 The migration script (`scripts/migrate-v1.ts`) matches periods by composite key `(startDate, endDate, note, halfDay, type)`. Rerunning safely skips existing records.
+
+## Architecture Decision Records
+
+Beyond the foundational decisions above, significant architectural choices are captured as dated ADRs (context, decision, alternatives, consequences). See the [ADR overview](./docs/adr/README.md) for the full index.

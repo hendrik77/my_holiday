@@ -316,4 +316,59 @@ describe('API /api/v1', () => {
       expect(res.text).toBe('Start Date;End Date;Note;Type;Half Day;Work Days');
     });
   });
+
+  describe('POST /api/v1/import', () => {
+    function importCsv(csv: string) {
+      return request(app).post('/api/v1/import').set('Content-Type', 'text/csv').send(csv);
+    }
+
+    it('imports an all-valid CSV with status 200', async () => {
+      const csv = [
+        'Start Date;End Date;Note;Type',
+        '2026-07-01;2026-07-05;Sommer;urlaub',
+        '2026-08-10;2026-08-14;Sommer2;urlaub',
+      ].join('\n');
+
+      const res = await importCsv(csv);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ imported: 2, skipped: [], errors: [] });
+
+      const listRes = await request(app).get('/api/v1/periods?year=2026');
+      expect(listRes.body).toHaveLength(2);
+    });
+
+    it('skips a row overlapping an existing period with status 207 and reason "overlap"', async () => {
+      await request(app).post('/api/v1/periods').send({
+        startDate: '2026-07-01', endDate: '2026-07-05', note: 'existing',
+      });
+      const csv = ['Start Date;End Date;Note;Type', '2026-07-03;2026-07-07;clash;urlaub'].join('\n');
+
+      const res = await importCsv(csv);
+      expect(res.status).toBe(207);
+      expect(res.body.imported).toBe(0);
+      expect(res.body.skipped).toHaveLength(1);
+      expect(res.body.skipped[0].reason).toBe('overlap');
+    });
+
+    it('reports malformed-date rows in errors with status 207 while importing the valid rows', async () => {
+      const csv = [
+        'Start Date;End Date;Note;Type',
+        '2026-07-01;2026-07-05;ok;urlaub',
+        'not-a-date;2026-08-14;bad;urlaub',
+      ].join('\n');
+
+      const res = await importCsv(csv);
+      expect(res.status).toBe(207);
+      expect(res.body.imported).toBe(1);
+      expect(res.body.errors.length).toBeGreaterThan(0);
+    });
+
+    it('returns 400 when no rows are parseable', async () => {
+      const csv = ['Start Date;End Date;Note', 'not-a-date;also-bad;x'].join('\n');
+
+      const res = await importCsv(csv);
+      expect(res.status).toBe(400);
+      expect(res.body.imported).toBe(0);
+    });
+  });
 });

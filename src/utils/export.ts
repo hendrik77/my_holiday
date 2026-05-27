@@ -1,6 +1,8 @@
 import type { VacationPeriod, VacationType } from '../types';
 import type { GermanState } from '../data/holidays';
-import { countVacationWorkDays } from './calendar';
+import { formatCSV } from './csv';
+
+export { escapeCSV } from './csv';
 
 /** Export vacation data as a CSV file and trigger download */
 export function downloadCSV(
@@ -10,19 +12,11 @@ export function downloadCSV(
   t: (key: string, params?: Record<string, string | number>) => string
 ): void {
   const BOM = '\uFEFF';
-  const rows = [t('csv.header')];
-
-  for (const p of periods) {
-    const workDays = countVacationWorkDays(p, state);
-    const halfDayLabel = p.halfDay ? t('csv.yes') : t('csv.no');
-    const note = escapeCSV(p.note || '');
-    const type = p.type ?? 'urlaub';
-    rows.push(
-      `${p.startDate};${p.endDate};${note};${type};${halfDayLabel};${workDays.toString().replace('.', ',')}`
-    );
-  }
-
-  const content = BOM + rows.join('\n');
+  const content = BOM + formatCSV(periods, state, {
+    header: t('csv.header'),
+    yes: t('csv.yes'),
+    no: t('csv.no'),
+  });
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -34,14 +28,6 @@ export function downloadCSV(
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
-
-/** Escape a CSV field: wrap in quotes if it contains delimiter, quote, or newline */
-export function escapeCSV(value: string): string {
-  if (value.includes(';') || value.includes('"') || value.includes('\n')) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
 }
 
 const VALID_TYPES: VacationType[] = [

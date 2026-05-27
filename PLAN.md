@@ -269,3 +269,8 @@ After all phases:
 - MCP server — separate vision pillar; this CLI work intentionally creates the HTTP endpoints it will need.
 - Interactive prompts (no `--type` → prompt user). Keep v1 non-interactive so it scripts cleanly.
 - Shell completion scripts. Add when there's demand.
+
+## Follow-ups (discovered during implementation)
+
+- **Server-side overlap check on `POST /api/v1/periods`.** `runAdd` (T3.1) maps a server `409` to an exit-1 overlap usage error, and that mapping is unit-tested — but `POST /periods` currently has no overlap detection, so it never returns `409` (an overlapping `add` succeeds with `201`). Add overlap detection server-side, reusing `hasOverlap` from `src/utils/calendar.ts` (the same util T1.4's import flow will use), returning `409` with an overlap message. Until then the `add` overlap path is dormant end-to-end.
+- **Consolidate the vacation-type runtime lists.** T3.1 added the canonical `VACATION_TYPES` to `src/types.ts`, but `src/utils/export.ts` (`VALID_TYPES`) and `src/components/VacationModal.tsx` (`VACATION_TYPES`) still keep their own copies. Point both at the canonical export to remove the duplication (DRY). Low risk, but `export.ts` carries browser-only deps, so sequence it with the T1.1 `formatCSV` extraction.

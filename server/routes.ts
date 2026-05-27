@@ -16,6 +16,7 @@ import {
   carryOverDeadline,
 } from '../src/utils/calendar';
 import { computeProRataEntitlement, computeLeaveReduction } from '../src/utils/entitlement';
+import { formatCSV } from '../src/utils/csv';
 import type { GermanState } from '../src/data/holidays';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -149,6 +150,18 @@ export function createRouter(db: Database.Database): Router {
     res.set('Content-Type', 'text/calendar; charset=utf-8');
     res.set('Content-Disposition', `attachment; filename="urlaub-${year}.ics"`);
     res.send(ics);
+  });
+
+  // ── CSV Export ──────────────────────────────────────────────────
+
+  router.get('/export.csv', (req, res) => {
+    const year = req.query.year ? parseYear(req.query.year) ?? new Date().getFullYear() : new Date().getFullYear();
+    const settings = getSettings(db);
+    const periods = getPeriodsByYear(db, year);
+    const csv = formatCSV(periods, settings.state as GermanState);
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="urlaub-${year}.csv"`);
+    res.send(csv);
   });
 
   // ── Remaining entitlement ───────────────────────────────────────

@@ -5,6 +5,7 @@ import Database from 'better-sqlite3';
 import cors from 'cors';
 import { initDb } from '../db';
 import { createRouter } from '../routes';
+import { formatCSV } from '../../src/utils/csv';
 
 function createTestApp() {
   const db = new Database(':memory:');
@@ -286,6 +287,33 @@ describe('API /api/v1', () => {
       expect(res.body.usedDays).toBe(5);
       expect(res.body.carryOver).toEqual({ available: 5, used: 5, expiresOn: '2026-03-31' });
       expect(res.body.remaining).toBe(25);
+    });
+  });
+
+  describe('GET /api/v1/export.csv', () => {
+    it('returns the year\'s periods as CSV with the correct headers', async () => {
+      await request(app).post('/api/v1/periods').send({
+        startDate: '2026-07-01', endDate: '2026-07-03', note: 'Sommer; lang', type: 'urlaub',
+      });
+      await request(app).post('/api/v1/periods').send({
+        startDate: '2026-09-01', endDate: '2026-09-01', note: '', halfDay: true, type: 'urlaub',
+      });
+
+      const listRes = await request(app).get('/api/v1/periods?year=2026');
+      const expected = formatCSV(listRes.body, 'HE');
+
+      const res = await request(app).get('/api/v1/export.csv?year=2026');
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toContain('text/csv');
+      expect(res.headers['content-type']).toContain('charset=utf-8');
+      expect(res.headers['content-disposition']).toContain('urlaub-2026.csv');
+      expect(res.text).toBe(expected);
+    });
+
+    it('returns just the header row when there are no periods', async () => {
+      const res = await request(app).get('/api/v1/export.csv?year=2099');
+      expect(res.status).toBe(200);
+      expect(res.text).toBe('Start Date;End Date;Note;Type;Half Day;Work Days');
     });
   });
 });

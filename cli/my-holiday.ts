@@ -3,6 +3,7 @@ import { Command, CommanderError } from 'commander'
 import { version } from '../package.json'
 import { createApiClient } from './api'
 import { runList } from './commands/list'
+import { runRemaining } from './commands/remaining'
 import { mapErrorToExit } from './errors'
 import { EXIT } from './exit-codes'
 
@@ -29,7 +30,16 @@ function buildProgram(): Command {
       process.stdout.write(`${output}\n`)
     })
   program.command('add').description('Add a vacation period')
-  program.command('remaining').description('Show remaining vacation entitlement')
+  program
+    .command('remaining')
+    .description('Show remaining vacation entitlement')
+    .option('--year <year>', 'calendar year (default: current year)', (value) => Number.parseInt(value, 10))
+    .action(async (options: { year?: number }, command: Command) => {
+      const globals = command.optsWithGlobals()
+      const client = createApiClient({ api: globals.api, token: globals.token })
+      const output = await runRemaining(client, { year: options.year, json: globals.json === true })
+      process.stdout.write(`${output}\n`)
+    })
   program.command('export').description('Export periods as an ICS or CSV file')
   program.command('migrate').description('Import vacation periods from a CSV file')
 

@@ -45,3 +45,31 @@ export function formatPeriodsTable(periods: VacationPeriod[]): string {
   ])
   return renderTable(HEADERS, rows)
 }
+
+export interface CarryOver {
+  readonly available: number
+  readonly used: number
+  readonly expiresOn: string
+}
+
+/** Server-computed remaining-entitlement summary returned by `GET /remaining`. */
+export interface RemainingSummary {
+  readonly year: number
+  readonly totalDays: number
+  readonly entitledDays: number
+  readonly usedDays: number
+  readonly carryOver: CarryOver
+  readonly remaining: number
+}
+
+/** Render a remaining-entitlement summary as aligned human-readable lines. */
+export function formatRemaining(summary: RemainingSummary): string {
+  const { carryOver } = summary
+  return [
+    `Year:       ${summary.year}`,
+    `Entitled:   ${formatDays(summary.entitledDays)} of ${formatDays(summary.totalDays)}`,
+    `Used:       ${formatDays(summary.usedDays)}`,
+    `Carry-over: ${formatDays(carryOver.available)} (used ${formatDays(carryOver.used)}, expires ${carryOver.expiresOn})`,
+    `Remaining:  ${formatDays(summary.remaining)}`,
+  ].join('\n')
+}

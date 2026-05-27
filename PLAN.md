@@ -90,6 +90,27 @@ src/utils/
   Run — fails (module does not exist).
 - **GREEN:** Implement `cli/api.ts` until all assertions pass.
 
+**T0.4 — Error spine & client hardening (cross-cutting)**
+
+Pulled forward from the original T5.1 review (#4, #5) plus the exit-code mapping. The *mechanism* lives here so every command from T2.1 on inherits one exit-code contract — honouring the "exit codes plumbed from day one" design principle. The end-to-end *verification* of that contract stays in T5.1.
+
+- **RED:**
+  - `cli/__tests__/errors.test.ts` for the pure `mapErrorToExit(err)`:
+    - `UsageError` → exit 1
+    - `ApiError` → exit 2
+    - network `TypeError` → exit 2, message contains "network"
+    - unknown error → exit 1
+  - Append to `cli/__tests__/api.test.ts`:
+    - **(#4)** a 2xx response with a non-JSON body throws a wrapped, descriptive `ApiError` — not a raw `SyntaxError`
+    - **(#5)** a base URL with a trailing slash joins cleanly with a leading-slash path (no `//periods`)
+  Run — fails (`cli/errors.ts` / `cli/exit-codes.ts` do not exist; `JSON.parse`/URL join not hardened).
+- **GREEN:**
+  - Add `cli/exit-codes.ts` (`EXIT.OK/USAGE/SERVER` = 0/1/2) and `cli/errors.ts` (`UsageError`, pure `mapErrorToExit`).
+  - Guard `JSON.parse` in `request()` (wrap non-JSON 2xx bodies as `ApiError`) and normalize the base-URL ↔ path join.
+  - Wrap the `cli/my-holiday.ts` entrypoint in `parseAsync` + a top-level `try/catch` via `.exitOverride()`, mapping `ApiError`/network `TypeError` → 2, `UsageError` → 1; with `--json`, errors print to stdout as `{"error": {...}}`.
+  Tests pass; `npm run lint` clean.
+- **Note:** `UsageError`'s first *consumer* is T3.1 (`add`). It is defined here as plumbing ahead of its consumer so the exit-code contract is centralized (DRY) rather than reimplemented per command.
+
 ### Phase 1 — Server API additions
 
 **T1.1 — Extract `formatCSV()` to `src/utils/csv.ts`**
@@ -178,21 +199,18 @@ src/utils/
 
 ### Phase 5 — Polish & docs
 
-**T5.1 — Global error handling, exit codes & client robustness**
-- **RED:** Spawn-based vitest that runs the built CLI as a subprocess:
+**T5.1 — End-to-end exit-code verification & build hook**
+
+The error-mapping mechanism (`mapErrorToExit`, entrypoint wrapper, `JSON.parse`/URL hardening) moved to **T0.4**. T5.1 now only *verifies* that contract through the built binary end-to-end, and makes the spawn suite self-contained.
+
+- **RED:** Spawn-based vitest that runs the built CLI as a subprocess (exercising the real T0.4 mechanism, not mocks):
   - network failure (unreachable `--api`) → exit 2, stderr contains "network"
   - server 500 → exit 2
   - validation error (`add` with bad date) → exit 1
   - success → exit 0
   - with `--json`, errors print to stdout as `{"error": {...}}`
-  Plus `cli/api.ts` unit tests from the Phase 0 review:
-  - **(#4)** a 2xx response with a non-JSON body throws a wrapped, descriptive error — not a raw `SyntaxError`
-  - **(#5)** a base URL with a trailing slash joins cleanly with a leading-slash path (no `//periods`)
-  Run — fails (no top-level handler; `JSON.parse`/URL join not hardened).
-- **GREEN:**
-  - Wrap the `cli/my-holiday.ts` entrypoint in a top-level `try/catch` mapping `ApiError` → 2, network `TypeError` → 2, validation/usage errors → 1.
-  - Guard `JSON.parse` in `request()` (wrap non-JSON 2xx bodies) and normalize the base-URL ↔ path join.
-  Tests pass.
+  Run — fails (binary not rebuilt / behaviours not yet wired through real commands).
+- **GREEN:** Ensure the T0.4 spine and the relevant command handlers produce the asserted exit codes through the built binary. Tests pass.
 - **(#3) Test infra:** spawn-based tests execute the gitignored `dist-cli/my-holiday.js`, so a clean `npm test` (without a prior build) fails with MODULE_NOT_FOUND. Add a `pretest` (or `pretest:cli`) hook that runs `npm run build:cli` so the suite is self-contained.
 
 **T5.2 — README + AGENTS.md**

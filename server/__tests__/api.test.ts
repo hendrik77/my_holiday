@@ -236,4 +236,56 @@ describe('API /api/v1', () => {
       expect(res.status).toBe(404);
     });
   });
+
+  describe('GET /api/v1/remaining', () => {
+    it('returns full entitlement for a full-year employee with no usage', async () => {
+      const res = await request(app).get('/api/v1/remaining?year=2026');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        year: 2026,
+        totalDays: 30,
+        entitledDays: 30,
+        usedDays: 0,
+        carryOver: { available: 0, used: 0, expiresOn: '2026-03-31' },
+        remaining: 30,
+      });
+    });
+
+    it('pro-rates entitlement for a new hire (§ 4 BUrlG)', async () => {
+      await request(app).put('/api/v1/settings').send({ employmentStartDate: '2026-10-01' });
+
+      const res = await request(app).get('/api/v1/remaining?year=2026');
+      expect(res.status).toBe(200);
+      // Oct–Dec = 3 complete months → floor(3/12 * 30) = 7
+      expect(res.body.entitledDays).toBe(7);
+      expect(res.body.usedDays).toBe(0);
+      expect(res.body.remaining).toBe(7);
+    });
+
+    it('reduces entitlement for an elternzeit leave period (§ 17 BEEG)', async () => {
+      await request(app).post('/api/v1/periods').send({
+        startDate: '2026-01-01', endDate: '2026-06-30', type: 'elternzeit', note: '',
+      });
+
+      const res = await request(app).get('/api/v1/remaining?year=2026');
+      expect(res.status).toBe(200);
+      // 6 full months → reduction (6/12) * 30 = 15; elternzeit is not consumed urlaub
+      expect(res.body.entitledDays).toBe(15);
+      expect(res.body.usedDays).toBe(0);
+      expect(res.body.remaining).toBe(15);
+    });
+
+    it('reports carry-over consumed before the Mar 31 deadline', async () => {
+      await request(app).put('/api/v1/settings').send({ carryOverDays: 5 });
+      await request(app).post('/api/v1/periods').send({
+        startDate: '2026-02-02', endDate: '2026-02-06', type: 'urlaub', note: '',
+      });
+
+      const res = await request(app).get('/api/v1/remaining?year=2026');
+      expect(res.status).toBe(200);
+      expect(res.body.usedDays).toBe(5);
+      expect(res.body.carryOver).toEqual({ available: 5, used: 5, expiresOn: '2026-03-31' });
+      expect(res.body.remaining).toBe(25);
+    });
+  });
 });

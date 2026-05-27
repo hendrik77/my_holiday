@@ -10,6 +10,13 @@ import {
   updateSettings,
 } from './db';
 import { generateICS } from '../src/utils/ics';
+import {
+  countVacationWorkDaysInYear,
+  countCarryOverUsed,
+  carryOverDeadline,
+} from '../src/utils/calendar';
+import { computeProRataEntitlement, computeLeaveReduction } from '../src/utils/entitlement';
+import type { GermanState } from '../src/data/holidays';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MM_DD_RE = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
@@ -142,6 +149,49 @@ export function createRouter(db: Database.Database): Router {
     res.set('Content-Type', 'text/calendar; charset=utf-8');
     res.set('Content-Disposition', `attachment; filename="urlaub-${year}.ics"`);
     res.send(ics);
+  });
+
+  // ── Remaining entitlement ───────────────────────────────────────
+
+  router.get('/remaining', (req, res) => {
+    const year = req.query.year ? parseYear(req.query.year) : new Date().getFullYear();
+    if (year === null) {
+      res.status(400).json({ error: 'Invalid year' });
+      return;
+    }
+
+    const settings = getSettings(db);
+    const totalDays = settings.totalDays;
+    const state = settings.state as GermanState;
+    const periods = getPeriodsByYear(db, year);
+    const urlaubPeriods = periods.filter((p) => !p.type || p.type === 'urlaub');
+
+    const usedDays = urlaubPeriods.reduce(
+      (sum, p) => sum + countVacationWorkDaysInYear(p, year, state),
+      0,
+    );
+    const proRata = computeProRataEntitlement(
+      settings.employmentStartDate,
+      settings.employmentEndDate,
+      year,
+      totalDays,
+    );
+    const reduction = computeLeaveReduction(periods, year, totalDays);
+    const entitledDays = Math.max(0, proRata - reduction);
+    const carryOverUsed = countCarryOverUsed(urlaubPeriods, year, state, settings.carryOverDays);
+
+    res.json({
+      year,
+      totalDays,
+      entitledDays,
+      usedDays,
+      carryOver: {
+        available: settings.carryOverDays,
+        used: carryOverUsed,
+        expiresOn: carryOverDeadline(year),
+      },
+      remaining: entitledDays - usedDays,
+    });
   });
 
   // ── Settings ─────────────────────────────────────────────────────

@@ -2,6 +2,7 @@
 import { Command, CommanderError } from 'commander'
 import { version } from '../package.json'
 import { createApiClient } from './api'
+import { runAdd } from './commands/add'
 import { runList } from './commands/list'
 import { runRemaining } from './commands/remaining'
 import { mapErrorToExit } from './errors'
@@ -29,7 +30,27 @@ function buildProgram(): Command {
       const output = await runList(client, { year: options.year, json: globals.json === true })
       process.stdout.write(`${output}\n`)
     })
-  program.command('add').description('Add a vacation period')
+  program
+    .command('add')
+    .description('Add a vacation period')
+    .option('--start <date>', 'start date (YYYY-MM-DD)')
+    .option('--end <date>', 'end date (YYYY-MM-DD)')
+    .option('--type <type>', 'vacation type (default: urlaub)')
+    .option('--note <text>', 'note')
+    .option('--half-day', 'count a single day as a half day', false)
+    .action(async (options: { start?: string; end?: string; type?: string; note?: string; halfDay?: boolean }, command: Command) => {
+      const globals = command.optsWithGlobals()
+      const client = createApiClient({ api: globals.api, token: globals.token })
+      const output = await runAdd(client, {
+        start: options.start,
+        end: options.end,
+        type: options.type,
+        note: options.note,
+        halfDay: options.halfDay === true,
+        json: globals.json === true,
+      })
+      process.stdout.write(`${output}\n`)
+    })
   program
     .command('remaining')
     .description('Show remaining vacation entitlement')

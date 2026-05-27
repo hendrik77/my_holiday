@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { Command, CommanderError } from 'commander'
 import { version } from '../package.json'
+import { createApiClient } from './api'
+import { runList } from './commands/list'
 import { mapErrorToExit } from './errors'
 import { EXIT } from './exit-codes'
 
@@ -16,7 +18,16 @@ function buildProgram(): Command {
     .option('--json', 'emit machine-readable JSON', false)
     .exitOverride()
 
-  program.command('list').description('List vacation periods for a year')
+  program
+    .command('list')
+    .description('List vacation periods for a year')
+    .option('--year <year>', 'filter to a calendar year', (value) => Number.parseInt(value, 10))
+    .action(async (options: { year?: number }, command: Command) => {
+      const globals = command.optsWithGlobals()
+      const client = createApiClient({ api: globals.api, token: globals.token })
+      const output = await runList(client, { year: options.year, json: globals.json === true })
+      process.stdout.write(`${output}\n`)
+    })
   program.command('add').description('Add a vacation period')
   program.command('remaining').description('Show remaining vacation entitlement')
   program.command('export').description('Export periods as an ICS or CSV file')

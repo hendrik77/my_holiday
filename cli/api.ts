@@ -43,7 +43,8 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       headers.set('Authorization', `Bearer ${token}`)
     }
 
-    const response = await fetch(`${baseUrl}${path}`, { ...init, headers })
+    const url = `${baseUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
+    const response = await fetch(url, { ...init, headers })
     const body = await response.text()
 
     if (!response.ok) {
@@ -54,7 +55,18 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       )
     }
 
-    return (body ? JSON.parse(body) : undefined) as T
+    if (!body) {
+      return undefined as T
+    }
+    try {
+      return JSON.parse(body) as T
+    } catch {
+      throw new ApiError(
+        response.status,
+        body,
+        `Request to ${path} returned ${response.status} but the body was not valid JSON`,
+      )
+    }
   }
 
   return { request }

@@ -98,4 +98,28 @@ describe('createApiClient', () => {
 
     expect(result).toEqual([{ id: '1' }])
   })
+
+  describe('response robustness', () => {
+    it('throws a wrapped ApiError, not a raw SyntaxError, when a 2xx body is not JSON', async () => {
+      fetchMock.mockResolvedValue(new Response('not json', { status: 200 }))
+      const client = createApiClient({ api: 'http://x' })
+
+      const error = await client.request('/periods').catch((e: unknown) => e)
+
+      expect(error).toBeInstanceOf(ApiError)
+      expect(error).not.toBeInstanceOf(SyntaxError)
+      expect((error as ApiError).message).toMatch(/json/i)
+    })
+
+    it('joins a trailing-slash base URL with a leading-slash path without doubling slashes', async () => {
+      const client = createApiClient({ api: 'http://x/api/v1/' })
+
+      await client.request('/periods')
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://x/api/v1/periods',
+        expect.any(Object),
+      )
+    })
+  })
 })

@@ -239,7 +239,7 @@ Build it before first use. (The test suite builds it automatically via the `pret
 
 | Command | Flags | Description |
 |---|---|---|
-| `list` | `[--year <year>]` | List vacation periods — table, or a JSON array with `--json` |
+| `list` | `[--year <year>]` | List vacation periods — table (Days = server-computed working days), or a JSON array with `--json` |
 | `remaining` | `[--year <year>]` | Remaining-entitlement summary (defaults to the current year) |
 | `add` | `--start <YYYY-MM-DD> --end <YYYY-MM-DD> [--type <type>] [--note <text>] [--half-day]` | Add a vacation period |
 | `export` | `--format <ics\|csv> [--year <year>] [--out <file>] [--bom]` | Export periods; writes to `--out` or stdout. `--bom` prepends a UTF-8 BOM to CSV (Excel) |

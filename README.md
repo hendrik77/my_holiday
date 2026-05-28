@@ -211,6 +211,58 @@ npx tsx scripts/migrate-v1.ts ./urlaub-2026.csv
 
 The migration is **idempotent** — running it twice won't create duplicates.
 
+## Command-Line Interface (CLI)
+
+`my-holiday` is a scriptable CLI for power users and AI agents. It talks to the same REST API as the web app over HTTP — local or remote — so the server must be running (`npm run server`, or Docker).
+
+### Build
+
+The CLI is bundled with esbuild into `dist-cli/my-holiday.js`:
+
+```bash
+npm run build:cli                  # produces dist-cli/my-holiday.js
+node dist-cli/my-holiday.js --help
+```
+
+Build it before first use. (The test suite builds it automatically via the `pretest` hook.) The `bin` field maps `my-holiday` to the built file, so `npm link` exposes a global `my-holiday` command.
+
+### Configuration
+
+| Variable | Flag override | Default | Purpose |
+|---|---|---|---|
+| `MY_HOLIDAY_API_URL` | `--api <url>` | `http://localhost:3001/api/v1` | API base URL (local or remote) |
+| `MY_HOLIDAY_API_TOKEN` | `--token <token>` | _(none)_ | Bearer token sent as `Authorization: Bearer …` (the server does not enforce auth yet) |
+
+`--json` makes every command emit machine-readable output. Exit codes: **0** success, **1** user/usage error (bad arguments, validation, partial import), **2** server or network error.
+
+### Commands
+
+| Command | Flags | Description |
+|---|---|---|
+| `list` | `[--year <year>]` | List vacation periods — table, or a JSON array with `--json` |
+| `remaining` | `[--year <year>]` | Remaining-entitlement summary (defaults to the current year) |
+| `add` | `--start <YYYY-MM-DD> --end <YYYY-MM-DD> [--type <type>] [--note <text>] [--half-day]` | Add a vacation period |
+| `export` | `--format <ics\|csv> [--year <year>] [--out <file>]` | Export periods; writes to `--out` or stdout |
+| `migrate` | `<file> [--dry-run]` | Import periods from a CSV file; `--dry-run` parses locally without sending |
+
+Valid `--type` values: `urlaub`, `bildungsurlaub`, `kur`, `sabbatical`, `unbezahlterUrlaub`, `mutterschaftsurlaub`, `elternzeit`, `sonderurlaub` (default: `urlaub`).
+
+### Examples
+
+```bash
+# Against a local server (default API URL)
+node dist-cli/my-holiday.js list --year 2026
+node dist-cli/my-holiday.js remaining --json
+
+# Against a remote homelab instance (after `npm link`)
+export MY_HOLIDAY_API_URL=https://holiday.example.lan/api/v1
+my-holiday add --start 2026-07-01 --end 2026-07-15 --type urlaub --note "Sommerurlaub"
+my-holiday export --format ics --year 2026 --out urlaub-2026.ics
+my-holiday migrate ./urlaub-2026.csv --dry-run
+```
+
+Run `my-holiday --help` (or `my-holiday <command> --help`) to discover commands and flags.
+
 ## Architecture
 
 For a full breakdown of the tech stack, file structure, REST API, data model, and key design decisions, see [ARCHITECTURE.md](./ARCHITECTURE.md).

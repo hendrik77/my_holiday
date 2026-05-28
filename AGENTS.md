@@ -37,8 +37,19 @@ Existing features must not regress — all tests must pass before committing.
 | `npm run test:watch` | Watch mode |
 | `npm run test:e2e` | Playwright end-to-end smoke tests |
 | `npm run build` | Production frontend build |
+| `npm run build:cli` | Bundle the `my-holiday` CLI to `dist-cli/` (also runs automatically as `pretest`) |
+| `npm run typecheck:cli` | Type-check the CLI (`tsconfig.cli.json`) |
 
-## 4. Further reading
+## 4. Command-line interface
+
+The project ships a `my-holiday` CLI — an HTTP client for the same REST API. See the [CLI section in README](./README.md#command-line-interface-cli) for the full reference. For agents:
+
+- Build it with `npm run build:cli` (the `pretest` hook does this automatically before tests).
+- Discover commands and flags with `my-holiday --help` and `my-holiday <command> --help`.
+- Pass `--json` on any command for machine-readable output.
+- Exit codes: `0` success, `1` user/usage error, `2` server/network error.
+
+## 5. Further reading
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — tech stack, file structure, REST API, data model, key design decisions
 - [VISION.md](./VISION.md) — long-term roadmap (Personal Enhancements, v3 multi-user, v4 company planner, AI/MCP)

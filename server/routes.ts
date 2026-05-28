@@ -17,8 +17,7 @@ import {
   hasOverlap,
 } from '../src/utils/calendar';
 import { computeProRataEntitlement, computeLeaveReduction } from '../src/utils/entitlement';
-import { formatCSV } from '../src/utils/csv';
-import { parseImportCSV } from '../src/utils/export';
+import { formatCSV, parseImportCSV } from '../src/utils/csv';
 import type { GermanState } from '../src/data/holidays';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -49,21 +48,6 @@ function isMonthDay(v: unknown): v is string {
   return typeof v === 'string' && MM_DD_RE.test(v);
 }
 
-/**
- * Canonical English messages for parseImportCSV (the browser passes a real i18n
- * `t`; the API/CLI surface is locale-independent, like the CSV export labels).
- */
-function csvImportMessage(key: string, params?: Record<string, string | number>): string {
-  switch (key) {
-    case 'csv.emptyFile': return 'The CSV file is empty.';
-    case 'csv.missingHeader': return 'No recognizable header row found.';
-    case 'csv.missingColumns': return 'Required start/end date columns are missing.';
-    case 'csv.invalidDate': return `Row ${params?.row}: invalid start date "${params?.value}".`;
-    case 'csv.invalidEndDate': return `Row ${params?.row}: invalid end date "${params?.value}".`;
-    case 'csv.noEntries': return 'No valid entries found in the CSV.';
-    default: return key;
-  }
-}
 
 export function createRouter(db: Database.Database): Router {
   const router = Router();
@@ -189,7 +173,7 @@ export function createRouter(db: Database.Database): Router {
 
   router.post('/import', (req, res) => {
     const csv = typeof req.body === 'string' ? req.body : '';
-    const { periods, errors } = parseImportCSV(csv, csvImportMessage);
+    const { periods, errors } = parseImportCSV(csv);
 
     if (periods.length === 0) {
       res.status(400).json({ imported: 0, skipped: [], errors });

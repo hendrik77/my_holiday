@@ -7,7 +7,7 @@ import { runExport } from './commands/export'
 import { runList } from './commands/list'
 import { runMigrate } from './commands/migrate'
 import { runRemaining } from './commands/remaining'
-import { mapErrorToExit } from './errors'
+import { UsageError, mapErrorToExit } from './errors'
 import { EXIT } from './exit-codes'
 
 function buildProgram(): Command {
@@ -83,7 +83,7 @@ function buildProgram(): Command {
     .action(async (file: string | undefined, options: { dryRun?: boolean }, command: Command) => {
       const globals = command.optsWithGlobals()
       const client = createApiClient({ api: globals.api, token: globals.token })
-      const output = await runMigrate(client, { file, dryRun: options.dryRun === true })
+      const output = await runMigrate(client, { file, dryRun: options.dryRun === true, json: globals.json === true })
       process.stdout.write(`${output}\n`)
     })
 
@@ -104,7 +104,9 @@ async function main(argv: string[]): Promise<number> {
 
     const { code, message } = mapErrorToExit(err)
     if (program.opts().json === true) {
-      process.stdout.write(`${JSON.stringify({ error: { code, message } })}\n`)
+      const payload =
+        err instanceof UsageError && err.json !== undefined ? err.json : { error: { code, message } }
+      process.stdout.write(`${JSON.stringify(payload)}\n`)
     } else {
       process.stderr.write(`${message}\n`)
     }

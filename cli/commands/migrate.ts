@@ -12,6 +12,15 @@ interface ImportResponse {
 export interface MigrateOptions {
   readonly file?: string
   readonly dryRun?: boolean
+  readonly json?: boolean
+}
+
+function parseJsonOrNull(text: string): unknown {
+  try {
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -30,6 +39,9 @@ export async function runMigrate(client: ApiClient, options: MigrateOptions = {}
 
   if (options.dryRun) {
     const { periods, errors } = parseImportCSV(csv)
+    if (options.json) {
+      return JSON.stringify({ dryRun: true, wouldImport: periods.length, errors }, null, 2)
+    }
     return `Dry run: ${periods.length} period(s) would import, ${errors.length} error(s); nothing sent.`
   }
 
@@ -42,7 +54,11 @@ export async function runMigrate(client: ApiClient, options: MigrateOptions = {}
     })
   } catch (err) {
     if (err instanceof ApiError && err.status === 400) {
-      throw new UsageError(`No rows could be imported: ${err.body || 'nothing parseable in the CSV'}`)
+      const message = `No rows could be imported: ${err.body || 'nothing parseable in the CSV'}`
+      throw new UsageError(
+        message,
+        options.json ? (parseJsonOrNull(err.body) ?? { imported: 0, skipped: [], errors: [] }) : undefined,
+      )
     }
     throw err
   }
@@ -52,9 +68,10 @@ export async function runMigrate(client: ApiClient, options: MigrateOptions = {}
     `Imported ${result.imported}, ` +
     `skipped ${result.skipped.length}${result.skipped.length ? ` (${reasons})` : ''}, ` +
     `errored ${result.errors.length}${result.errors.length ? ` (${result.errors.join('; ')})` : ''}`
+  const partial = result.skipped.length > 0 || result.errors.length > 0
 
-  if (result.skipped.length > 0 || result.errors.length > 0) {
-    throw new UsageError(summary)
+  if (partial) {
+    throw new UsageError(summary, options.json ? result : undefined)
   }
-  return summary
+  return options.json ? JSON.stringify(result, null, 2) : summary
 }

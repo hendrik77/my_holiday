@@ -6,9 +6,17 @@ import { EXIT } from './exit-codes'
  * Commands throw this when the request never should have been made. Maps to exit 1.
  */
 export class UsageError extends Error {
-  constructor(message: string) {
+  /**
+   * Optional machine-readable payload. When set, the entrypoint emits this
+   * (instead of the `{ error }` envelope) under `--json`, so commands like
+   * `migrate` can return structured results even on a non-zero exit.
+   */
+  readonly json?: unknown
+
+  constructor(message: string, json?: unknown) {
     super(message)
     this.name = 'UsageError'
+    this.json = json
   }
 }
 

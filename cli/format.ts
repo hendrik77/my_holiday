@@ -1,5 +1,10 @@
 import type { VacationPeriod } from '../src/types'
 
+/** A period as returned by `GET /periods`, optionally carrying server-computed work days. */
+export interface ListedPeriod extends VacationPeriod {
+  readonly workDays?: number
+}
+
 const MS_PER_DAY = 86_400_000
 const HEADERS = ['Start', 'End', 'Days', 'Type', 'Note'] as const
 
@@ -32,14 +37,14 @@ function renderTable(headers: readonly string[], rows: readonly string[][]): str
 }
 
 /** Render vacation periods as a fixed-width `Start | End | Days | Type | Note` table. */
-export function formatPeriodsTable(periods: VacationPeriod[]): string {
+export function formatPeriodsTable(periods: ListedPeriod[]): string {
   if (periods.length === 0) {
     return 'No vacation periods.'
   }
   const rows = periods.map((period) => [
     period.startDate,
     period.endDate,
-    formatDays(periodDays(period)),
+    formatDays(period.workDays ?? periodDays(period)),
     period.type ?? 'urlaub',
     period.note || '',
   ])

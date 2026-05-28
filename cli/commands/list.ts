@@ -1,6 +1,5 @@
 import type { ApiClient } from '../api'
-import type { VacationPeriod } from '../../src/types'
-import { formatPeriodsTable } from '../format'
+import { type ListedPeriod, formatPeriodsTable } from '../format'
 
 export interface ListOptions {
   readonly year?: number
@@ -13,6 +12,6 @@ export interface ListOptions {
  */
 export async function runList(client: ApiClient, options: ListOptions = {}): Promise<string> {
   const path = options.year ? `/periods?year=${options.year}` : '/periods'
-  const periods = await client.request<VacationPeriod[]>(path)
+  const periods = await client.request<ListedPeriod[]>(path)
   return options.json ? JSON.stringify(periods, null, 2) : formatPeriodsTable(periods)
 }

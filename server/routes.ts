@@ -11,6 +11,7 @@ import {
 } from './db';
 import { generateICS } from '../src/utils/ics';
 import {
+  countVacationWorkDays,
   countVacationWorkDaysInYear,
   countCarryOverUsed,
   carryOverDeadline,
@@ -64,7 +65,12 @@ export function createRouter(db: Database.Database): Router {
       return;
     }
     const periods = year ? getPeriodsByYear(db, year) : getAllPeriods(db);
-    res.json(periods);
+    const state = getSettings(db).state as GermanState;
+    const enriched = periods.map((p) => ({
+      ...p,
+      workDays: year ? countVacationWorkDaysInYear(p, year, state) : countVacationWorkDays(p, state),
+    }));
+    res.json(enriched);
   });
 
   router.post('/periods', (req, res) => {

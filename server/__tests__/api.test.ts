@@ -179,6 +179,15 @@ describe('API /api/v1', () => {
       expect(res.status).toBe(200);
       expect(res.body).toHaveLength(1);
     });
+
+    it('includes server-computed workDays for each period', async () => {
+      // 2026-07-06..10 is Mon–Fri (no Hessen holiday that week) → 5 work days.
+      await request(app).post('/api/v1/periods').send({ startDate: '2026-07-06', endDate: '2026-07-10', note: '' });
+
+      const res = await request(app).get('/api/v1/periods?year=2026');
+      expect(res.status).toBe(200);
+      expect(res.body[0].workDays).toBe(5);
+    });
   });
 
   describe('PUT /api/v1/periods/:id', () => {

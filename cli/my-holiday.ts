@@ -5,6 +5,7 @@ import { createApiClient } from './api'
 import { runAdd } from './commands/add'
 import { runExport } from './commands/export'
 import { runList } from './commands/list'
+import { runMigrate } from './commands/migrate'
 import { runRemaining } from './commands/remaining'
 import { mapErrorToExit } from './errors'
 import { EXIT } from './exit-codes'
@@ -74,7 +75,17 @@ function buildProgram(): Command {
       const output = await runExport(client, { format: options.format, year: options.year, out: options.out })
       process.stdout.write(`${output}\n`)
     })
-  program.command('migrate').description('Import vacation periods from a CSV file')
+  program
+    .command('migrate')
+    .description('Import vacation periods from a CSV file')
+    .argument('[file]', 'path to the CSV file to import')
+    .option('--dry-run', 'parse locally and report what would import, without sending', false)
+    .action(async (file: string | undefined, options: { dryRun?: boolean }, command: Command) => {
+      const globals = command.optsWithGlobals()
+      const client = createApiClient({ api: globals.api, token: globals.token })
+      const output = await runMigrate(client, { file, dryRun: options.dryRun === true })
+      process.stdout.write(`${output}\n`)
+    })
 
   return program
 }

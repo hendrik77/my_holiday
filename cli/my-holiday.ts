@@ -69,10 +69,16 @@ function buildProgram(): Command {
     .option('--format <format>', 'ics or csv')
     .option('--year <year>', 'calendar year (default: current year)', (value) => Number.parseInt(value, 10))
     .option('--out <file>', 'write to a file instead of stdout')
-    .action(async (options: { format?: string; year?: number; out?: string }, command: Command) => {
+    .option('--bom', 'prepend a UTF-8 BOM to CSV output (for Excel)', false)
+    .action(async (options: { format?: string; year?: number; out?: string; bom?: boolean }, command: Command) => {
       const globals = command.optsWithGlobals()
       const client = createApiClient({ api: globals.api, token: globals.token })
-      const output = await runExport(client, { format: options.format, year: options.year, out: options.out })
+      const output = await runExport(client, {
+        format: options.format,
+        year: options.year,
+        out: options.out,
+        bom: options.bom === true,
+      })
       process.stdout.write(`${output}\n`)
     })
   program

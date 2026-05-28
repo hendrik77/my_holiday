@@ -11,6 +11,7 @@ export interface ExportOptions {
   readonly format?: string
   readonly year?: number
   readonly out?: string
+  readonly bom?: boolean
 }
 
 /**
@@ -26,10 +27,12 @@ export async function runExport(client: ApiClient, options: ExportOptions = {}):
 
   const year = options.year ?? new Date().getFullYear()
   const body = await client.requestText(`${FORMAT_PATHS[format]}?year=${year}`)
+  // A UTF-8 BOM helps Excel read umlauts in CSV; non-standard for ICS, so csv-only.
+  const content = format === 'csv' && options.bom ? `\uFEFF${body}` : body
 
   if (options.out) {
-    await writeFile(options.out, body, 'utf8')
+    await writeFile(options.out, content, 'utf8')
     return `Exported ${format} for ${year} to ${options.out}`
   }
-  return body
+  return content
 }

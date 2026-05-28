@@ -76,4 +76,21 @@ describe('runExport', () => {
 
     expect(readFileSync(file, 'utf8')).toBe(BODY)
   })
+
+  it('prepends a UTF-8 BOM to CSV output when --bom is set', async () => {
+    const { client } = clientReturning(BODY)
+
+    const output = await runExport(client, { format: 'csv', year: 2026, bom: true })
+
+    expect(output.charCodeAt(0)).toBe(0xfeff)
+    expect(output.slice(1)).toBe(BODY)
+  })
+
+  it('does not add a BOM for ics even when --bom is set', async () => {
+    const { client } = clientReturning(BODY)
+
+    const output = await runExport(client, { format: 'ics', year: 2026, bom: true })
+
+    expect(output).toBe(BODY)
+  })
 })

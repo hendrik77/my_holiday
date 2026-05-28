@@ -8,7 +8,10 @@ export interface ApiClientOptions {
 }
 
 export interface ApiClient {
+  /** Send a request and parse the JSON response body. */
   request<T>(path: string, init?: RequestInit): Promise<T>
+  /** Send a request and return the raw response body (e.g. ICS/CSV exports). */
+  requestText(path: string, init?: RequestInit): Promise<string>
 }
 
 /** Thrown when the API responds with a non-2xx status. */
@@ -34,7 +37,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
   const baseUrl = options.api ?? process.env.MY_HOLIDAY_API_URL ?? DEFAULT_API_URL
   const token = options.token ?? process.env.MY_HOLIDAY_API_TOKEN
 
-  async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  async function send(path: string, init: RequestInit = {}): Promise<{ status: number; body: string }> {
     const headers = new Headers(init.headers)
     if (init.body !== undefined && !headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json')
@@ -55,6 +58,11 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       )
     }
 
+    return { status: response.status, body }
+  }
+
+  async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    const { status, body } = await send(path, init)
     if (!body) {
       return undefined as T
     }
@@ -62,12 +70,17 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return JSON.parse(body) as T
     } catch {
       throw new ApiError(
-        response.status,
+        status,
         body,
-        `Request to ${path} returned ${response.status} but the body was not valid JSON`,
+        `Request to ${path} returned ${status} but the body was not valid JSON`,
       )
     }
   }
 
-  return { request }
+  async function requestText(path: string, init?: RequestInit): Promise<string> {
+    const { body } = await send(path, init)
+    return body
+  }
+
+  return { request, requestText }
 }

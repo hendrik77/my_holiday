@@ -3,6 +3,7 @@ import { Command, CommanderError } from 'commander'
 import { version } from '../package.json'
 import { createApiClient } from './api'
 import { runAdd } from './commands/add'
+import { runExport } from './commands/export'
 import { runList } from './commands/list'
 import { runRemaining } from './commands/remaining'
 import { mapErrorToExit } from './errors'
@@ -61,7 +62,18 @@ function buildProgram(): Command {
       const output = await runRemaining(client, { year: options.year, json: globals.json === true })
       process.stdout.write(`${output}\n`)
     })
-  program.command('export').description('Export periods as an ICS or CSV file')
+  program
+    .command('export')
+    .description('Export periods as an ICS or CSV file')
+    .option('--format <format>', 'ics or csv')
+    .option('--year <year>', 'calendar year (default: current year)', (value) => Number.parseInt(value, 10))
+    .option('--out <file>', 'write to a file instead of stdout')
+    .action(async (options: { format?: string; year?: number; out?: string }, command: Command) => {
+      const globals = command.optsWithGlobals()
+      const client = createApiClient({ api: globals.api, token: globals.token })
+      const output = await runExport(client, { format: options.format, year: options.year, out: options.out })
+      process.stdout.write(`${output}\n`)
+    })
   program.command('migrate').description('Import vacation periods from a CSV file')
 
   return program

@@ -122,4 +122,35 @@ describe('createApiClient', () => {
       )
     })
   })
+
+  describe('requestText', () => {
+    it('returns the raw body without JSON parsing', async () => {
+      fetchMock.mockResolvedValue(new Response('BEGIN:VCALENDAR', { status: 200 }))
+      const client = createApiClient({ api: 'http://x' })
+
+      const text = await client.requestText('/export.ics')
+
+      expect(text).toBe('BEGIN:VCALENDAR')
+    })
+
+    it('joins the URL and sends the auth header like request', async () => {
+      const client = createApiClient({ api: 'http://x/api/v1/', token: 'secret' })
+
+      await client.requestText('/export.csv')
+
+      expect(fetchMock).toHaveBeenCalledWith('http://x/api/v1/export.csv', expect.any(Object))
+      const init = fetchMock.mock.calls[0][1] as RequestInit
+      expect(new Headers(init.headers).get('Authorization')).toBe('Bearer secret')
+    })
+
+    it('throws ApiError on a non-2xx response', async () => {
+      fetchMock.mockResolvedValue(new Response('boom', { status: 500 }))
+      const client = createApiClient({ api: 'http://x' })
+
+      const error = await client.requestText('/export.ics').catch((e: unknown) => e)
+
+      expect(error).toBeInstanceOf(ApiError)
+      expect((error as ApiError).status).toBe(500)
+    })
+  })
 })

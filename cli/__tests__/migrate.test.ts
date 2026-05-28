@@ -50,18 +50,19 @@ describe('runMigrate', () => {
     expect(new Headers(init.headers).get('Content-Type')).toBe('text/csv')
   })
 
-  it('returns a summary and exits 0 on a fully successful import', async () => {
+  it('reports ok and a summary on a fully successful import', async () => {
     const file = tmpCsv(CSV)
     const { client } = clientReturning({ imported: 2, skipped: [], errors: [] })
 
-    const output = await runMigrate(client, { file })
+    const { output, ok } = await runMigrate(client, { file })
 
+    expect(ok).toBe(true)
     expect(output).toContain('Imported 2')
     expect(output).toContain('skipped 0')
     expect(output).toContain('errored 0')
   })
 
-  it('throws a usage error (exit 1) on a partial import, with the summary in the message', async () => {
+  it('reports not-ok with the summary on a partial import (drives exit 1)', async () => {
     const file = tmpCsv(CSV)
     const { client } = clientReturning({
       imported: 1,
@@ -69,20 +70,20 @@ describe('runMigrate', () => {
       errors: [],
     })
 
-    const err = await rejection(runMigrate(client, { file }))
+    const { output, ok } = await runMigrate(client, { file })
 
-    expect(err).toBeInstanceOf(UsageError)
-    expect(mapErrorToExit(err).code).toBe(EXIT.USAGE)
-    expect((err as UsageError).message).toContain('overlap')
+    expect(ok).toBe(false)
+    expect(output).toContain('overlap')
   })
 
   it('parses locally and never calls the API with --dry-run', async () => {
     const file = tmpCsv(CSV)
     const { client, request } = clientReturning({ imported: 0, skipped: [], errors: [] })
 
-    const output = await runMigrate(client, { file, dryRun: true })
+    const { output, ok } = await runMigrate(client, { file, dryRun: true })
 
     expect(request).not.toHaveBeenCalled()
+    expect(ok).toBe(true)
     expect(output).toMatch(/dry run/i)
     expect(output).toContain('1')
   })
@@ -101,12 +102,13 @@ describe('runMigrate', () => {
     const file = tmpCsv(CSV)
     const { client } = clientReturning({ imported: 2, skipped: [], errors: [] })
 
-    const output = await runMigrate(client, { file, json: true })
+    const { output, ok } = await runMigrate(client, { file, json: true })
 
+    expect(ok).toBe(true)
     expect(JSON.parse(output)).toEqual({ imported: 2, skipped: [], errors: [] })
   })
 
-  it('throws with the structured result as a json payload (exit 1) on a partial import with --json', async () => {
+  it('emits the structured result (not-ok) on a partial import with --json', async () => {
     const file = tmpCsv(CSV)
     const response = {
       imported: 1,
@@ -115,20 +117,20 @@ describe('runMigrate', () => {
     }
     const { client } = clientReturning(response)
 
-    const err = await rejection(runMigrate(client, { file, json: true }))
+    const { output, ok } = await runMigrate(client, { file, json: true })
 
-    expect(err).toBeInstanceOf(UsageError)
-    expect(mapErrorToExit(err).code).toBe(EXIT.USAGE)
-    expect((err as UsageError).json).toEqual(response)
+    expect(ok).toBe(false)
+    expect(JSON.parse(output)).toEqual(response)
   })
 
   it('emits structured JSON for --dry-run --json without calling the API', async () => {
     const file = tmpCsv(CSV)
     const { client, request } = clientReturning({ imported: 0, skipped: [], errors: [] })
 
-    const output = await runMigrate(client, { file, dryRun: true, json: true })
+    const { output, ok } = await runMigrate(client, { file, dryRun: true, json: true })
 
     expect(request).not.toHaveBeenCalled()
+    expect(ok).toBe(true)
     expect(JSON.parse(output)).toEqual({ dryRun: true, wouldImport: 1, errors: [] })
   })
 })

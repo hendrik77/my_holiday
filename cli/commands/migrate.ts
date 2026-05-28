@@ -15,6 +15,12 @@ export interface MigrateOptions {
   readonly json?: boolean
 }
 
+/** Outcome of a migrate run: the text to print, and whether everything imported cleanly. */
+export interface MigrateResult {
+  readonly output: string
+  readonly ok: boolean
+}
+
 function parseJsonOrNull(text: string): unknown {
   try {
     return JSON.parse(text)
@@ -25,11 +31,13 @@ function parseJsonOrNull(text: string): unknown {
 
 /**
  * Import vacation periods from a CSV file. Reads the file and POSTs it to
- * `/import`; a partial result (anything skipped or errored) throws a
- * `UsageError` (exit 1) with the summary as its message. `--dry-run` parses the
- * file locally via `parseImportCSV` and never contacts the server.
+ * `/import`, returning the text to print plus `ok` (false when anything was
+ * skipped or errored, or the server rejected the whole file) so the caller can
+ * print the result to stdout and still exit non-zero. `--dry-run` parses locally
+ * via `parseImportCSV` and never contacts the server. Only a missing file path
+ * throws (a true usage error); network/5xx propagate as `ApiError`.
  */
-export async function runMigrate(client: ApiClient, options: MigrateOptions = {}): Promise<string> {
+export async function runMigrate(client: ApiClient, options: MigrateOptions = {}): Promise<MigrateResult> {
   const { file } = options
   if (!file) {
     throw new UsageError('a CSV file path is required: my-holiday migrate <file>')
@@ -39,10 +47,10 @@ export async function runMigrate(client: ApiClient, options: MigrateOptions = {}
 
   if (options.dryRun) {
     const { periods, errors } = parseImportCSV(csv)
-    if (options.json) {
-      return JSON.stringify({ dryRun: true, wouldImport: periods.length, errors }, null, 2)
-    }
-    return `Dry run: ${periods.length} period(s) would import, ${errors.length} error(s); nothing sent.`
+    const output = options.json
+      ? JSON.stringify({ dryRun: true, wouldImport: periods.length, errors }, null, 2)
+      : `Dry run: ${periods.length} period(s) would import, ${errors.length} error(s); nothing sent.`
+    return { output, ok: true }
   }
 
   let result: ImportResponse
@@ -54,11 +62,10 @@ export async function runMigrate(client: ApiClient, options: MigrateOptions = {}
     })
   } catch (err) {
     if (err instanceof ApiError && err.status === 400) {
-      const message = `No rows could be imported: ${err.body || 'nothing parseable in the CSV'}`
-      throw new UsageError(
-        message,
-        options.json ? (parseJsonOrNull(err.body) ?? { imported: 0, skipped: [], errors: [] }) : undefined,
-      )
+      const output = options.json
+        ? JSON.stringify(parseJsonOrNull(err.body) ?? { imported: 0, skipped: [], errors: [] }, null, 2)
+        : 'No rows could be imported from the CSV.'
+      return { output, ok: false }
     }
     throw err
   }
@@ -68,10 +75,7 @@ export async function runMigrate(client: ApiClient, options: MigrateOptions = {}
     `Imported ${result.imported}, ` +
     `skipped ${result.skipped.length}${result.skipped.length ? ` (${reasons})` : ''}, ` +
     `errored ${result.errors.length}${result.errors.length ? ` (${result.errors.join('; ')})` : ''}`
-  const partial = result.skipped.length > 0 || result.errors.length > 0
-
-  if (partial) {
-    throw new UsageError(summary, options.json ? result : undefined)
-  }
-  return options.json ? JSON.stringify(result, null, 2) : summary
+  const ok = result.skipped.length === 0 && result.errors.length === 0
+  const output = options.json ? JSON.stringify(result, null, 2) : summary
+  return { output, ok }
 }

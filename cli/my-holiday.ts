@@ -7,7 +7,7 @@ import { runExport } from './commands/export'
 import { runList } from './commands/list'
 import { runMigrate } from './commands/migrate'
 import { runRemaining } from './commands/remaining'
-import { UsageError, mapErrorToExit } from './errors'
+import { mapErrorToExit } from './errors'
 import { EXIT } from './exit-codes'
 
 function buildProgram(): Command {
@@ -89,8 +89,11 @@ function buildProgram(): Command {
     .action(async (file: string | undefined, options: { dryRun?: boolean }, command: Command) => {
       const globals = command.optsWithGlobals()
       const client = createApiClient({ api: globals.api, token: globals.token })
-      const output = await runMigrate(client, { file, dryRun: options.dryRun === true, json: globals.json === true })
+      const { output, ok } = await runMigrate(client, { file, dryRun: options.dryRun === true, json: globals.json === true })
       process.stdout.write(`${output}\n`)
+      if (!ok) {
+        process.exitCode = EXIT.USAGE
+      }
     })
 
   return program
@@ -110,9 +113,7 @@ async function main(argv: string[]): Promise<number> {
 
     const { code, message } = mapErrorToExit(err)
     if (program.opts().json === true) {
-      const payload =
-        err instanceof UsageError && err.json !== undefined ? err.json : { error: { code, message } }
-      process.stdout.write(`${JSON.stringify(payload)}\n`)
+      process.stdout.write(`${JSON.stringify({ error: { code, message } })}\n`)
     } else {
       process.stderr.write(`${message}\n`)
     }
@@ -121,5 +122,7 @@ async function main(argv: string[]): Promise<number> {
 }
 
 main(process.argv).then((code) => {
-  process.exitCode = code
+  if (!process.exitCode) {
+    process.exitCode = code
+  }
 })

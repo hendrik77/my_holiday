@@ -79,6 +79,11 @@ export function createRouter(db: Database.Database): Router {
       return;
     }
 
+    if (hasOverlap(startDate, endDate, getAllPeriods(db))) {
+      res.status(409).json({ error: 'overlaps an existing period' });
+      return;
+    }
+
     const period = createPeriod(db, {
       startDate,
       endDate,
@@ -104,6 +109,19 @@ export function createRouter(db: Database.Database): Router {
     }
     if (type !== undefined && !VALID_TYPES.has(type)) {
       res.status(400).json({ error: 'Invalid type' });
+      return;
+    }
+
+    const all = getAllPeriods(db);
+    const current = all.find((p) => p.id === id);
+    if (!current) {
+      res.status(404).json({ error: 'Period not found' });
+      return;
+    }
+    const effectiveStart = startDate ?? current.startDate;
+    const effectiveEnd = endDate ?? current.endDate;
+    if (hasOverlap(effectiveStart, effectiveEnd, all, id)) {
+      res.status(409).json({ error: 'overlaps an existing period' });
       return;
     }
 

@@ -144,6 +144,15 @@ describe('API /api/v1', () => {
       expect(res.status).toBe(201);
       expect(res.body.type).toBe('urlaub');
     });
+
+    it('returns 409 when the new period overlaps an existing one', async () => {
+      await request(app).post('/api/v1/periods').send({ startDate: '2026-07-01', endDate: '2026-07-05', note: '' });
+
+      const res = await request(app)
+        .post('/api/v1/periods')
+        .send({ startDate: '2026-07-03', endDate: '2026-07-09', note: '' });
+      expect(res.status).toBe(409);
+    });
   });
 
   describe('GET /api/v1/periods', () => {
@@ -192,6 +201,24 @@ describe('API /api/v1', () => {
         .put('/api/v1/periods/nonexistent')
         .send({ note: 'test' });
       expect(res.status).toBe(404);
+    });
+
+    it('returns 409 when an update would overlap another period', async () => {
+      await request(app).post('/api/v1/periods').send({ startDate: '2026-07-01', endDate: '2026-07-05', note: 'A' });
+      const b = await request(app).post('/api/v1/periods').send({ startDate: '2026-08-01', endDate: '2026-08-05', note: 'B' });
+
+      const res = await request(app)
+        .put(`/api/v1/periods/${b.body.id}`)
+        .send({ startDate: '2026-07-03', endDate: '2026-07-04' });
+      expect(res.status).toBe(409);
+    });
+
+    it('allows updating a period without flagging self-overlap', async () => {
+      const a = await request(app).post('/api/v1/periods').send({ startDate: '2026-07-01', endDate: '2026-07-05', note: 'A' });
+
+      const res = await request(app).put(`/api/v1/periods/${a.body.id}`).send({ note: 'edited' });
+      expect(res.status).toBe(200);
+      expect(res.body.note).toBe('edited');
     });
   });
 

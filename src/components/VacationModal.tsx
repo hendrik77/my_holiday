@@ -5,7 +5,7 @@ import type { VacationPeriod, VacationType } from '../types';
 import { VACATION_TYPES } from '../types';
 import { countVacationWorkDays, hasOverlap, toISODate } from '../utils/calendar';
 import { useT } from '../i18n/useT';
-import { downloadSingleICS } from '../utils/ics';
+import { downloadSingleICS } from '../utils/icsDownload';
 import './Modal.css';
 
 interface VacationModalProps {

@@ -67,6 +67,33 @@ export interface RemainingSummary {
   readonly remaining: number
 }
 
+/** Compact vacation status for the `today` command. */
+export interface StatusInfo {
+  readonly year: number
+  readonly remaining: number
+  /** Period covering today, if the user is currently on vacation. */
+  readonly active: ListedPeriod | null
+  /** Earliest period starting after today, if any. */
+  readonly next: ListedPeriod | null
+  /** Whole days from today until `next` starts (null when there is no next). */
+  readonly daysUntilNext: number | null
+}
+
+/** Render a one-line vacation status (remaining days + active/next period). */
+export function formatStatus(info: StatusInfo): string {
+  const left = `${formatDays(info.remaining)} days left`
+  if (info.active) {
+    return `${left} · on vacation until ${info.active.endDate}`
+  }
+  if (info.next) {
+    const type = info.next.type ?? 'urlaub'
+    const days = info.daysUntilNext ?? 0
+    const unit = days === 1 ? 'day' : 'days'
+    return `${left} · next: ${type} in ${days} ${unit} (${info.next.startDate}→${info.next.endDate})`
+  }
+  return `${left} · no upcoming vacation`
+}
+
 /** Render a remaining-entitlement summary as aligned human-readable lines. */
 export function formatRemaining(summary: RemainingSummary): string {
   const { carryOver } = summary

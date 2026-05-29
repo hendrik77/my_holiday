@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "bin": {
-    "my-holiday": "dist-cli/my-holiday.js"
+    "holiday": "dist-cli/my-holiday.js"
   },
   "scripts": {
+    "prepare": "npm run build:cli",
     "dev": "vite",
     "dev:server": "tsx watch server/index.ts",
     "build": "tsc -b && vite build",

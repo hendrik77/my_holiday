@@ -213,18 +213,19 @@ The migration is **idempotent** — running it twice won't create duplicates.
 
 ## Command-Line Interface (CLI)
 
-`my-holiday` is a scriptable CLI for power users and AI agents. It talks to the same REST API as the web app over HTTP — local or remote — so the server must be running (`npm run server`, or Docker).
+`holiday` is a scriptable CLI for power users and AI agents. It talks to the same REST API as the web app over HTTP — local or remote — so the server must be running (`npm run server`, or Docker).
 
-### Build
+### Build & install
 
-The CLI is bundled with esbuild into `dist-cli/my-holiday.js`:
+The CLI is bundled with esbuild into `dist-cli/my-holiday.js`. Link it once to get a global `holiday` command:
 
 ```bash
-npm run build:cli                  # produces dist-cli/my-holiday.js
-node dist-cli/my-holiday.js --help
+npm run build:cli   # produces dist-cli/my-holiday.js (also runs automatically on npm link)
+npm link            # exposes a global `holiday` command
+holiday --help
 ```
 
-Build it before first use. (The test suite builds it automatically via the `pretest` hook.) The `bin` field maps `my-holiday` to the built file, so `npm link` exposes a global `my-holiday` command.
+The `bin` field maps `holiday` to the built file, and the bundle carries a `#!/usr/bin/env node` shebang, so `holiday` runs without a `node` prefix once linked. (The test suite builds the bundle automatically via the `pretest` hook.) To run it without linking, invoke the file directly: `node dist-cli/my-holiday.js --help`.
 
 ### Configuration
 
@@ -251,17 +252,17 @@ Valid `--type` values: `urlaub`, `bildungsurlaub`, `kur`, `sabbatical`, `unbezah
 
 ```bash
 # Against a local server (default API URL)
-node dist-cli/my-holiday.js list --year 2026
-node dist-cli/my-holiday.js remaining --json
+holiday list --year 2026
+holiday remaining --json
 
-# Against a remote homelab instance (after `npm link`)
+# Against a remote homelab instance
 export MY_HOLIDAY_API_URL=https://holiday.example.lan/api/v1
-my-holiday add --start 2026-07-01 --end 2026-07-15 --type urlaub --note "Sommerurlaub"
-my-holiday export --format ics --year 2026 --out urlaub-2026.ics
-my-holiday migrate ./urlaub-2026.csv --dry-run
+holiday add --start 2026-07-01 --end 2026-07-15 --type urlaub --note "Sommerurlaub"
+holiday export --format ics --year 2026 --out urlaub-2026.ics
+holiday migrate ./urlaub-2026.csv --dry-run
 ```
 
-Run `my-holiday --help` (or `my-holiday <command> --help`) to discover commands and flags.
+Run `holiday --help` (or `holiday <command> --help`) to discover commands and flags.
 
 ## Architecture
 

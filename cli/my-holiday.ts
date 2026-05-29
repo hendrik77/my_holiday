@@ -14,7 +14,7 @@ function buildProgram(): Command {
   const program = new Command()
 
   program
-    .name('my-holiday')
+    .name('holiday')
     .description('Command-line interface for the my-holiday vacation planner')
     .version(version)
     .option('--api <url>', 'API base URL (default: $MY_HOLIDAY_API_URL or http://localhost:3001/api/v1)')

@@ -5,7 +5,7 @@ import pkg from '../../package.json'
 
 const CLI_PATH = resolve(import.meta.dirname, '../../dist-cli/my-holiday.js')
 
-describe('my-holiday CLI', () => {
+describe('holiday CLI', () => {
   it('prints the package.json version for --version', () => {
     const output = execFileSync(process.execPath, [CLI_PATH, '--version'], {
       encoding: 'utf8',
@@ -22,5 +22,13 @@ describe('my-holiday CLI', () => {
     for (const command of ['list', 'add', 'remaining', 'export', 'migrate']) {
       expect(output).toContain(command)
     }
+  })
+
+  it('uses "holiday" as the program name in --help output', () => {
+    const output = execFileSync(process.execPath, [CLI_PATH, '--help'], {
+      encoding: 'utf8',
+    })
+
+    expect(output).toMatch(/Usage: holiday/)
   })
 })

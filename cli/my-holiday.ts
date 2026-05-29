@@ -3,10 +3,13 @@ import { Command, CommanderError } from 'commander'
 import { version } from '../package.json'
 import { createApiClient } from './api'
 import { runAdd } from './commands/add'
+import { runCalendar } from './commands/calendar'
+import { runCompletion } from './commands/completion'
 import { runExport } from './commands/export'
 import { runList } from './commands/list'
 import { runMigrate } from './commands/migrate'
 import { runRemaining } from './commands/remaining'
+import { runToday } from './commands/today'
 import { mapErrorToExit } from './errors'
 import { EXIT } from './exit-codes'
 
@@ -94,6 +97,35 @@ function buildProgram(): Command {
       if (!ok) {
         process.exitCode = EXIT.USAGE
       }
+    })
+  program
+    .command('today')
+    .description('Show a one-line vacation status: remaining days and the next/active period')
+    .action(async (_options: Record<string, never>, command: Command) => {
+      const globals = command.optsWithGlobals()
+      const client = createApiClient({ api: globals.api, token: globals.token })
+      const output = await runToday(client, { json: globals.json === true })
+      process.stdout.write(`${output}\n`)
+    })
+  program
+    .command('calendar')
+    .description('Show a terminal calendar for a year, shading vacation, holidays and weekends')
+    .option('--year <year>', 'calendar year (default: current year)', (value) => Number.parseInt(value, 10))
+    .option('--month <month>', 'show a single month (1-12) instead of the full year', (value) => Number.parseInt(value, 10))
+    .option('--no-color', 'disable ANSI colors (also respects NO_COLOR and non-TTY output)')
+    .action(async (options: { year?: number; month?: number; color?: boolean }, command: Command) => {
+      const globals = command.optsWithGlobals()
+      const client = createApiClient({ api: globals.api, token: globals.token })
+      const color = options.color !== false && process.stdout.isTTY === true && !process.env.NO_COLOR
+      const output = await runCalendar(client, { year: options.year, month: options.month, color })
+      process.stdout.write(`${output}\n`)
+    })
+  program
+    .command('completion')
+    .description('Print a shell completion script (bash, zsh, or fish)')
+    .argument('<shell>', 'bash, zsh, or fish')
+    .action((shell: string) => {
+      process.stdout.write(runCompletion(shell))
     })
 
   return program

@@ -245,6 +245,9 @@ The `bin` field maps `holiday` to the built file, and the bundle carries a `#!/u
 | `add` | `--start <YYYY-MM-DD> --end <YYYY-MM-DD> [--type <type>] [--note <text>] [--half-day]` | Add a vacation period |
 | `export` | `--format <ics\|csv> [--year <year>] [--out <file>] [--bom]` | Export periods; writes to `--out` or stdout. `--bom` prepends a UTF-8 BOM to CSV (Excel) |
 | `migrate` | `<file> [--dry-run]` | Import periods from a CSV file; `--dry-run` parses locally without sending |
+| `calendar` | `[--year <year>] [--month <1-12>] [--no-color]` | Render a terminal calendar — full-year German grid, or one month with `--month`; shades vacation, public holidays and weekends |
+| `today` | _(none)_ | One-line status: remaining days plus the active/next vacation. `--json` for structured output |
+| `completion` | `<bash\|zsh\|fish>` | Print a shell completion script (see [Shell completions](#shell-completions)) |
 
 Valid `--type` values: `urlaub`, `bildungsurlaub`, `kur`, `sabbatical`, `unbezahlterUrlaub`, `mutterschaftsurlaub`, `elternzeit`, `sonderurlaub` (default: `urlaub`).
 
@@ -254,6 +257,8 @@ Valid `--type` values: `urlaub`, `bildungsurlaub`, `kur`, `sabbatical`, `unbezah
 # Against a local server (default API URL)
 holiday list --year 2026
 holiday remaining --json
+holiday today                      # 18 days left · next: urlaub in 16 days (…)
+holiday calendar --year 2026       # full-year grid; add --month 7 for one month
 
 # Against a remote homelab instance
 export MY_HOLIDAY_API_URL=https://holiday.example.lan/api/v1
@@ -263,6 +268,21 @@ holiday migrate ./urlaub-2026.csv --dry-run
 ```
 
 Run `holiday --help` (or `holiday <command> --help`) to discover commands and flags.
+
+### Shell completions
+
+`holiday completion <shell>` prints a completion script for `bash`, `zsh`, or `fish`. Install it once so subcommands, flags, and `--type` values tab-complete:
+
+```bash
+# bash
+holiday completion bash | sudo tee /etc/bash_completion.d/holiday > /dev/null
+
+# zsh (a directory on your $fpath)
+holiday completion zsh > "${fpath[1]}/_holiday"
+
+# fish
+holiday completion fish > ~/.config/fish/completions/holiday.fish
+```
 
 ## Architecture
 

@@ -4,6 +4,25 @@ All notable changes to My Holiday.
 
 ---
 
+## v2.3.0 (2026-05-29)
+
+### Added
+- **Command-line interface (`holiday`)** — HTTP-only CLI for power users and AI agents, talking to the same REST API as the web app (local or remote). Commands: `list`, `add`, `remaining`, `export`, `migrate`, `calendar`, `today`, `completion`. Global `--api` / `--token` (or `MY_HOLIDAY_API_URL` / `MY_HOLIDAY_API_TOKEN`), `--json` on every command, exit codes `0`/`1`/`2`. Bundled to `dist-cli/` via esbuild; `npm link` exposes a global `holiday` command
+- **`holiday calendar`** — terminal calendar: full-year German 12-month grid (or one month via `--month`) shading vacation, half-days, public holidays and weekends; TTY-gated ANSI color (`--no-color` / `NO_COLOR` respected)
+- **`holiday today`** — one-line status: remaining days plus the active/next vacation (`--json` for structured output)
+- **`holiday completion <bash\|zsh\|fish>`** — shell completion scripts; `--type` values sourced from the canonical `VACATION_TYPES` so they cannot drift
+- **New server endpoints** — `GET /api/v1/remaining`, `GET /api/v1/export.csv`, `POST /api/v1/import`, and `GET /api/v1/holidays?year=[&state=]` (public holidays as `{date,name}`), centralising entitlement / CSV / holiday computation server-side for all clients
+- **`export --bom`** — opt-in UTF-8 BOM on CLI CSV output for Excel
+- **Architecture Decision Records** — `docs/adr/` with ADR-0001 (HTTP-only CLI transport), ADR-0002 (server-side computation), and ADR-0003 (dedicated `/holidays` endpoint)
+- **Build & type-check scripts** — `build:cli`, `build:server`, `typecheck:cli`, `typecheck:server`, and a combined `typecheck`; a `pretest` hook builds the CLI bundle so the suite is self-contained
+
+### Changed
+- **`GET /api/v1/periods`** now returns a server-computed `workDays` per period (from the configured Bundesland); the CLI `list` renders it, falling back to the calendar-day span only when absent
+- **CSV/ICS refactor** — `formatCSV` extracted into a browser-free `src/utils/csv.ts` shared by the web download and `/export.csv`; `downloadSingleICS` moved to `src/utils/icsDownload.ts` to keep `ics.ts` DOM-free
+- **CLI command renamed** from `my-holiday` to `holiday` (the `bin` entry); the bundle carries a `#!/usr/bin/env node` shebang so it runs without a `node` prefix once linked
+
+---
+
 ## v2.2.0 (2026-05-19)
 
 ### Added

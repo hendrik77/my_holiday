@@ -90,9 +90,11 @@ src/
 │   └── schoolHolidays.ts      # Dynamic school holidays (ferien-api.de)
 ├── utils/
 │   ├── calendar.ts            # Work-day counting, half-day logic
+│   ├── csv.ts                 # Browser-free CSV format/parse (shared with the server)
 │   ├── entitlement.ts         # Pro-rata entitlement & leave reduction (§ 4/§ 17 BUrlG)
-│   ├── export.ts              # CSV export/import (handwritten parser)
-│   └── ics.ts                 # RFC 5545 iCalendar generator
+│   ├── export.ts              # Browser CSV download (delegates to csv.ts)
+│   ├── ics.ts                 # RFC 5545 iCalendar generator
+│   └── icsDownload.ts         # Browser-only single-event ICS download
 ├── i18n/
 │   ├── translations.ts        # All DE + EN strings as a typed nested object
 │   └── useT.ts                # useT() hook — returns t(key, params?) function
@@ -115,9 +117,19 @@ src/
 
 server/
 ├── index.ts                   # Express server (port 3001)
-├── routes.ts                  # REST routes + ICS endpoint
+├── routes.ts                  # REST routes (periods, settings, remaining, holidays, ICS/CSV export, import)
 ├── db.ts                      # SQLite schema + CRUD operations
 └── types.ts                   # Server-specific types
+
+cli/                           # HTTP-only CLI, bundled to dist-cli/ via esbuild (bin: `holiday`)
+├── my-holiday.ts              # entry point, commander setup
+├── api.ts                     # fetch client, env/flag resolution, typed errors
+├── dates.ts                   # dependency-free UTC date helpers
+├── format.ts                  # table / summary / status output helpers
+├── calendar-view.ts           # pure terminal-calendar renderer (German labels)
+├── errors.ts                  # UsageError + mapErrorToExit
+├── exit-codes.ts              # EXIT.OK / USAGE / SERVER (0 / 1 / 2)
+└── commands/                  # list, add, remaining, export, migrate, calendar, today, completion
 
 scripts/
 └── migrate-v1.ts              # v1 CSV → v2 SQLite (idempotent)

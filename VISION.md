@@ -119,16 +119,21 @@ Expose My Holiday as a **Model Context Protocol server** so Claude (or any MCP-c
 - Book or cancel vacation via natural language ("Book me a week off in August avoiding school holidays")
 - Answer questions about German vacation law (entitlement, carry-over, leave reductions)
 
-### CLI
-A `my-holiday` command-line interface for scripting and power users:
+### CLI — shipped in v2.3.0
+
+The `holiday` command-line interface for scripting and power users is implemented (full reference in the [README CLI section](./README.md#command-line-interface-cli)):
 
 ```bash
-my-holiday list [--year 2026]
-my-holiday add --start 2026-07-01 --end 2026-07-15 --type urlaub --note "Sommerurlaub"
-my-holiday remaining [--year 2026]
-my-holiday export --format ics --year 2026
-my-holiday migrate ./urlaub-2026.csv
+holiday list [--year 2026]
+holiday add --start 2026-07-01 --end 2026-07-15 --type urlaub --note "Sommerurlaub"
+holiday remaining [--year 2026]
+holiday export --format ics --year 2026
+holiday calendar --year 2026          # terminal calendar grid
+holiday today                          # one-line status
+holiday migrate ./urlaub-2026.csv
 ```
+
+Future CLI ideas tie into the Personal Enhancements above: a live `webcal` subscription, conflict/quota warnings on `add`, and carry-over (use-or-lose) reporting.
 
 ### Chat / Voice interface
 - In-app natural language chat panel powered by Claude API

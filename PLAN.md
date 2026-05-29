@@ -268,7 +268,7 @@ After all phases:
 - Server-side auth enforcement of the `Authorization` header — CLI sends the header now; the server starts honouring it when v3 multi-user auth lands.
 - MCP server — separate vision pillar; this CLI work intentionally creates the HTTP endpoints it will need.
 - Interactive prompts (no `--type` → prompt user). Keep v1 non-interactive so it scripts cleanly.
-- Shell completion scripts. Add when there's demand.
+- Shell completion scripts. ✅ Later delivered in v2.3.0 (`holiday completion <bash|zsh|fish>`), together with the `calendar` and `today` commands and the `/holidays` endpoint.
 
 ## Follow-ups (discovered during implementation)
 

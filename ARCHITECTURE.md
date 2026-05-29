@@ -155,7 +155,11 @@ Settings changes follow the same pattern via `PUT /api/v1/settings`. Read-only v
 | `DELETE` | `/api/v1/periods/:id` | Delete a period |
 | `GET` | `/api/v1/settings` | Get all settings |
 | `PUT` | `/api/v1/settings` | Update settings |
+| `GET` | `/api/v1/remaining?year=YYYY` | Server-computed remaining-entitlement summary |
+| `GET` | `/api/v1/holidays?year=YYYY[&state=XX]` | Public holidays (`{date,name}`) for the configured or given state |
 | `GET` | `/api/v1/export.ics?year=YYYY` | Download iCalendar file |
+| `GET` | `/api/v1/export.csv?year=YYYY` | Download CSV file |
+| `POST` | `/api/v1/import` | Import periods from a CSV body |
 
 Period endpoints (`POST`, `PUT`, `GET /periods`) use the `VacationPeriod` shape (see Data Model below). The settings endpoints use the flat settings object (`totalDays`, `state`, `carryOverDays`, `carryOverDeadline`, `carryOverMaxDays`, `bildungsurlaubDays`, employment dates). `DELETE` and the ICS endpoint return no body on success.
 

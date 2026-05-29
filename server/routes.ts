@@ -19,6 +19,7 @@ import {
 } from '../src/utils/calendar';
 import { computeProRataEntitlement, computeLeaveReduction } from '../src/utils/entitlement';
 import { formatCSV, parseImportCSV } from '../src/utils/csv';
+import { getHolidayMap } from '../src/data/holidays';
 import type { GermanState } from '../src/data/holidays';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -273,6 +274,30 @@ export function createRouter(db: Database.Database): Router {
       },
       remaining: entitledDays - usedDays,
     });
+  });
+
+  // ── Public holidays ─────────────────────────────────────────────
+
+  router.get('/holidays', (req, res) => {
+    const year = parseYear(req.query.year);
+    if (year === null) {
+      res.status(400).json({ error: 'Invalid year' });
+      return;
+    }
+
+    let state = getSettings(db).state as GermanState;
+    if (req.query.state !== undefined) {
+      if (typeof req.query.state !== 'string' || !VALID_STATES.has(req.query.state)) {
+        res.status(400).json({ error: 'state must be a valid German state code (e.g. BW, BY, HE)' });
+        return;
+      }
+      state = req.query.state as GermanState;
+    }
+
+    const holidays = [...getHolidayMap(year, year, state).entries()]
+      .map(([date, name]) => ({ date, name }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    res.json(holidays);
   });
 
   // ── Settings ─────────────────────────────────────────────────────

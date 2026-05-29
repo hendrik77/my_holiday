@@ -407,4 +407,42 @@ describe('API /api/v1', () => {
       expect(res.body.imported).toBe(0);
     });
   });
+
+  describe('GET /api/v1/holidays', () => {
+    it('returns public holidays for the configured state as {date,name} entries', async () => {
+      const res = await request(app).get('/api/v1/holidays?year=2026');
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      const newYear = res.body.find((h: { date: string }) => h.date === '2026-01-01');
+      expect(newYear).toBeDefined();
+      expect(typeof newYear.name).toBe('string');
+      expect(newYear.name.length).toBeGreaterThan(0);
+    });
+
+    it('returns entries sorted by date', async () => {
+      const res = await request(app).get('/api/v1/holidays?year=2026');
+      const dates = res.body.map((h: { date: string }) => h.date);
+      expect(dates).toEqual([...dates].sort());
+    });
+
+    it('honours a ?state= override (Epiphany is a holiday in BY but not HE)', async () => {
+      const he = await request(app).get('/api/v1/holidays?year=2026');
+      const by = await request(app).get('/api/v1/holidays?year=2026&state=BY');
+
+      const hasEpiphany = (body: { date: string }[]) => body.some((h) => h.date === '2026-01-06');
+      expect(hasEpiphany(he.body)).toBe(false);
+      expect(hasEpiphany(by.body)).toBe(true);
+    });
+
+    it('rejects a missing or invalid year with 400', async () => {
+      const res = await request(app).get('/api/v1/holidays?year=nope');
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects an invalid state code with 400', async () => {
+      const res = await request(app).get('/api/v1/holidays?year=2026&state=XX');
+      expect(res.status).toBe(400);
+    });
+  });
 });

@@ -220,7 +220,7 @@ The migration is **idempotent** — running it twice won't create duplicates.
 The CLI is bundled with esbuild into `dist-cli/my-holiday.js`. Link it once to get a global `holiday` command:
 
 ```bash
-npm run build:cli   # produces dist-cli/my-holiday.js (also runs automatically on npm link)
+npm run build:cli   # produces dist-cli/my-holiday.js
 npm link            # exposes a global `holiday` command
 holiday --help
 ```

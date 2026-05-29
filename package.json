@@ -7,7 +7,6 @@
     "holiday": "dist-cli/my-holiday.js"
   },
   "scripts": {
-    "prepare": "npm run build:cli",
     "dev": "vite",
     "dev:server": "tsx watch server/index.ts",
     "build": "tsc -b && vite build",

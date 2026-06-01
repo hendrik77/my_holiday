@@ -4,6 +4,20 @@ All notable changes to My Holiday.
 
 ---
 
+## v2.3.2 (2026-06-01)
+
+### Added
+- **`holiday --help <command>`** — per-command help is now reachable in flag-first order too (commander ignored the trailing command before); `holiday <command> --help` and `holiday help <command>` remain equivalent
+- **Richer per-command help** — each command's help shows a curated usage signature (e.g. `holiday add --start <YYYY-MM-DD> --end <YYYY-MM-DD> [--type <type>] …`), an example, and the global options (`--json` / `--api` / `--token`)
+
+### Fixed
+- **CLI runs standalone** — `build:cli` now bundles its only dependency (`commander`) into `dist-cli/my-holiday.js` instead of leaving it external, so the single file runs anywhere with just Node (no `node_modules` required); previously it threw `ERR_MODULE_NOT_FOUND` when run outside a full checkout
+
+### Changed
+- **README**: documented the GHCR pre-built/multi-arch image, a copy-paste `MY_HOLIDAY_API_URL` export, the self-contained CLI bundle, the `--help <command>` forms, and a more robust zsh completion install hint (`mkdir -p` the target dir)
+
+---
+
 ## v2.3.1 (2026-06-01)
 
 ### Added

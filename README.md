@@ -297,7 +297,7 @@ holiday export --format ics --year 2026 --out urlaub-2026.ics
 holiday migrate ./urlaub-2026.csv --dry-run
 ```
 
-Run `holiday --help` (or `holiday <command> --help`) to discover commands and flags.
+Run `holiday --help` for the command overview. For a single command's full flags and an example, use `holiday --help <command>`, `holiday <command> --help`, or `holiday help <command>` (all equivalent) — e.g. `holiday --help add`.
 
 ### Shell completions
 

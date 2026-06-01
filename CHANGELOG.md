@@ -4,7 +4,7 @@ All notable changes to My Holiday.
 
 ---
 
-## v2.3.0 (2026-05-29)
+## v2.3.0 (2026-06-01)
 
 ### Added
 - **Command-line interface (`holiday`)** — HTTP-only CLI for power users and AI agents, talking to the same REST API as the web app (local or remote). Commands: `list`, `add`, `remaining`, `export`, `migrate`, `calendar`, `today`, `completion`. Global `--api` / `--token` (or `MY_HOLIDAY_API_URL` / `MY_HOLIDAY_API_TOKEN`), `--json` on every command, exit codes `0`/`1`/`2`. Bundled to `dist-cli/` via esbuild; `npm link` exposes a global `holiday` command
@@ -20,6 +20,8 @@ All notable changes to My Holiday.
 - **`GET /api/v1/periods`** now returns a server-computed `workDays` per period (from the configured Bundesland); the CLI `list` renders it, falling back to the calendar-day span only when absent
 - **CSV/ICS refactor** — `formatCSV` extracted into a browser-free `src/utils/csv.ts` shared by the web download and `/export.csv`; `downloadSingleICS` moved to `src/utils/icsDownload.ts` to keep `ics.ts` DOM-free
 - **CLI command renamed** from `my-holiday` to `holiday` (the `bin` entry); the bundle carries a `#!/usr/bin/env node` shebang so it runs without a `node` prefix once linked
+- **Dependency updates** (Dependabot) — `react`/`react-dom`, `zustand`, `better-sqlite3`, `typescript-eslint`, and the dev-tooling group bumped to their latest minor/patch versions
+- **`package.json` version** set to `2.3.0` so `holiday --version` reports the real release
 
 ---
 

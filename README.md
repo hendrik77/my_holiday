@@ -307,8 +307,10 @@ Run `holiday --help` (or `holiday <command> --help`) to discover commands and fl
 # bash
 holiday completion bash | sudo tee /etc/bash_completion.d/holiday > /dev/null
 
-# zsh (a directory on your $fpath)
-holiday completion zsh > "${fpath[1]}/_holiday"
+# zsh — write to a dir on your $fpath (create it first; the path may not exist)
+mkdir -p "${fpath[1]}" && holiday completion zsh > "${fpath[1]}/_holiday"
+# Oh My Zsh tip: or use a dedicated dir — `mkdir -p ~/.zfunc && holiday completion zsh > ~/.zfunc/_holiday`,
+# then add `fpath=(~/.zfunc $fpath)` to ~/.zshrc before it sources oh-my-zsh.sh. Reload: `exec zsh`.
 
 # fish
 holiday completion fish > ~/.config/fish/completions/holiday.fish

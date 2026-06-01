@@ -53,7 +53,7 @@ complete -F _holiday holiday
 
 function zshScript(): string {
   return `#compdef holiday
-# holiday zsh completion. Install: holiday completion zsh > "\${fpath[1]}/_holiday"
+# holiday zsh completion. Install: mkdir -p "\${fpath[1]}" && holiday completion zsh > "\${fpath[1]}/_holiday"
 _holiday() {
   local -a commands
   commands=(

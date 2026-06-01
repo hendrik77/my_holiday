@@ -1,23 +1,32 @@
 {
   "name": "my_holiday",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.3.0",
   "type": "module",
+  "bin": {
+    "holiday": "dist-cli/my-holiday.js"
+  },
   "scripts": {
     "dev": "vite",
     "dev:server": "tsx watch server/index.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "pretest": "npm run build:cli",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "server": "tsx server/index.ts",
-    "build:server": "esbuild server/index.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outfile=dist-server/index.js"
+    "build:server": "esbuild server/index.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outfile=dist-server/index.js",
+    "build:cli": "esbuild cli/my-holiday.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outfile=dist-cli/my-holiday.js",
+    "typecheck:cli": "tsc -p tsconfig.cli.json",
+    "typecheck:server": "tsc -p tsconfig.server.json",
+    "typecheck": "npm run typecheck:cli && npm run typecheck:server"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.100.7",
     "better-sqlite3": "^12.10.0",
+    "commander": "^14.0.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "feiertagejs": "^1.5.1",

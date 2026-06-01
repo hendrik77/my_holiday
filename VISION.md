@@ -38,6 +38,18 @@ Generate a clean one-page PDF or shareable link showing approved vacation dates 
 
 A horizontal visual line showing key milestones for the current employee: start of employment → 6-month mark (full entitlement unlocks under § 4 BUrlG) → carry-over deadline → year end. The current accrual is highlighted. Especially useful for new hires figuring out exactly how many days they have earned.
 
+### Live calendar subscription (webcal)
+
+Beyond the one-shot `.ics` export, expose a stable, token-protected `webcal://…` feed that Google, Apple, and Outlook calendars subscribe to once and refresh automatically. Vacation periods then sit alongside meetings and stay in sync as they are added or removed — no re-exporting. Public and school holidays for the chosen state can be offered as optional overlay calendars on the same feed.
+
+### Conflict & quota warnings
+
+When adding or editing a period, validate it against existing data before saving: warn on overlap with an existing period, on exceeding the remaining entitlement for the year, and (later) on collision with a blackout window. A year-validation pass (`holiday check`) flags every issue for a year at once. This turns the planner from a passive recorder into an advisor that catches mistakes before they are saved.
+
+### Carry-over (use-or-lose) tracking
+
+Model the German reality that unused days expire — typically 31 March of the following year under § 7 BUrlG, sometimes later by contract. Remaining-day calculations distinguish current-year entitlement from carried-over days and surface an explicit deadline ("use-or-lose by 2026-03-31: 4 days"), so employees do not silently forfeit time. Feeds directly into the entitlement timeline visualizer above.
+
 ---
 
 ## v3 Multi-user + Authentication
@@ -107,16 +119,21 @@ Expose My Holiday as a **Model Context Protocol server** so Claude (or any MCP-c
 - Book or cancel vacation via natural language ("Book me a week off in August avoiding school holidays")
 - Answer questions about German vacation law (entitlement, carry-over, leave reductions)
 
-### CLI
-A `my-holiday` command-line interface for scripting and power users:
+### CLI — shipped in v2.3.0
+
+The `holiday` command-line interface for scripting and power users is implemented (full reference in the [README CLI section](./README.md#command-line-interface-cli)):
 
 ```bash
-my-holiday list [--year 2026]
-my-holiday add --start 2026-07-01 --end 2026-07-15 --type urlaub --note "Sommerurlaub"
-my-holiday remaining [--year 2026]
-my-holiday export --format ics --year 2026
-my-holiday migrate ./urlaub-2026.csv
+holiday list [--year 2026]
+holiday add --start 2026-07-01 --end 2026-07-15 --type urlaub --note "Sommerurlaub"
+holiday remaining [--year 2026]
+holiday export --format ics --year 2026
+holiday calendar --year 2026          # terminal calendar grid
+holiday today                          # one-line status
+holiday migrate ./urlaub-2026.csv
 ```
+
+Future CLI ideas tie into the Personal Enhancements above: a live `webcal` subscription, conflict/quota warnings on `add`, and carry-over (use-or-lose) reporting.
 
 ### Chat / Voice interface
 - In-app natural language chat panel powered by Claude API

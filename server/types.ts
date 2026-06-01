@@ -3,6 +3,8 @@ import type { VacationPeriod } from '../src/types';
 /** Row shape from the periods table */
 export interface PeriodRow extends VacationPeriod {
   changedAt: string; // ISO timestamp
+  /** Work days consumed (Mon–Fri minus holidays); computed by GET /periods, not stored. */
+  workDays?: number;
 }
 
 /** Parameters for creating a new period (no id, no changedAt) */

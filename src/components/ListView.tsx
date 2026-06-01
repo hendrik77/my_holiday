@@ -7,7 +7,8 @@ import type { VacationPeriod } from '../types';
 import { VacationModal } from './VacationModal';
 import { showToast } from './toastStore';
 import { useT } from '../i18n/useT';
-import { generateICS, downloadSingleICS } from '../utils/ics';
+import { generateICS } from '../utils/ics';
+import { downloadSingleICS } from '../utils/icsDownload';
 import './ListView.css';
 import './TypeBadges.css';
 

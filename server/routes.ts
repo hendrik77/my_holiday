@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import type Database from 'better-sqlite3';
 import {
   getAllPeriods,
@@ -10,6 +10,17 @@ import {
   updateSettings,
 } from './db';
 import { generateICS } from '../src/utils/ics';
+import {
+  countVacationWorkDays,
+  countVacationWorkDaysInYear,
+  countCarryOverUsed,
+  carryOverDeadline,
+  hasOverlap,
+} from '../src/utils/calendar';
+import { computeProRataEntitlement, computeLeaveReduction } from '../src/utils/entitlement';
+import { formatCSV, parseImportCSV } from '../src/utils/csv';
+import { getHolidayMap } from '../src/data/holidays';
+import type { GermanState } from '../src/data/holidays';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MM_DD_RE = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
@@ -28,19 +39,28 @@ function parseYear(raw: unknown): number | null {
 }
 
 function isISODate(v: unknown): v is string {
-  return typeof v === 'string' && ISO_DATE_RE.test(v);
+  if (typeof v !== 'string' || !ISO_DATE_RE.test(v)) return false;
+  // Reject well-formed but non-existent dates (e.g. 2026-02-30, 2026-13-45)
+  // by round-tripping through Date and checking the components survive.
+  const [y, m, d] = v.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
 }
 
 function isISODateOrEmpty(v: unknown): v is string {
-  return typeof v === 'string' && (v === '' || ISO_DATE_RE.test(v));
+  return v === '' || isISODate(v);
 }
 
 function isMonthDay(v: unknown): v is string {
   return typeof v === 'string' && MM_DD_RE.test(v);
 }
 
+
 export function createRouter(db: Database.Database): Router {
   const router = Router();
+
+  // Parse raw CSV bodies for the import endpoint (JSON is parsed app-level).
+  router.use(express.text({ type: 'text/csv', limit: '1mb' }));
 
   // ── Periods ──────────────────────────────────────────────────────
 
@@ -51,7 +71,12 @@ export function createRouter(db: Database.Database): Router {
       return;
     }
     const periods = year ? getPeriodsByYear(db, year) : getAllPeriods(db);
-    res.json(periods);
+    const state = getSettings(db).state as GermanState;
+    const enriched = periods.map((p) => ({
+      ...p,
+      workDays: year ? countVacationWorkDaysInYear(p, year, state) : countVacationWorkDays(p, state),
+    }));
+    res.json(enriched);
   });
 
   router.post('/periods', (req, res) => {
@@ -63,6 +88,11 @@ export function createRouter(db: Database.Database): Router {
     }
     if (type !== undefined && !VALID_TYPES.has(type)) {
       res.status(400).json({ error: 'Invalid type' });
+      return;
+    }
+
+    if (hasOverlap(startDate, endDate, getAllPeriods(db))) {
+      res.status(409).json({ error: 'overlaps an existing period' });
       return;
     }
 
@@ -91,6 +121,19 @@ export function createRouter(db: Database.Database): Router {
     }
     if (type !== undefined && !VALID_TYPES.has(type)) {
       res.status(400).json({ error: 'Invalid type' });
+      return;
+    }
+
+    const all = getAllPeriods(db);
+    const current = all.find((p) => p.id === id);
+    if (!current) {
+      res.status(404).json({ error: 'Period not found' });
+      return;
+    }
+    const effectiveStart = startDate ?? current.startDate;
+    const effectiveEnd = endDate ?? current.endDate;
+    if (hasOverlap(effectiveStart, effectiveEnd, all, id)) {
+      res.status(409).json({ error: 'overlaps an existing period' });
       return;
     }
 
@@ -142,6 +185,124 @@ export function createRouter(db: Database.Database): Router {
     res.set('Content-Type', 'text/calendar; charset=utf-8');
     res.set('Content-Disposition', `attachment; filename="urlaub-${year}.ics"`);
     res.send(ics);
+  });
+
+  // ── CSV Export ──────────────────────────────────────────────────
+
+  router.get('/export.csv', (req, res) => {
+    const year = req.query.year ? parseYear(req.query.year) ?? new Date().getFullYear() : new Date().getFullYear();
+    const settings = getSettings(db);
+    const periods = getPeriodsByYear(db, year);
+    const csv = formatCSV(periods, settings.state as GermanState);
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="urlaub-${year}.csv"`);
+    res.send(csv);
+  });
+
+  // ── CSV Import ──────────────────────────────────────────────────
+
+  router.post('/import', (req, res) => {
+    const csv = typeof req.body === 'string' ? req.body : '';
+    const { periods, errors } = parseImportCSV(csv);
+
+    if (periods.length === 0) {
+      res.status(400).json({ imported: 0, skipped: [], errors });
+      return;
+    }
+
+    const existing = getAllPeriods(db).map((p) => ({
+      id: p.id,
+      startDate: p.startDate,
+      endDate: p.endDate,
+    }));
+    const skipped: Array<{ startDate: string; endDate: string; reason: string }> = [];
+    let imported = 0;
+
+    for (const period of periods) {
+      if (hasOverlap(period.startDate, period.endDate, existing)) {
+        skipped.push({ startDate: period.startDate, endDate: period.endDate, reason: 'overlap' });
+        continue;
+      }
+      const created = createPeriod(db, {
+        startDate: period.startDate,
+        endDate: period.endDate,
+        note: period.note,
+        halfDay: period.halfDay === true,
+        type: period.type ?? 'urlaub',
+      });
+      existing.push({ id: created.id, startDate: created.startDate, endDate: created.endDate });
+      imported++;
+    }
+
+    const status = skipped.length > 0 || errors.length > 0 ? 207 : 200;
+    res.status(status).json({ imported, skipped, errors });
+  });
+
+  // ── Remaining entitlement ───────────────────────────────────────
+
+  router.get('/remaining', (req, res) => {
+    const year = req.query.year ? parseYear(req.query.year) : new Date().getFullYear();
+    if (year === null) {
+      res.status(400).json({ error: 'Invalid year' });
+      return;
+    }
+
+    const settings = getSettings(db);
+    const totalDays = settings.totalDays;
+    const state = settings.state as GermanState;
+    const periods = getPeriodsByYear(db, year);
+    const urlaubPeriods = periods.filter((p) => !p.type || p.type === 'urlaub');
+
+    const usedDays = urlaubPeriods.reduce(
+      (sum, p) => sum + countVacationWorkDaysInYear(p, year, state),
+      0,
+    );
+    const proRata = computeProRataEntitlement(
+      settings.employmentStartDate,
+      settings.employmentEndDate,
+      year,
+      totalDays,
+    );
+    const reduction = computeLeaveReduction(periods, year, totalDays);
+    const entitledDays = Math.max(0, proRata - reduction);
+    const carryOverUsed = countCarryOverUsed(urlaubPeriods, year, state, settings.carryOverDays);
+
+    res.json({
+      year,
+      totalDays,
+      entitledDays,
+      usedDays,
+      carryOver: {
+        available: settings.carryOverDays,
+        used: carryOverUsed,
+        expiresOn: carryOverDeadline(year),
+      },
+      remaining: entitledDays - usedDays,
+    });
+  });
+
+  // ── Public holidays ─────────────────────────────────────────────
+
+  router.get('/holidays', (req, res) => {
+    const year = parseYear(req.query.year);
+    if (year === null) {
+      res.status(400).json({ error: 'Invalid year' });
+      return;
+    }
+
+    let state = getSettings(db).state as GermanState;
+    if (req.query.state !== undefined) {
+      if (typeof req.query.state !== 'string' || !VALID_STATES.has(req.query.state)) {
+        res.status(400).json({ error: 'state must be a valid German state code (e.g. BW, BY, HE)' });
+        return;
+      }
+      state = req.query.state as GermanState;
+    }
+
+    const holidays = [...getHolidayMap(year, year, state).entries()]
+      .map(([date, name]) => ({ date, name }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    res.json(holidays);
   });
 
   // ── Settings ─────────────────────────────────────────────────────

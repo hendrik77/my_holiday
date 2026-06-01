@@ -14,6 +14,69 @@
 | Routing | None — tab-based view switching |
 | Tests | Vitest (unit/integration) + Playwright (E2E) |
 
+## System Overview (C4)
+
+### Level 1 — System Context
+
+```mermaid
+flowchart TB
+    user["<b>Employee</b><br/><i>[Person]</i><br/>Plans vacation and tracks<br/>entitlement under German<br/>BUrlG rules"]
+
+    system["<b>My Holiday</b><br/><i>[Software System]</i><br/>Vacation planning &amp; entitlement<br/>tracker. Manages periods, computes<br/>work-day counts, exports ICS."]
+
+    ferien["<b>ferien-api.de</b><br/><i>[External System]</i><br/>Public REST API for German<br/>school holidays per state"]
+
+    calendar["<b>Calendar Application</b><br/><i>[External System]</i><br/>Apple Calendar, Google Calendar,<br/>Outlook — imports ICS files"]
+
+    user -- "Plans vacation,<br/>views entitlement<br/>[HTTPS]" --> system
+    system -- "Fetches school<br/>holidays<br/>[HTTPS/JSON]" --> ferien
+    system -- "Provides ICS<br/>export file<br/>[RFC 5545]" --> calendar
+    user -- "Imports planned<br/>vacation" --> calendar
+
+    classDef person fill:#08427B,stroke:#052E56,color:#fff
+    classDef sys fill:#1168BD,stroke:#0B4884,color:#fff
+    classDef external fill:#999999,stroke:#6B6B6B,color:#fff
+
+    class user person
+    class system sys
+    class ferien,calendar external
+```
+
+### Level 2 — Containers
+
+```mermaid
+flowchart TB
+    user["<b>Employee</b><br/><i>[Person]</i>"]
+
+    subgraph boundary["My Holiday [Software System]"]
+        spa["<b>Web Application</b><br/><i>[Container: React 19 + TypeScript + Vite]</i><br/>SPA serving Dashboard, Year, Month<br/>and List views. UI state in Zustand,<br/>server state in TanStack Query."]
+
+        api["<b>API Server</b><br/><i>[Container: Node.js + Express]</i><br/>REST endpoints for periods and<br/>settings. Generates ICS files.<br/>Listens on port 3001."]
+
+        db[("<b>Database</b><br/><i>[Container: SQLite via better-sqlite3]</i><br/>Persists vacation periods and<br/>user settings.<br/>data/my-holiday.db")]
+    end
+
+    ferien["<b>ferien-api.de</b><br/><i>[External System]</i>"]
+    calendar["<b>Calendar Application</b><br/><i>[External System]</i>"]
+
+    user -- "Uses<br/>[HTTPS]" --> spa
+    spa -- "REST calls<br/>[JSON/HTTPS]" --> api
+    spa -- "Fetches school<br/>holidays<br/>[JSON/HTTPS]" --> ferien
+    api -- "Reads &amp; writes<br/>[better-sqlite3]" --> db
+    api -- "Serves ICS file<br/>[RFC 5545]" --> calendar
+    user -- "Imports ICS" --> calendar
+
+    classDef person fill:#08427B,stroke:#052E56,color:#fff
+    classDef container fill:#438DD5,stroke:#2E6295,color:#fff
+    classDef external fill:#999999,stroke:#6B6B6B,color:#fff
+    classDef sysBoundary fill:none,stroke:#444,stroke-dasharray:5 5
+
+    class user person
+    class spa,api,db container
+    class ferien,calendar external
+    class boundary sysBoundary
+```
+
 ## Project Structure
 
 ```
@@ -27,9 +90,11 @@ src/
 │   └── schoolHolidays.ts      # Dynamic school holidays (ferien-api.de)
 ├── utils/
 │   ├── calendar.ts            # Work-day counting, half-day logic
+│   ├── csv.ts                 # Browser-free CSV format/parse (shared with the server)
 │   ├── entitlement.ts         # Pro-rata entitlement & leave reduction (§ 4/§ 17 BUrlG)
-│   ├── export.ts              # CSV export/import (handwritten parser)
-│   └── ics.ts                 # RFC 5545 iCalendar generator
+│   ├── export.ts              # Browser CSV download (delegates to csv.ts)
+│   ├── ics.ts                 # RFC 5545 iCalendar generator
+│   └── icsDownload.ts         # Browser-only single-event ICS download
 ├── i18n/
 │   ├── translations.ts        # All DE + EN strings as a typed nested object
 │   └── useT.ts                # useT() hook — returns t(key, params?) function
@@ -52,9 +117,19 @@ src/
 
 server/
 ├── index.ts                   # Express server (port 3001)
-├── routes.ts                  # REST routes + ICS endpoint
+├── routes.ts                  # REST routes (periods, settings, remaining, holidays, ICS/CSV export, import)
 ├── db.ts                      # SQLite schema + CRUD operations
 └── types.ts                   # Server-specific types
+
+cli/                           # HTTP-only CLI, bundled to dist-cli/ via esbuild (bin: `holiday`)
+├── my-holiday.ts              # entry point, commander setup
+├── api.ts                     # fetch client, env/flag resolution, typed errors
+├── dates.ts                   # dependency-free UTC date helpers
+├── format.ts                  # table / summary / status output helpers
+├── calendar-view.ts           # pure terminal-calendar renderer (German labels)
+├── errors.ts                  # UsageError + mapErrorToExit
+├── exit-codes.ts              # EXIT.OK / USAGE / SERVER (0 / 1 / 2)
+└── commands/                  # list, add, remaining, export, migrate, calendar, today, completion
 
 scripts/
 └── migrate-v1.ts              # v1 CSV → v2 SQLite (idempotent)
@@ -92,7 +167,11 @@ Settings changes follow the same pattern via `PUT /api/v1/settings`. Read-only v
 | `DELETE` | `/api/v1/periods/:id` | Delete a period |
 | `GET` | `/api/v1/settings` | Get all settings |
 | `PUT` | `/api/v1/settings` | Update settings |
+| `GET` | `/api/v1/remaining?year=YYYY` | Server-computed remaining-entitlement summary |
+| `GET` | `/api/v1/holidays?year=YYYY[&state=XX]` | Public holidays (`{date,name}`) for the configured or given state |
 | `GET` | `/api/v1/export.ics?year=YYYY` | Download iCalendar file |
+| `GET` | `/api/v1/export.csv?year=YYYY` | Download CSV file |
+| `POST` | `/api/v1/import` | Import periods from a CSV body |
 
 Period endpoints (`POST`, `PUT`, `GET /periods`) use the `VacationPeriod` shape (see Data Model below). The settings endpoints use the flat settings object (`totalDays`, `state`, `carryOverDays`, `carryOverDeadline`, `carryOverMaxDays`, `bildungsurlaubDays`, employment dates). `DELETE` and the ICS endpoint return no body on success.
 
@@ -151,3 +230,7 @@ Translations live in `src/i18n/translations.ts` as a typed nested object with `d
 **7. Idempotent CSV migration**
 
 The migration script (`scripts/migrate-v1.ts`) matches periods by composite key `(startDate, endDate, note, halfDay, type)`. Rerunning safely skips existing records.
+
+## Architecture Decision Records
+
+Beyond the foundational decisions above, significant architectural choices are captured as dated ADRs (context, decision, alternatives, consequences). See the [ADR overview](./docs/adr/README.md) for the full index.

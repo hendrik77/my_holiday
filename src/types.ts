@@ -8,6 +8,18 @@ export type VacationType =
   | 'elternzeit'
   | 'sonderurlaub';
 
+/** Canonical runtime list of all vacation types (mirrors the VacationType union). */
+export const VACATION_TYPES: readonly VacationType[] = [
+  'urlaub',
+  'bildungsurlaub',
+  'kur',
+  'sabbatical',
+  'unbezahlterUrlaub',
+  'mutterschaftsurlaub',
+  'elternzeit',
+  'sonderurlaub',
+];
+
 export interface VacationPeriod {
   id: string;
   startDate: string; // ISO date YYYY-MM-DD

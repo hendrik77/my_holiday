@@ -211,9 +211,86 @@ npx tsx scripts/migrate-v1.ts ./urlaub-2026.csv
 
 The migration is **idempotent** — running it twice won't create duplicates.
 
+## Command-Line Interface (CLI)
+
+`holiday` is a scriptable CLI for power users and AI agents. It talks to the same REST API as the web app over HTTP — local or remote — so the server must be running (`npm run server`, or Docker).
+
+### Build & install
+
+The CLI is bundled with esbuild into `dist-cli/my-holiday.js`. Link it once to get a global `holiday` command:
+
+```bash
+npm run build:cli   # produces dist-cli/my-holiday.js
+npm link            # exposes a global `holiday` command
+holiday --help
+```
+
+The `bin` field maps `holiday` to the built file, and the bundle carries a `#!/usr/bin/env node` shebang, so `holiday` runs without a `node` prefix once linked. (The test suite builds the bundle automatically via the `pretest` hook.) To run it without linking, invoke the file directly: `node dist-cli/my-holiday.js --help`.
+
+### Configuration
+
+| Variable | Flag override | Default | Purpose |
+|---|---|---|---|
+| `MY_HOLIDAY_API_URL` | `--api <url>` | `http://localhost:3001/api/v1` | API base URL (local or remote) |
+| `MY_HOLIDAY_API_TOKEN` | `--token <token>` | _(none)_ | Bearer token sent as `Authorization: Bearer …` (the server does not enforce auth yet) |
+
+`--json` makes every command emit machine-readable output. Exit codes: **0** success, **1** user/usage error (bad arguments, validation, partial import), **2** server or network error.
+
+### Commands
+
+| Command | Flags | Description |
+|---|---|---|
+| `list` | `[--year <year>]` | List vacation periods — table (Days = server-computed working days), or a JSON array with `--json` |
+| `remaining` | `[--year <year>]` | Remaining-entitlement summary (defaults to the current year) |
+| `add` | `--start <YYYY-MM-DD> --end <YYYY-MM-DD> [--type <type>] [--note <text>] [--half-day]` | Add a vacation period |
+| `export` | `--format <ics\|csv> [--year <year>] [--out <file>] [--bom]` | Export periods; writes to `--out` or stdout. `--bom` prepends a UTF-8 BOM to CSV (Excel) |
+| `migrate` | `<file> [--dry-run]` | Import periods from a CSV file; `--dry-run` parses locally without sending |
+| `calendar` | `[--year <year>] [--month <1-12>] [--no-color]` | Render a terminal calendar — full-year German grid, or one month with `--month`; shades vacation, public holidays and weekends |
+| `today` | _(none)_ | One-line status: remaining days plus the active/next vacation. `--json` for structured output |
+| `completion` | `<bash\|zsh\|fish>` | Print a shell completion script (see [Shell completions](#shell-completions)) |
+
+Valid `--type` values: `urlaub`, `bildungsurlaub`, `kur`, `sabbatical`, `unbezahlterUrlaub`, `mutterschaftsurlaub`, `elternzeit`, `sonderurlaub` (default: `urlaub`).
+
+### Examples
+
+```bash
+# Against a local server (default API URL)
+holiday list --year 2026
+holiday remaining --json
+holiday today                      # 18 days left · next: urlaub in 16 days (…)
+holiday calendar --year 2026       # full-year grid; add --month 7 for one month
+
+# Against a remote homelab instance
+export MY_HOLIDAY_API_URL=https://holiday.example.lan/api/v1
+holiday add --start 2026-07-01 --end 2026-07-15 --type urlaub --note "Sommerurlaub"
+holiday export --format ics --year 2026 --out urlaub-2026.ics
+holiday migrate ./urlaub-2026.csv --dry-run
+```
+
+Run `holiday --help` (or `holiday <command> --help`) to discover commands and flags.
+
+### Shell completions
+
+`holiday completion <shell>` prints a completion script for `bash`, `zsh`, or `fish`. Install it once so subcommands, flags, and `--type` values tab-complete:
+
+```bash
+# bash
+holiday completion bash | sudo tee /etc/bash_completion.d/holiday > /dev/null
+
+# zsh (a directory on your $fpath)
+holiday completion zsh > "${fpath[1]}/_holiday"
+
+# fish
+holiday completion fish > ~/.config/fish/completions/holiday.fish
+```
+
 ## Architecture
 
 For a full breakdown of the tech stack, file structure, REST API, data model, and key design decisions, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+## Architecture Decision Records
+
+Significant architectural decisions are recorded as ADRs. See the [ADR overview](./docs/adr/README.md) for the full index.
 
 ## Design System
 
@@ -240,7 +317,7 @@ Documented in [`DESIGN.md`](./DESIGN.md):
 ## Development
 
 ```bash
-npm test              # unit + integration tests (257 tests)
+npm test              # unit + integration tests (350 tests)
 npm run test:watch    # watch mode
 npm run test:e2e      # Playwright end-to-end smoke tests
 ```

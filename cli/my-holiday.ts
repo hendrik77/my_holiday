@@ -6,6 +6,7 @@ import { runAdd } from './commands/add'
 import { runCalendar } from './commands/calendar'
 import { runChange } from './commands/change'
 import { runCompletion } from './commands/completion'
+import { runDelete } from './commands/delete'
 import { runExport } from './commands/export'
 import { runList } from './commands/list'
 import { runMigrate } from './commands/migrate'
@@ -87,6 +88,18 @@ function buildProgram(): Command {
         halfDay,
         json: globals.json === true,
       })
+      process.stdout.write(`${output}\n`)
+    })
+  program
+    .command('delete')
+    .description('Delete a vacation period')
+    .usage('<id>')
+    .addHelpText('after', '\nExample:\n  holiday delete 3f9a2c1   # id (or unique prefix) from `holiday list`')
+    .argument('<id>', 'period id or unique prefix (from `holiday list`)')
+    .action(async (id: string, _options: Record<string, never>, command: Command) => {
+      const globals = command.optsWithGlobals()
+      const client = createApiClient({ api: globals.api, token: globals.token })
+      const output = await runDelete(client, { id, json: globals.json === true })
       process.stdout.write(`${output}\n`)
     })
   program

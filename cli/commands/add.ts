@@ -20,13 +20,15 @@ export interface AddOptions {
  * failure rather than a generic server error (exit 2).
  */
 export async function runAdd(client: ApiClient, options: AddOptions = {}): Promise<string> {
-  const { start, end, type } = options
+  const { start, type } = options
 
   if (!start || !ISO_DATE_RE.test(start)) {
     throw new UsageError('--start is required and must be an ISO date (YYYY-MM-DD)')
   }
-  if (!end || !ISO_DATE_RE.test(end)) {
-    throw new UsageError('--end is required and must be an ISO date (YYYY-MM-DD)')
+  // --end is optional: a single-day (or half-day) vacation just needs --start.
+  const end = options.end ?? start
+  if (!ISO_DATE_RE.test(end)) {
+    throw new UsageError('--end must be an ISO date (YYYY-MM-DD)')
   }
   if (type !== undefined && !VACATION_TYPES.includes(type as VacationType)) {
     throw new UsageError(`--type must be one of: ${VACATION_TYPES.join(', ')}`)

@@ -40,7 +40,7 @@ function parseJsonOrNull(text: string): unknown {
 export async function runMigrate(client: ApiClient, options: MigrateOptions = {}): Promise<MigrateResult> {
   const { file } = options
   if (!file) {
-    throw new UsageError('a CSV file path is required: my-holiday migrate <file>')
+    throw new UsageError('a CSV file path is required: holiday migrate <file>')
   }
 
   const csv = await readFile(file, 'utf8')

@@ -124,6 +124,33 @@ describe('runChange', () => {
     expect((err as UsageError).message).toMatch(/overlap/i)
   })
 
+  it('maps a server 400 to a usage error (exit 1)', async () => {
+    const { client } = clientPutRejects(new ApiError(400, 'bad dates', 'failed'))
+
+    const err = await rejection(runChange(client, { id: 'aaaa', start: '2026-13-01' }))
+
+    expect(err).toBeInstanceOf(UsageError)
+    expect(mapErrorToExit(err).code).toBe(EXIT.USAGE)
+  })
+
+  it('maps a server 404 (period vanished between resolve and update) to a usage error', async () => {
+    const { client } = clientPutRejects(new ApiError(404, 'Period not found', 'failed'))
+
+    const err = await rejection(runChange(client, { id: 'aaaa', note: 'x' }))
+
+    expect(err).toBeInstanceOf(UsageError)
+    expect(mapErrorToExit(err).code).toBe(EXIT.USAGE)
+  })
+
+  it('rethrows a non-usage server error (e.g. 500) as-is (exit 2)', async () => {
+    const { client } = clientPutRejects(new ApiError(500, 'boom', 'failed'))
+
+    const err = await rejection(runChange(client, { id: 'aaaa', note: 'x' }))
+
+    expect(err).toBeInstanceOf(ApiError)
+    expect(mapErrorToExit(err).code).toBe(EXIT.SERVER)
+  })
+
   it('returns the updated record as JSON with --json', async () => {
     const updated = { ...PERIODS[0], note: 'Sommerurlaub' }
     const { client } = clientReturning(PERIODS, updated)

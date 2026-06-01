@@ -270,9 +270,10 @@ Or pass it per-command without exporting: `holiday --api http://localhost:3001/a
 
 | Command | Flags | Description |
 |---|---|---|
-| `list` | `[--year <year>]` | List vacation periods — table (Days = server-computed working days), or a JSON array with `--json` |
+| `list` | `[--year <year>]` | List vacation periods — table (ID = short id for `change`, Days = server-computed working days), or a JSON array with `--json` |
 | `remaining` | `[--year <year>]` | Remaining-entitlement summary (defaults to the current year) |
 | `add` | `--start <YYYY-MM-DD> [--end <YYYY-MM-DD>] [--type <type>] [--note <text>] [--half-day]` | Add a vacation period; omit `--end` for a single-day (or `--half-day`) vacation |
+| `change` | `<id> [--start <YYYY-MM-DD>] [--end <YYYY-MM-DD>] [--type <type>] [--note <text>] [--half-day\|--no-half-day]` | Update an existing period (id or unique prefix from `list`); only the flags you pass change |
 | `export` | `--format <ics\|csv> [--year <year>] [--out <file>] [--bom]` | Export periods; writes to `--out` or stdout. `--bom` prepends a UTF-8 BOM to CSV (Excel) |
 | `migrate` | `<file> [--dry-run]` | Import periods from a CSV file; `--dry-run` parses locally without sending |
 | `calendar` | `[--year <year>] [--month <1-12>] [--no-color]` | Render a terminal calendar — full-year German grid, or one month with `--month`; shades vacation, public holidays and weekends |

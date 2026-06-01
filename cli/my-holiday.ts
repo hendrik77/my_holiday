@@ -4,6 +4,7 @@ import { version } from '../package.json'
 import { createApiClient } from './api'
 import { runAdd } from './commands/add'
 import { runCalendar } from './commands/calendar'
+import { runChange } from './commands/change'
 import { runCompletion } from './commands/completion'
 import { runExport } from './commands/export'
 import { runList } from './commands/list'
@@ -57,6 +58,33 @@ function buildProgram(): Command {
         type: options.type,
         note: options.note,
         halfDay: options.halfDay === true,
+        json: globals.json === true,
+      })
+      process.stdout.write(`${output}\n`)
+    })
+  program
+    .command('change')
+    .description('Update an existing vacation period')
+    .usage('<id> [--start <YYYY-MM-DD>] [--end <YYYY-MM-DD>] [--type <type>] [--note <text>] [--half-day|--no-half-day]')
+    .addHelpText('after', '\nExample:\n  holiday change 3f9a2c1 --end 2026-07-20 --note "verlängert"   # id (or unique prefix) from `holiday list`')
+    .argument('<id>', 'period id or unique prefix (from `holiday list`)')
+    .option('--start <date>', 'new start date (YYYY-MM-DD)')
+    .option('--end <date>', 'new end date (YYYY-MM-DD)')
+    .option('--type <type>', 'new vacation type')
+    .option('--note <text>', 'new note (use --note "" to clear)')
+    .option('--half-day', 'mark as a half day')
+    .option('--no-half-day', 'clear the half-day flag')
+    .action(async (id: string, options: { start?: string; end?: string; type?: string; note?: string; halfDay?: boolean }, command: Command) => {
+      const globals = command.optsWithGlobals()
+      const client = createApiClient({ api: globals.api, token: globals.token })
+      const halfDay = command.getOptionValueSource('halfDay') === 'cli' ? options.halfDay === true : undefined
+      const output = await runChange(client, {
+        id,
+        start: options.start,
+        end: options.end,
+        type: options.type,
+        note: options.note,
+        halfDay,
         json: globals.json === true,
       })
       process.stdout.write(`${output}\n`)

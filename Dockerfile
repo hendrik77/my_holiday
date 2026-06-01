@@ -1,6 +1,10 @@
 # ── Stage 1: build ───────────────────────────────────────────────────
 FROM node:20-alpine AS build
 WORKDIR /app
+# Toolchain to compile the better-sqlite3 native addon when no musl prebuilt
+# binary is published for this Node version. This is a throwaway builder layer,
+# so the tools are not stripped (they never reach the runtime image).
+RUN apk add --no-cache python3 make g++
 COPY package*.json ./
 RUN npm ci
 COPY . .

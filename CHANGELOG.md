@@ -4,6 +4,17 @@ All notable changes to My Holiday.
 
 ---
 
+## v2.3.1 (2026-06-01)
+
+### Added
+- **Multi-arch Docker images** — the release now publishes `linux/amd64` **and** `linux/arm64`, so ARM hosts (Apple Silicon, Raspberry Pi, ARM NAS) pull a native image instead of emulating amd64. `docker pull` auto-selects the host architecture
+- **README: pre-built image instructions** — documents pulling/running/updating `ghcr.io/hendrik77/my_holiday` from GHCR
+
+### Changed
+- **CI now builds the Docker image on every PR** — Dockerfile / native-addon (`better-sqlite3`) build failures are caught before merge, instead of only at release-tag time
+
+---
+
 ## v2.3.0 (2026-06-01)
 
 ### Added

@@ -81,6 +81,22 @@ API_HOST=0.0.0.0 API_PORT=4000 npm run server
 
 The easiest way to run the app on a server, NAS, or Raspberry Pi.
 
+### Pre-built image (GHCR)
+
+Pull the published **multi-arch** image (`linux/amd64` + `linux/arm64`, so Apple Silicon, a Raspberry Pi, or an ARM NAS run natively — no emulation):
+
+```bash
+docker run -d --name my-holiday -p 3001:3001 \
+  -v "$(pwd)/data:/app/data" \
+  -e DB_PATH=/app/data/my-holiday.db \
+  -e API_HOST=0.0.0.0 \
+  ghcr.io/hendrik77/my_holiday:latest    # or pin a version, e.g. :2.3.1
+```
+
+To update: `docker pull ghcr.io/hendrik77/my_holiday:latest`, then `docker rm -f my-holiday` and re-run the command above — the `./data` volume keeps your database.
+
+### Build from source
+
 ```bash
 # Build and start (data persisted in ./data/)
 docker-compose up

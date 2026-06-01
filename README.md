@@ -252,6 +252,18 @@ The bundle is **self-contained** — esbuild inlines its only dependency (`comma
 | `MY_HOLIDAY_API_URL` | `--api <url>` | `http://localhost:3001/api/v1` | API base URL (local or remote) |
 | `MY_HOLIDAY_API_TOKEN` | `--token <token>` | _(none)_ | Bearer token sent as `Authorization: Bearer …` (the server does not enforce auth yet) |
 
+Point the CLI at your server (add to `~/.zshrc` / `~/.bashrc` to make it permanent):
+
+```bash
+# Local server (default — only needed if you want it explicit)
+export MY_HOLIDAY_API_URL=http://localhost:3001/api/v1
+
+# Remote / homelab instance
+export MY_HOLIDAY_API_URL=https://holiday.example.lan/api/v1
+```
+
+Or pass it per-command without exporting: `holiday --api http://localhost:3001/api/v1 today`.
+
 `--json` makes every command emit machine-readable output. Exit codes: **0** success, **1** user/usage error (bad arguments, validation, partial import), **2** server or network error.
 
 ### Commands

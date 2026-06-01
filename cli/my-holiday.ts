@@ -23,11 +23,14 @@ function buildProgram(): Command {
     .option('--api <url>', 'API base URL (default: $MY_HOLIDAY_API_URL or http://localhost:3001/api/v1)')
     .option('--token <token>', 'bearer token for the Authorization header (default: $MY_HOLIDAY_API_TOKEN)')
     .option('--json', 'emit machine-readable JSON', false)
+    .configureHelp({ showGlobalOptions: true })
     .exitOverride()
 
   program
     .command('list')
     .description('List vacation periods for a year')
+    .usage('[--year <year>]')
+    .addHelpText('after', '\nExample:\n  holiday list --year 2026')
     .option('--year <year>', 'filter to a calendar year', (value) => Number.parseInt(value, 10))
     .action(async (options: { year?: number }, command: Command) => {
       const globals = command.optsWithGlobals()
@@ -38,6 +41,8 @@ function buildProgram(): Command {
   program
     .command('add')
     .description('Add a vacation period')
+    .usage('--start <YYYY-MM-DD> --end <YYYY-MM-DD> [--type <type>] [--note <text>] [--half-day]')
+    .addHelpText('after', '\nExample:\n  holiday add --start 2026-07-01 --end 2026-07-15 --type urlaub --note "Sommerurlaub"')
     .option('--start <date>', 'start date (YYYY-MM-DD)')
     .option('--end <date>', 'end date (YYYY-MM-DD)')
     .option('--type <type>', 'vacation type (default: urlaub)')
@@ -59,6 +64,8 @@ function buildProgram(): Command {
   program
     .command('remaining')
     .description('Show remaining vacation entitlement')
+    .usage('[--year <year>]')
+    .addHelpText('after', '\nExample:\n  holiday remaining --year 2026')
     .option('--year <year>', 'calendar year (default: current year)', (value) => Number.parseInt(value, 10))
     .action(async (options: { year?: number }, command: Command) => {
       const globals = command.optsWithGlobals()
@@ -69,6 +76,8 @@ function buildProgram(): Command {
   program
     .command('export')
     .description('Export periods as an ICS or CSV file')
+    .usage('--format <ics|csv> [--year <year>] [--out <file>] [--bom]')
+    .addHelpText('after', '\nExample:\n  holiday export --format ics --year 2026 --out urlaub-2026.ics')
     .option('--format <format>', 'ics or csv')
     .option('--year <year>', 'calendar year (default: current year)', (value) => Number.parseInt(value, 10))
     .option('--out <file>', 'write to a file instead of stdout')
@@ -87,6 +96,8 @@ function buildProgram(): Command {
   program
     .command('migrate')
     .description('Import vacation periods from a CSV file')
+    .usage('[file] [--dry-run]')
+    .addHelpText('after', '\nExample:\n  holiday migrate ./urlaub-2026.csv --dry-run')
     .argument('[file]', 'path to the CSV file to import')
     .option('--dry-run', 'parse locally and report what would import, without sending', false)
     .action(async (file: string | undefined, options: { dryRun?: boolean }, command: Command) => {
@@ -101,6 +112,7 @@ function buildProgram(): Command {
   program
     .command('today')
     .description('Show a one-line vacation status: remaining days and the next/active period')
+    .addHelpText('after', '\nExample:\n  holiday today')
     .action(async (_options: Record<string, never>, command: Command) => {
       const globals = command.optsWithGlobals()
       const client = createApiClient({ api: globals.api, token: globals.token })
@@ -110,6 +122,8 @@ function buildProgram(): Command {
   program
     .command('calendar')
     .description('Show a terminal calendar for a year, shading vacation, holidays and weekends')
+    .usage('[--year <year>] [--month <1-12>] [--no-color]')
+    .addHelpText('after', '\nExample:\n  holiday calendar --year 2026 --month 7')
     .option('--year <year>', 'calendar year (default: current year)', (value) => Number.parseInt(value, 10))
     .option('--month <month>', 'show a single month (1-12) instead of the full year', (value) => Number.parseInt(value, 10))
     .option('--no-color', 'disable ANSI colors (also respects NO_COLOR and non-TTY output)')
@@ -123,6 +137,8 @@ function buildProgram(): Command {
   program
     .command('completion')
     .description('Print a shell completion script (bash, zsh, or fish)')
+    .usage('<bash|zsh|fish>')
+    .addHelpText('after', '\nExample:\n  holiday completion zsh')
     .argument('<shell>', 'bash, zsh, or fish')
     .action((shell: string) => {
       process.stdout.write(runCompletion(shell))
@@ -131,11 +147,28 @@ function buildProgram(): Command {
   return program
 }
 
+/**
+ * Allow `holiday --help <command>` (and `-h <command>`) by rewriting it to the
+ * canonical `holiday <command> --help`. Commander treats `--help` as a root flag
+ * otherwise and ignores the trailing command. `holiday <command> --help` and
+ * `holiday help <command>` already work and are left untouched.
+ */
+function normalizeHelpArgs(argv: string[], program: Command): string[] {
+  const names = new Set(program.commands.map((c) => c.name()).filter((n) => n !== 'help'))
+  const rest = argv.slice(2)
+  const wantsHelp = rest.includes('--help') || rest.includes('-h')
+  const command = rest.find((token) => names.has(token))
+  if (wantsHelp && command) {
+    return [argv[0], argv[1], command, '--help']
+  }
+  return argv
+}
+
 async function main(argv: string[]): Promise<number> {
   const program = buildProgram()
 
   try {
-    await program.parseAsync(argv)
+    await program.parseAsync(normalizeHelpArgs(argv, program))
     return EXIT.OK
   } catch (err) {
     // commander threw on its own terms: --help / --version exit 0, usage errors exit 1.

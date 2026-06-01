@@ -243,6 +243,8 @@ holiday --help
 
 The `bin` field maps `holiday` to the built file, and the bundle carries a `#!/usr/bin/env node` shebang, so `holiday` runs without a `node` prefix once linked. (The test suite builds the bundle automatically via the `pretest` hook.) To run it without linking, invoke the file directly: `node dist-cli/my-holiday.js --help`.
 
+The bundle is **self-contained** — esbuild inlines its only dependency (`commander`), so `dist-cli/my-holiday.js` is a single file you can copy anywhere (or to another machine) and run with just Node; no `node_modules` is needed at runtime.
+
 ### Configuration
 
 | Variable | Flag override | Default | Purpose |

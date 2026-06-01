@@ -137,6 +137,20 @@ describe('API /api/v1', () => {
       expect(res.status).toBe(400);
     });
 
+    it('returns 400 for a well-formed but non-existent calendar date', async () => {
+      const res = await request(app)
+        .post('/api/v1/periods')
+        .send({ startDate: '2026-02-30', endDate: '2026-02-30', note: '' });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 for an out-of-range month/day', async () => {
+      const res = await request(app)
+        .post('/api/v1/periods')
+        .send({ startDate: '2026-13-45', endDate: '2026-13-45', note: '' });
+      expect(res.status).toBe(400);
+    });
+
     it('defaults type to urlaub', async () => {
       const res = await request(app)
         .post('/api/v1/periods')
@@ -210,6 +224,17 @@ describe('API /api/v1', () => {
         .put('/api/v1/periods/nonexistent')
         .send({ note: 'test' });
       expect(res.status).toBe(404);
+    });
+
+    it('returns 400 when updating to a non-existent calendar date', async () => {
+      const created = await request(app)
+        .post('/api/v1/periods')
+        .send({ startDate: '2026-07-01', endDate: '2026-07-15', note: '' });
+
+      const res = await request(app)
+        .put(`/api/v1/periods/${created.body.id}`)
+        .send({ startDate: '2026-02-30' });
+      expect(res.status).toBe(400);
     });
 
     it('returns 409 when an update would overlap another period', async () => {

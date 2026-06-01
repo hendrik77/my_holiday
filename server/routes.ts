@@ -39,11 +39,16 @@ function parseYear(raw: unknown): number | null {
 }
 
 function isISODate(v: unknown): v is string {
-  return typeof v === 'string' && ISO_DATE_RE.test(v);
+  if (typeof v !== 'string' || !ISO_DATE_RE.test(v)) return false;
+  // Reject well-formed but non-existent dates (e.g. 2026-02-30, 2026-13-45)
+  // by round-tripping through Date and checking the components survive.
+  const [y, m, d] = v.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
 }
 
 function isISODateOrEmpty(v: unknown): v is string {
-  return typeof v === 'string' && (v === '' || ISO_DATE_RE.test(v));
+  return v === '' || isISODate(v);
 }
 
 function isMonthDay(v: unknown): v is string {

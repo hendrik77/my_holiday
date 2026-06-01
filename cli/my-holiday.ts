@@ -41,10 +41,10 @@ function buildProgram(): Command {
   program
     .command('add')
     .description('Add a vacation period')
-    .usage('--start <YYYY-MM-DD> --end <YYYY-MM-DD> [--type <type>] [--note <text>] [--half-day]')
-    .addHelpText('after', '\nExample:\n  holiday add --start 2026-07-01 --end 2026-07-15 --type urlaub --note "Sommerurlaub"')
+    .usage('--start <YYYY-MM-DD> [--end <YYYY-MM-DD>] [--type <type>] [--note <text>] [--half-day]')
+    .addHelpText('after', '\nExamples:\n  holiday add --start 2026-07-01 --end 2026-07-15 --type urlaub --note "Sommerurlaub"\n  holiday add --start 2026-10-14            # single day\n  holiday add --start 2026-10-14 --half-day # single half day')
     .option('--start <date>', 'start date (YYYY-MM-DD)')
-    .option('--end <date>', 'end date (YYYY-MM-DD)')
+    .option('--end <date>', 'end date (YYYY-MM-DD); defaults to --start (single day)')
     .option('--type <type>', 'vacation type (default: urlaub)')
     .option('--note <text>', 'note')
     .option('--half-day', 'count a single day as a half day', false)

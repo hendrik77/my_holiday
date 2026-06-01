@@ -97,6 +97,43 @@ describe('runAdd', () => {
     expect(mapErrorToExit(err).code).toBe(EXIT.USAGE)
   })
 
+  it('defaults endDate to startDate when --end is omitted (single day)', async () => {
+    const { client, request } = resolvingClient(CREATED)
+
+    await runAdd(client, { start: '2026-10-14', type: 'urlaub' })
+
+    const calls = request.mock.calls as unknown as Array<[string, RequestInit]>
+    expect(JSON.parse(calls[0][1].body as string)).toEqual({
+      startDate: '2026-10-14',
+      endDate: '2026-10-14',
+      note: '',
+      halfDay: false,
+      type: 'urlaub',
+    })
+  })
+
+  it('supports a single half-day from just --start', async () => {
+    const { client, request } = resolvingClient(CREATED)
+
+    await runAdd(client, { start: '2026-10-14', halfDay: true })
+
+    const calls = request.mock.calls as unknown as Array<[string, RequestInit]>
+    const body = JSON.parse(calls[0][1].body as string)
+    expect(body.startDate).toBe('2026-10-14')
+    expect(body.endDate).toBe('2026-10-14')
+    expect(body.halfDay).toBe(true)
+  })
+
+  it('rejects a malformed --end (when provided) with exit 1 and makes no request', async () => {
+    const { client, request } = resolvingClient(CREATED)
+
+    const err = await rejection(runAdd(client, { start: '2026-10-14', end: '10/14/2026' }))
+
+    expect(err).toBeInstanceOf(UsageError)
+    expect(mapErrorToExit(err).code).toBe(EXIT.USAGE)
+    expect(request).not.toHaveBeenCalled()
+  })
+
   it('prints the created record verbatim when --json is set', async () => {
     const { client } = resolvingClient(CREATED)
 

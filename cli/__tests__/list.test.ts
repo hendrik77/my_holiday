@@ -31,12 +31,12 @@ describe('runList', () => {
     expect(request).toHaveBeenCalledWith('/periods?year=2026')
   })
 
-  it('renders a table with Start | End | Days | Type | Note by default', async () => {
+  it('renders a table with ID | Start | End | Days | Type | Note by default', async () => {
     const { client } = clientReturning(SAMPLE)
 
     const output = await runList(client, {})
 
-    for (const header of ['Start', 'End', 'Days', 'Type', 'Note']) {
+    for (const header of ['ID', 'Start', 'End', 'Days', 'Type', 'Note']) {
       expect(output).toContain(header)
     }
     expect(output).toContain('2026-07-01')
@@ -59,7 +59,7 @@ describe('runList', () => {
     const output = await runList(client, {})
 
     const cells = output.split('\n')[1].split(/\s{2,}/)
-    expect(cells[2]).toBe('3')
+    expect(cells[3]).toBe('3')
   })
 
   it('falls back to the calendar-day span when workDays is absent', async () => {
@@ -68,6 +68,6 @@ describe('runList', () => {
     const output = await runList(client, {})
 
     const cells = output.split('\n')[1].split(/\s{2,}/)
-    expect(cells[2]).toBe('5')
+    expect(cells[3]).toBe('5')
   })
 })

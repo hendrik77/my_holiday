@@ -6,7 +6,7 @@ export interface ListedPeriod extends VacationPeriod {
 }
 
 const MS_PER_DAY = 86_400_000
-const HEADERS = ['Start', 'End', 'Days', 'Type', 'Note'] as const
+const HEADERS = ['ID', 'Start', 'End', 'Days', 'Type', 'Note'] as const
 
 /**
  * Inclusive day span of a period. A half-day (single-day period flagged
@@ -36,12 +36,13 @@ function renderTable(headers: readonly string[], rows: readonly string[][]): str
   return [renderRow(headers), ...rows.map(renderRow)].join('\n')
 }
 
-/** Render vacation periods as a fixed-width `Start | End | Days | Type | Note` table. */
+/** Render vacation periods as a fixed-width `ID | Start | End | Days | Type | Note` table. */
 export function formatPeriodsTable(periods: ListedPeriod[]): string {
   if (periods.length === 0) {
     return 'No vacation periods.'
   }
   const rows = periods.map((period) => [
+    period.id.slice(0, 7),
     period.startDate,
     period.endDate,
     formatDays(period.workDays ?? periodDays(period)),

@@ -14,7 +14,7 @@ _holiday() {
   cur="\${COMP_WORDS[COMP_CWORD]}"
   prev="\${COMP_WORDS[COMP_CWORD-1]}"
 
-  local commands="list add remaining export migrate calendar today completion help"
+  local commands="list add change remaining export migrate calendar today completion help"
   local global="--api --token --json --help --version"
 
   case "$prev" in
@@ -40,6 +40,7 @@ _holiday() {
   case "$cmd" in
     list) opts="$opts --year" ;;
     add) opts="$opts --start --end --type --note --half-day" ;;
+    change) opts="$opts --start --end --type --note --half-day --no-half-day" ;;
     remaining) opts="$opts --year" ;;
     export) opts="$opts --format --year --out --bom" ;;
     migrate) opts="$opts --dry-run" ;;
@@ -59,6 +60,7 @@ _holiday() {
   commands=(
     'list:List vacation periods for a year'
     'add:Add a vacation period'
+    'change:Update an existing vacation period'
     'remaining:Show remaining vacation entitlement'
     'export:Export periods as an ICS or CSV file'
     'migrate:Import vacation periods from a CSV file'
@@ -75,6 +77,8 @@ _holiday() {
   case "\${words[2]}" in
     add) _arguments '--start=[start date YYYY-MM-DD]' '--end=[end date YYYY-MM-DD]' \\
       '--type=[vacation type]:type:(${TYPES})' '--note=[note]' '--half-day[count a single day as a half day]' ;;
+    change) _arguments '--start=[new start date]' '--end=[new end date]' \\
+      '--type=[vacation type]:type:(${TYPES})' '--note=[new note]' '--half-day[mark as a half day]' '--no-half-day[clear the half-day flag]' ;;
     export) _arguments '--format=[output format]:format:(ics csv)' '--year=[calendar year]' \\
       '--out=[write to file]:file:_files' '--bom[prepend a UTF-8 BOM]' ;;
     calendar) _arguments '--year=[calendar year]' '--month=[month 1-12]' '--no-color[disable ANSI colors]' ;;
@@ -94,6 +98,7 @@ complete -c holiday -f
 # Subcommands
 complete -c holiday -n __fish_use_subcommand -a list -d 'List vacation periods for a year'
 complete -c holiday -n __fish_use_subcommand -a add -d 'Add a vacation period'
+complete -c holiday -n __fish_use_subcommand -a change -d 'Update an existing vacation period'
 complete -c holiday -n __fish_use_subcommand -a remaining -d 'Show remaining vacation entitlement'
 complete -c holiday -n __fish_use_subcommand -a export -d 'Export periods as an ICS or CSV file'
 complete -c holiday -n __fish_use_subcommand -a migrate -d 'Import vacation periods from a CSV file'
@@ -115,6 +120,12 @@ complete -c holiday -n '__fish_seen_subcommand_from add' -l end -d 'End date YYY
 complete -c holiday -n '__fish_seen_subcommand_from add' -l type -d 'Vacation type' -a '${TYPES}'
 complete -c holiday -n '__fish_seen_subcommand_from add' -l note -d 'Note'
 complete -c holiday -n '__fish_seen_subcommand_from add' -l half-day -d 'Count a single day as a half day'
+complete -c holiday -n '__fish_seen_subcommand_from change' -l start -d 'New start date YYYY-MM-DD'
+complete -c holiday -n '__fish_seen_subcommand_from change' -l end -d 'New end date YYYY-MM-DD'
+complete -c holiday -n '__fish_seen_subcommand_from change' -l type -d 'Vacation type' -a '${TYPES}'
+complete -c holiday -n '__fish_seen_subcommand_from change' -l note -d 'New note'
+complete -c holiday -n '__fish_seen_subcommand_from change' -l half-day -d 'Mark as a half day'
+complete -c holiday -n '__fish_seen_subcommand_from change' -l no-half-day -d 'Clear the half-day flag'
 complete -c holiday -n '__fish_seen_subcommand_from export' -l format -d 'Output format' -a 'ics csv'
 complete -c holiday -n '__fish_seen_subcommand_from export' -l out -d 'Write to a file'
 complete -c holiday -n '__fish_seen_subcommand_from export' -l bom -d 'Prepend a UTF-8 BOM'

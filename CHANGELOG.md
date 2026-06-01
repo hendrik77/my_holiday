@@ -4,6 +4,17 @@ All notable changes to My Holiday.
 
 ---
 
+## v2.3.3 (2026-06-01)
+
+### Added
+- **`holiday change <id>`** — edit an existing vacation period (partial update via `PUT /periods/:id`): change `--start`/`--end`/`--type`/`--note` or toggle `--half-day`/`--no-half-day`; only the flags you pass are sent. Accepts a unique id prefix, and `holiday list` now shows a short **ID** column to copy from
+
+### Changed
+- **`holiday add` — `--end` is now optional** — omit it for a single-day (or `--half-day`) vacation; it defaults to `--start`
+- **Release builds arm64 on native runners** — multi-arch images are now built without QEMU (amd64 on `ubuntu-latest`, arm64 on `ubuntu-24.04-arm`), fixing the emulated `better-sqlite3` build flakiness and speeding releases
+
+---
+
 ## v2.3.2 (2026-06-01)
 
 ### Added

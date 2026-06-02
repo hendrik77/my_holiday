@@ -4,6 +4,14 @@ All notable changes to My Holiday.
 
 ---
 
+## v2.3.5 (2026-06-02)
+
+### Fixed
+- **Reject reversed date ranges** — `POST`/`PUT /api/v1/periods` (and thus `holiday add`/`change`) now return `400` when the end date is before the start; a reversed period previously stored but counted as 0 work days. Single-day periods (start == end) remain valid
+- **CLI handles a closed output pipe** — `holiday … | head` (or any reader that closes stdout early) no longer crashes with an unhandled `EPIPE`; the command exits cleanly
+
+---
+
 ## v2.3.4 (2026-06-02)
 
 ### Added

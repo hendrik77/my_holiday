@@ -1,7 +1,7 @@
 {
   "name": "my_holiday",
   "private": true,
-  "version": "2.3.4",
+  "version": "2.3.5",
   "type": "module",
   "bin": {
     "holiday": "dist-cli/my-holiday.js"

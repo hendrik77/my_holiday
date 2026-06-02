@@ -4,6 +4,13 @@ All notable changes to My Holiday.
 
 ---
 
+## v2.3.4 (2026-06-02)
+
+### Added
+- **`holiday delete <id>`** — delete a vacation period by id or unique prefix (from `holiday list`); `--json` returns a structured confirmation. Completes CLI CRUD (`add` / `list` / `change` / `delete`)
+
+---
+
 ## v2.3.3 (2026-06-01)
 
 ### Added

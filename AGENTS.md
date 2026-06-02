@@ -26,6 +26,8 @@ Tests live alongside source files (`src/**/*.test.ts`) using vitest. Run with `n
 
 Existing features must not regress — all tests must pass before committing.
 
+**Larger features** — decompose into small phases, each its own RED→GREEN cycle that ends lint-clean; build the server endpoint(s) before the client that consumes them. Reuse the shared logic in `src/utils` (`entitlement`, `calendar`, `csv`, `ics`) and `server/db` instead of re-implementing German vacation law — one source of truth across the web app, the CLI, and the future MCP server (see [ADR-0002](./docs/adr/0002-server-side-computation.md)).
+
 ## 3. Commands reference
 
 | Command | Purpose |

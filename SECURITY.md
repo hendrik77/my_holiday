@@ -8,7 +8,7 @@ My Holiday is a **single-user, locally-hosted** vacation planner. It binds to `1
 
 These are intentional design tradeoffs, not bugs:
 
-- **No authentication** — the API accepts all requests without credentials when accessed on the loopback interface
+- **No authentication** — the API accepts all requests without credentials when accessed on the loopback interface. (The CLI may send an `Authorization: Bearer` token via `MY_HOLIDAY_API_TOKEN`, but the server does not yet verify it — bearer enforcement lands with v3 multi-user auth.)
 - **Permissive CORS default** — without `CORS_ORIGIN` set, the API reflects any origin; restrict this in any networked deployment
 - **No rate limiting** — not relevant for a single-user localhost app, but must be added before any public exposure
 - **No CSRF protection** — acceptable in the current threat model; required if the app is ever exposed with session-based auth

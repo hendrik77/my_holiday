@@ -90,7 +90,7 @@ docker run -d --name my-holiday -p 3001:3001 \
   -v "$(pwd)/data:/app/data" \
   -e DB_PATH=/app/data/my-holiday.db \
   -e API_HOST=0.0.0.0 \
-  ghcr.io/hendrik77/my_holiday:latest    # or pin a version, e.g. :2.3.1
+  ghcr.io/hendrik77/my_holiday:latest    # or pin a version, e.g. :2.3.5
 ```
 
 To update: `docker pull ghcr.io/hendrik77/my_holiday:latest`, then `docker rm -f my-holiday` and re-run the command above — the `./data` volume keeps your database.
@@ -351,7 +351,7 @@ Documented in [`DESIGN.md`](./DESIGN.md):
 ## Development
 
 ```bash
-npm test              # unit + integration tests (350 tests)
+npm test              # unit + integration tests (388 tests)
 npm run test:watch    # watch mode
 npm run test:e2e      # Playwright end-to-end smoke tests
 ```

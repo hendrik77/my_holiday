@@ -1,5 +1,7 @@
 # Plan: Implement `my-holiday` CLI
 
+> **Historical** — this is the original plan for the *initial* CLI (phases T0–T5, command then named `my-holiday`). The CLI has since shipped and grown to full CRUD plus `calendar`, `today`, `completion`, and was renamed to `holiday`. For the current state see [CHANGELOG.md](./CHANGELOG.md), [README.md](./README.md#command-line-interface-cli), and the [ADRs](./docs/adr/README.md). Kept for provenance.
+
 ## Context
 
 VISION.md section "AI / MCP / CLI Extensions" describes a `my-holiday` command-line interface so power users (and AI agents) can script vacation operations. The CLI must work against a remote server — the long-term goal is hosting the app on a homelab and accessing it from any client. Local-only operation is just a special case of remote (where the API URL is `http://localhost:3001`).

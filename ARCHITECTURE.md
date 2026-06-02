@@ -13,6 +13,7 @@
 | Styling | Plain CSS with custom properties, per-component CSS files |
 | Routing | None — tab-based view switching |
 | Tests | Vitest (unit/integration) + Playwright (E2E) |
+| CLI | Node.js + `commander`, bundled with esbuild (`holiday`) |
 
 ## System Overview (C4)
 
@@ -22,7 +23,7 @@
 flowchart TB
     user["<b>Employee</b><br/><i>[Person]</i><br/>Plans vacation and tracks<br/>entitlement under German<br/>BUrlG rules"]
 
-    system["<b>My Holiday</b><br/><i>[Software System]</i><br/>Vacation planning &amp; entitlement<br/>tracker. Manages periods, computes<br/>work-day counts, exports ICS."]
+    system["<b>My Holiday</b><br/><i>[Software System]</i><br/>Vacation planning &amp; entitlement tracker.<br/>Web app + scriptable CLI; computes<br/>work-day counts, exports ICS."]
 
     ferien["<b>ferien-api.de</b><br/><i>[External System]</i><br/>Public REST API for German<br/>school holidays per state"]
 
@@ -54,12 +55,16 @@ flowchart TB
         api["<b>API Server</b><br/><i>[Container: Node.js + Express]</i><br/>REST endpoints for periods and<br/>settings. Generates ICS files.<br/>Listens on port 3001."]
 
         db[("<b>Database</b><br/><i>[Container: SQLite via better-sqlite3]</i><br/>Persists vacation periods and<br/>user settings.<br/>data/my-holiday.db")]
+
+        cli["<b>CLI</b><br/><i>[Container: Node.js + commander]</i><br/>Scriptable HTTP client for power<br/>users &amp; AI agents (add/list/change/<br/>delete, export, calendar, today, …)."]
     end
 
     ferien["<b>ferien-api.de</b><br/><i>[External System]</i>"]
     calendar["<b>Calendar Application</b><br/><i>[External System]</i>"]
 
     user -- "Uses<br/>[HTTPS]" --> spa
+    user -- "Scripts / automates<br/>[CLI]" --> cli
+    cli -- "REST calls<br/>[JSON/HTTP]" --> api
     spa -- "REST calls<br/>[JSON/HTTPS]" --> api
     spa -- "Fetches school<br/>holidays<br/>[JSON/HTTPS]" --> ferien
     api -- "Reads &amp; writes<br/>[better-sqlite3]" --> db
@@ -72,7 +77,7 @@ flowchart TB
     classDef sysBoundary fill:none,stroke:#444,stroke-dasharray:5 5
 
     class user person
-    class spa,api,db container
+    class spa,api,cli,db container
     class ferien,calendar external
     class boundary sysBoundary
 ```
@@ -127,9 +132,10 @@ cli/                           # HTTP-only CLI, bundled to dist-cli/ via esbuild
 ├── dates.ts                   # dependency-free UTC date helpers
 ├── format.ts                  # table / summary / status output helpers
 ├── calendar-view.ts           # pure terminal-calendar renderer (German labels)
+├── periods.ts                 # resolve an id / unique prefix to a period (change, delete)
 ├── errors.ts                  # UsageError + mapErrorToExit
 ├── exit-codes.ts              # EXIT.OK / USAGE / SERVER (0 / 1 / 2)
-└── commands/                  # list, add, remaining, export, migrate, calendar, today, completion
+└── commands/                  # add, list, change, delete, remaining, export, migrate, calendar, today, completion
 
 scripts/
 └── migrate-v1.ts              # v1 CSV → v2 SQLite (idempotent)

@@ -54,5 +54,6 @@ The project ships a `holiday` CLI — an HTTP client for the same REST API. See 
 ## 5. Further reading
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — tech stack, file structure, REST API, data model, key design decisions
+- [docs/adr/](./docs/adr/README.md) — Architecture Decision Records: the "why" behind load-bearing choices (HTTP-only CLI transport, server-side computation, `/holidays` endpoint). Read before changing the CLI↔server boundary, and add a new ADR when making a comparable decision.
 - [VISION.md](./VISION.md) — long-term roadmap (Personal Enhancements, v3 multi-user, v4 company planner, AI/MCP)
 - [DESIGN.md](./DESIGN.md) — design tokens, colour palette, typography, spacing

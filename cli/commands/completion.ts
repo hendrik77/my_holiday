@@ -14,7 +14,7 @@ _holiday() {
   cur="\${COMP_WORDS[COMP_CWORD]}"
   prev="\${COMP_WORDS[COMP_CWORD-1]}"
 
-  local commands="list add change remaining export migrate calendar today completion help"
+  local commands="list add change delete remaining export migrate calendar today completion help"
   local global="--api --token --json --help --version"
 
   case "$prev" in
@@ -61,6 +61,7 @@ _holiday() {
     'list:List vacation periods for a year'
     'add:Add a vacation period'
     'change:Update an existing vacation period'
+    'delete:Delete a vacation period'
     'remaining:Show remaining vacation entitlement'
     'export:Export periods as an ICS or CSV file'
     'migrate:Import vacation periods from a CSV file'
@@ -99,6 +100,7 @@ complete -c holiday -f
 complete -c holiday -n __fish_use_subcommand -a list -d 'List vacation periods for a year'
 complete -c holiday -n __fish_use_subcommand -a add -d 'Add a vacation period'
 complete -c holiday -n __fish_use_subcommand -a change -d 'Update an existing vacation period'
+complete -c holiday -n __fish_use_subcommand -a delete -d 'Delete a vacation period'
 complete -c holiday -n __fish_use_subcommand -a remaining -d 'Show remaining vacation entitlement'
 complete -c holiday -n __fish_use_subcommand -a export -d 'Export periods as an ICS or CSV file'
 complete -c holiday -n __fish_use_subcommand -a migrate -d 'Import vacation periods from a CSV file'

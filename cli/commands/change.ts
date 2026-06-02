@@ -2,6 +2,7 @@ import { ApiError, type ApiClient } from '../api'
 import { type VacationType, VACATION_TYPES } from '../../src/types'
 import { UsageError } from '../errors'
 import type { ListedPeriod } from '../format'
+import { resolvePeriod } from '../periods'
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -57,16 +58,7 @@ export async function runChange(client: ApiClient, options: ChangeOptions = {}):
     throw new UsageError('specify at least one field to change (--start, --end, --type, --note, --half-day)')
   }
 
-  // Resolve the id prefix against the live period list (the CLI is HTTP-only).
-  const periods = await client.request<ListedPeriod[]>('/periods')
-  const matches = periods.filter((p) => p.id.startsWith(id))
-  if (matches.length === 0) {
-    throw new UsageError(`no period matches id '${id}'`)
-  }
-  if (matches.length > 1) {
-    throw new UsageError(`id '${id}' is ambiguous (${matches.length} matches) — use more characters`)
-  }
-  const fullId = matches[0].id
+  const fullId = (await resolvePeriod(client, id)).id
 
   let updated: ListedPeriod
   try {

@@ -14,6 +14,8 @@ Every feature, refactor, or significant change must be reflected in the relevant
 
 **ARCHITECTURE.md** — update when the tech stack, file structure, REST API, data model, or a key design decision changes.
 
+**docs/adr/** — when you make a load-bearing architectural decision (transport, data model, build/release strategy, a new endpoint's contract), record it as a **new numbered ADR**: copy `docs/adr/template.md`, follow the existing 0001–0003 as examples (Context / Decision / Alternatives / Consequences), and add a row to `docs/adr/README.md`.
+
 ## 2. RED-GREEN test principle
 
 All new features follow test-driven development:
@@ -54,6 +56,6 @@ The project ships a `holiday` CLI — an HTTP client for the same REST API. See 
 ## 5. Further reading
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — tech stack, file structure, REST API, data model, key design decisions
-- [docs/adr/](./docs/adr/README.md) — Architecture Decision Records: the "why" behind load-bearing choices (HTTP-only CLI transport, server-side computation, `/holidays` endpoint). Read before changing the CLI↔server boundary, and add a new ADR when making a comparable decision.
+- [docs/adr/](./docs/adr/README.md) — Architecture Decision Records: the "why" behind load-bearing choices (HTTP-only CLI transport, server-side computation, `/holidays` endpoint). Read before changing the CLI↔server boundary. (Recording a new ADR is covered in §1.)
 - [VISION.md](./VISION.md) — long-term roadmap (Personal Enhancements, v3 multi-user, v4 company planner, AI/MCP)
 - [DESIGN.md](./DESIGN.md) — design tokens, colour palette, typography, spacing

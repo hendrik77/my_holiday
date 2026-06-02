@@ -151,6 +151,20 @@ describe('API /api/v1', () => {
       expect(res.status).toBe(400);
     });
 
+    it('returns 400 when endDate is before startDate (reversed range)', async () => {
+      const res = await request(app)
+        .post('/api/v1/periods')
+        .send({ startDate: '2026-07-10', endDate: '2026-07-01', note: '' });
+      expect(res.status).toBe(400);
+    });
+
+    it('allows a single-day period (startDate === endDate)', async () => {
+      const res = await request(app)
+        .post('/api/v1/periods')
+        .send({ startDate: '2026-07-10', endDate: '2026-07-10', note: '' });
+      expect(res.status).toBe(201);
+    });
+
     it('defaults type to urlaub', async () => {
       const res = await request(app)
         .post('/api/v1/periods')
@@ -234,6 +248,17 @@ describe('API /api/v1', () => {
       const res = await request(app)
         .put(`/api/v1/periods/${created.body.id}`)
         .send({ startDate: '2026-02-30' });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when an update would make endDate before startDate', async () => {
+      const created = await request(app)
+        .post('/api/v1/periods')
+        .send({ startDate: '2026-07-01', endDate: '2026-07-15', note: '' });
+
+      const res = await request(app)
+        .put(`/api/v1/periods/${created.body.id}`)
+        .send({ endDate: '2026-06-30' });
       expect(res.status).toBe(400);
     });
 

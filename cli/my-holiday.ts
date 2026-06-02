@@ -227,6 +227,17 @@ async function main(argv: string[]): Promise<number> {
   }
 }
 
+// Exit cleanly when stdout is piped into a reader that closes early
+// (e.g. `holiday --help | head`) instead of crashing with an unhandled EPIPE.
+for (const stream of [process.stdout, process.stderr]) {
+  stream.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EPIPE') {
+      process.exit(0)
+    }
+    throw err
+  })
+}
+
 main(process.argv).then((code) => {
   if (!process.exitCode) {
     process.exitCode = code

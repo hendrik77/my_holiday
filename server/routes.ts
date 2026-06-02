@@ -86,6 +86,10 @@ export function createRouter(db: Database.Database): Router {
       res.status(400).json({ error: 'startDate and endDate must be ISO dates (YYYY-MM-DD)' });
       return;
     }
+    if (endDate < startDate) {
+      res.status(400).json({ error: 'endDate must be on or after startDate' });
+      return;
+    }
     if (type !== undefined && !VALID_TYPES.has(type)) {
       res.status(400).json({ error: 'Invalid type' });
       return;
@@ -132,6 +136,10 @@ export function createRouter(db: Database.Database): Router {
     }
     const effectiveStart = startDate ?? current.startDate;
     const effectiveEnd = endDate ?? current.endDate;
+    if (effectiveEnd < effectiveStart) {
+      res.status(400).json({ error: 'endDate must be on or after startDate' });
+      return;
+    }
     if (hasOverlap(effectiveStart, effectiveEnd, all, id)) {
       res.status(409).json({ error: 'overlaps an existing period' });
       return;

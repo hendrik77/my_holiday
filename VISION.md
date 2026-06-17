@@ -44,11 +44,7 @@ Beyond the one-shot `.ics` export, expose a stable, token-protected `webcal://�
 
 ### Conflict & quota warnings
 
-When adding or editing a period, validate it against existing data before saving: warn on overlap with an existing period, on exceeding the remaining entitlement for the year, and (later) on collision with a blackout window. A year-validation pass (`holiday check`) flags every issue for a year at once. This turns the planner from a passive recorder into an advisor that catches mistakes before they are saved.
-
-### Carry-over (use-or-lose) tracking
-
-Model the German reality that unused days expire — typically 31 March of the following year under § 7 BUrlG, sometimes later by contract. Remaining-day calculations distinguish current-year entitlement from carried-over days and surface an explicit deadline ("use-or-lose by 2026-03-31: 4 days"), so employees do not silently forfeit time. Feeds directly into the entitlement timeline visualizer above.
+Overlap prevention already blocks conflicting bookings today. The remaining work is to turn this into a fuller advisor: when adding or editing a period, also warn on exceeding the remaining entitlement for the year and (later) on collision with a blackout window. A year-validation pass (`holiday check`) would flag every issue for a year at once — moving the planner from a passive recorder to one that catches mistakes before they are saved.
 
 ---
 

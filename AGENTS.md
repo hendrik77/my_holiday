@@ -24,7 +24,7 @@ All new features follow test-driven development:
 2. **GREEN** — Implement the minimal code to make the test pass
 3. **REFACTOR** — Clean up while keeping tests green
 
-Tests live alongside source files (`src/**/*.test.ts`) using vitest. Run with `npm test`.
+Tests live alongside source files (`src/**/*.test.ts`) or in `__tests__/` directories (`server/__tests__`, `cli/__tests__`, `scripts/__tests__`) using vitest. Run with `npm test`.
 
 Existing features must not regress — all tests must pass before committing.
 

@@ -69,7 +69,8 @@ The backend reads these environment variables on startup:
 | `API_HOST` | `127.0.0.1` | Network interface to bind. Loopback by default — the API is **not** reachable from other devices on your LAN. Set to `0.0.0.0` to expose on all interfaces (only do this if you've added authentication). |
 | `API_PORT` | `3001` | TCP port |
 | `DB_PATH` | `data/my-holiday.db` | SQLite database file path |
-| `CORS_ORIGIN` | reflect any origin | Restrict cross-origin access in production, e.g. `CORS_ORIGIN=http://localhost:5173` |
+| `CORS_ORIGIN` | local origins only | Allow one additional cross-origin origin, e.g. `CORS_ORIGIN=https://dashboard.example.lan`. By default only `localhost` / `127.0.0.1` / `[::1]` origins may call the API cross-origin |
+| `API_TOKEN` | _(none)_ | When set, every `/api/v1` request must send `Authorization: Bearer <token>`. The CLI supplies it via `MY_HOLIDAY_API_TOKEN`; the web UI does not attach tokens, so use this for CLI/API-only or reverse-proxy deployments |
 
 The frontend resolves its API base URL automatically: production builds use the relative `/api/v1` (the server serves the SPA on the same port, so any hostname works), the dev server uses `http://localhost:3001/api/v1`. Set the build-time variable `VITE_API_BASE_URL` only if the API lives on a different origin than the frontend.
 
@@ -252,7 +253,7 @@ The bundle is **self-contained** — esbuild inlines its only dependency (`comma
 | Variable | Flag override | Default | Purpose |
 |---|---|---|---|
 | `MY_HOLIDAY_API_URL` | `--api <url>` | `http://localhost:3001/api/v1` | API base URL (local or remote) |
-| `MY_HOLIDAY_API_TOKEN` | `--token <token>` | _(none)_ | Bearer token sent as `Authorization: Bearer …` (the server does not enforce auth yet) |
+| `MY_HOLIDAY_API_TOKEN` | `--token <token>` | _(none)_ | Bearer token sent as `Authorization: Bearer …` — required when the server is started with `API_TOKEN` |
 
 Point the CLI at your server (add to `~/.zshrc` / `~/.bashrc` to make it permanent):
 

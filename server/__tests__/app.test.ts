@@ -2,14 +2,14 @@ import { describe, it, expect, afterEach } from 'vitest';
 import request from 'supertest';
 import Database from 'better-sqlite3';
 import { initDb } from '../db';
-import { createApp } from '../app';
+import { createApp, type CreateAppOptions } from '../app';
 
 let db: Database.Database;
 
-function makeApp() {
+function makeApp(options: CreateAppOptions = {}) {
   db = new Database(':memory:');
   initDb(db);
-  return createApp(db);
+  return createApp(db, options);
 }
 
 afterEach(() => {
@@ -42,5 +42,75 @@ describe('createApp error handling', () => {
     const res = await request(app).get('/api/v1/settings');
     expect(res.status).toBe(200);
     expect(res.body.totalDays).toBe(30);
+  });
+});
+
+describe('createApp CORS defaults', () => {
+  it('does not reflect a non-local origin by default', async () => {
+    const app = makeApp();
+    const res = await request(app).get('/api/v1/settings').set('Origin', 'https://evil.example');
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('allows localhost dev origins by default', async () => {
+    const app = makeApp();
+    const res = await request(app).get('/api/v1/settings').set('Origin', 'http://localhost:5173');
+    expect(res.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+  });
+
+  it('allows 127.0.0.1 origins by default', async () => {
+    const app = makeApp();
+    const res = await request(app).get('/api/v1/settings').set('Origin', 'http://127.0.0.1:8080');
+    expect(res.headers['access-control-allow-origin']).toBe('http://127.0.0.1:8080');
+  });
+
+  it('honours an explicit corsOrigin override', async () => {
+    const app = makeApp({ corsOrigin: 'https://holiday.example.lan' });
+    const res = await request(app)
+      .get('/api/v1/settings')
+      .set('Origin', 'https://holiday.example.lan');
+    expect(res.headers['access-control-allow-origin']).toBe('https://holiday.example.lan');
+  });
+});
+
+describe('createApp bearer-token auth', () => {
+  const apiToken = 'test-token-123';
+
+  it('rejects API requests without a token when apiToken is configured', async () => {
+    const app = makeApp({ apiToken });
+    const res = await request(app).get('/api/v1/settings');
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBeTruthy();
+  });
+
+  it('rejects a wrong token', async () => {
+    const app = makeApp({ apiToken });
+    const res = await request(app)
+      .get('/api/v1/settings')
+      .set('Authorization', 'Bearer wrong-token');
+    expect(res.status).toBe(401);
+  });
+
+  it('accepts the configured token', async () => {
+    const app = makeApp({ apiToken });
+    const res = await request(app)
+      .get('/api/v1/settings')
+      .set('Authorization', `Bearer ${apiToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.totalDays).toBe(30);
+  });
+
+  it('protects mutating endpoints too', async () => {
+    const app = makeApp({ apiToken });
+    const res = await request(app)
+      .post('/api/v1/periods')
+      .send({ startDate: '2026-07-01', endDate: '2026-07-03', note: '' });
+    expect(res.status).toBe(401);
+  });
+
+  it('requires no token when apiToken is not configured', async () => {
+    const app = makeApp();
+    const res = await request(app).get('/api/v1/settings');
+    expect(res.status).toBe(200);
   });
 });

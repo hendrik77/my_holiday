@@ -6,6 +6,11 @@ All notable changes to My Holiday.
 
 ## Unreleased
 
+### Security
+- **CORS now defaults to local origins only** — previously the API reflected *any* origin, so any website open in your browser could read and modify your vacation data on `localhost:3001`. Cross-origin access is now limited to `localhost` / `127.0.0.1` / `[::1]` origins; set `CORS_ORIGIN` to allow one specific extra origin. Same-origin use (served SPA, CLI, curl) is unaffected
+- **Opt-in bearer-token auth (`API_TOKEN`)** — when the env var is set, every `/api/v1` request must send `Authorization: Bearer <token>` (timing-safe comparison). The CLI already supports this via `MY_HOLIDAY_API_TOKEN` / `--token`; also mitigates DNS-rebinding attacks
+- **CSV formula-injection guard** — exported notes starting with `=`, `+`, `-`, `@` (or tab/CR) are prefixed with a guard apostrophe so spreadsheets display instead of execute them (OWASP CSV injection); the importer strips the guard so notes survive a round trip
+
 ### Fixed
 - **SPA now works when accessed from another device** — the production bundle hardcoded `http://localhost:3001/api/v1` as API base URL, so opening the Docker container from a NAS/Pi/LAN address made every API call target the *visitor's* machine and fail. Production builds now use the relative `/api/v1` (same origin); `VITE_API_BASE_URL` still overrides at build time
 - **Malformed JSON returns 400, not 500** — errors thrown by middleware (JSON body parser, size limit) now keep their status code (`400` bad JSON, `413` over the 32 kb limit) instead of being masked as `Internal server error`

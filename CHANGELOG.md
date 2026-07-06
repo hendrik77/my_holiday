@@ -4,7 +4,7 @@ All notable changes to My Holiday.
 
 ---
 
-## Unreleased
+## v2.4.0 (2026-07-06)
 
 ### Security
 - **CORS now defaults to local origins only** — previously the API reflected *any* origin, so any website open in your browser could read and modify your vacation data on `localhost:3001`. Cross-origin access is now limited to `localhost` / `127.0.0.1` / `[::1]` origins; set `CORS_ORIGIN` to allow one specific extra origin. Same-origin use (served SPA, CLI, curl) is unaffected

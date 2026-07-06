@@ -1,15 +1,26 @@
 import express from 'express';
 import cors from 'cors';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 import type Database from 'better-sqlite3';
 import { createRouter } from './routes';
 
 export interface CreateAppOptions {
-  /** CORS origin passed through to the cors middleware; defaults to reflecting any origin. */
+  /** CORS origin override; by default only local origins (localhost, 127.0.0.1, [::1]) are allowed. */
   corsOrigin?: string;
+  /** When set, every /api/v1 request must carry `Authorization: Bearer <token>`. */
+  apiToken?: string;
   /** Serve the built SPA from dist/ (production single-port mode). */
   serveStatic?: boolean;
+}
+
+// Same-machine origins (any port). Cross-origin reads from arbitrary websites
+// are not allowed by default — set CORS_ORIGIN to open up a specific origin.
+const LOCAL_ORIGIN_RE = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
+
+function sha256(value: string): Buffer {
+  return createHash('sha256').update(value).digest();
 }
 
 interface HttpError extends Error {
@@ -22,8 +33,28 @@ interface HttpError extends Error {
 export function createApp(db: Database.Database, options: CreateAppOptions = {}): express.Express {
   const app = express();
 
-  app.use(cors({ origin: options.corsOrigin ?? true }));
+  app.use(
+    cors({
+      origin:
+        options.corsOrigin ??
+        ((origin, callback) => callback(null, origin === undefined || LOCAL_ORIGIN_RE.test(origin))),
+    }),
+  );
   app.use(express.json({ limit: '32kb' }));
+
+  if (options.apiToken) {
+    // Hashing both sides gives timingSafeEqual equal-length buffers.
+    const expected = sha256(options.apiToken);
+    app.use('/api/v1', (req, res, next) => {
+      const match = /^Bearer\s+(.+)$/i.exec(req.get('authorization') ?? '');
+      if (match && timingSafeEqual(expected, sha256(match[1]))) {
+        next();
+        return;
+      }
+      res.status(401).json({ error: 'Missing or invalid bearer token' });
+    });
+  }
+
   app.use('/api/v1', createRouter(db));
 
   if (options.serveStatic) {

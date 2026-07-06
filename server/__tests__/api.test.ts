@@ -76,6 +76,42 @@ describe('API /api/v1', () => {
       expect(res.status).toBe(400);
     });
 
+    it('rejects a non-integer totalDays string with 400', async () => {
+      const res = await request(app).put('/api/v1/settings').send({ totalDays: '30abc' });
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects a fractional totalDays with 400', async () => {
+      const res = await request(app).put('/api/v1/settings').send({ totalDays: 30.5 });
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects totalDays above 60 (matches the UI bound)', async () => {
+      const res = await request(app).put('/api/v1/settings').send({ totalDays: 61 });
+      expect(res.status).toBe(400);
+    });
+
+    it('accepts a numeric-string totalDays', async () => {
+      const res = await request(app).put('/api/v1/settings').send({ totalDays: '28' });
+      expect(res.status).toBe(200);
+      expect(res.body.totalDays).toBe(28);
+    });
+
+    it('rejects carryOverDays above 60', async () => {
+      const res = await request(app).put('/api/v1/settings').send({ carryOverDays: 61 });
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects bildungsUrlaubDays above 60', async () => {
+      const res = await request(app).put('/api/v1/settings').send({ bildungsUrlaubDays: 61 });
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects a non-integer carryOverMaxDays with 400', async () => {
+      const res = await request(app).put('/api/v1/settings').send({ carryOverMaxDays: '10x' });
+      expect(res.status).toBe(400);
+    });
+
     it('accepts empty string for employmentStartDate (clears the value)', async () => {
       const res = await request(app)
         .put('/api/v1/settings')

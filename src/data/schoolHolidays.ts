@@ -1,3 +1,5 @@
+import { useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { GermanState } from './holidays';
 
 export interface SchoolHolidayPeriod {
@@ -33,20 +35,25 @@ function getFallbackForState(state: GermanState, year: number): SchoolHolidayPer
   return [];
 }
 
-// ── Runtime API cache ──────────────────────────────────────────────
-
 const API_BASE = 'https://ferien-api.de/api/v1/holidays';
 
-/** In-memory cache: day ISO → holiday period name */
-const dayCache = new Map<string, string>();
+const ISO_DATE_PREFIX_RE = /^\d{4}-\d{2}-\d{2}/;
 
-/** Set of state+year keys already fetched (to avoid re-fetching) */
-const fetchedKeys = new Set<string>();
+/** Accept only entries with a string name and ISO-prefixed start/end dates. */
+function isValidPeriod(value: unknown): value is SchoolHolidayPeriod {
+  if (typeof value !== 'object' || value === null) return false;
+  const p = value as Record<string, unknown>;
+  return (
+    typeof p.name === 'string' &&
+    typeof p.start === 'string' && ISO_DATE_PREFIX_RE.test(p.start) &&
+    typeof p.end === 'string' && ISO_DATE_PREFIX_RE.test(p.end)
+  );
+}
 
 /**
  * Fetch school holidays from ferien-api.de for a state and year.
- * Returns an array of { name, start, end } objects.
- * Falls back to built-in data if the API is unreachable.
+ * Malformed entries are dropped; if the API is unreachable or the response
+ * has an unexpected shape, built-in fallback data is used.
  */
 export async function fetchSchoolHolidays(
   state: GermanState,
@@ -56,46 +63,22 @@ export async function fetchSchoolHolidays(
     const res = await fetch(`${API_BASE}/${state}/${year}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    const data = (await res.json()) as Array<{
-      name: string;
-      start: string;
-      end: string;
-    }>;
+    const data: unknown = await res.json();
+    if (!Array.isArray(data)) throw new Error('Unexpected response shape');
 
-    return data.map((h) => ({
-      name: h.name,
-      start: h.start,
-      end: h.end,
-    }));
+    return data
+      .filter(isValidPeriod)
+      .map((h) => ({ name: h.name, start: h.start, end: h.end }));
   } catch {
     // API unavailable — use fallback
     return getFallbackForState(state, year);
   }
 }
 
-/**
- * Build the day-level cache for a state covering [year-1, year+1].
- * Fetches from the API, caches each day → period name.
- */
-async function buildDayCache(state: GermanState, year: number): Promise<void> {
-  const cacheKey = `${state}-${year}`;
-  if (fetchedKeys.has(cacheKey)) return;
-
-  for (const y of [year - 1, year, year + 1]) {
-    const periods = await fetchSchoolHolidays(state, y);
-    for (const p of periods) {
-      const start = new Date(p.start);
-      const end = new Date(p.end);
-      const current = new Date(start);
-      while (current <= end) {
-        const iso = toDayISO(current);
-        dayCache.set(iso, p.name);
-        current.setDate(current.getDate() + 1);
-      }
-    }
-  }
-
-  fetchedKeys.add(cacheKey);
+/** Parse the date part of an ISO string as a local date. */
+function parseDay(iso: string): Date {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d);
 }
 
 function toDayISO(date: Date): string {
@@ -105,39 +88,46 @@ function toDayISO(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-// ── Synchronous check (used by components) ────────────────────────
-
-let _pendingPromise: Promise<void> | null = null;
-let _pendingKey = '';
+// A school-holiday period longer than this is a corrupt API response, not a
+// holiday — skip it instead of expanding it into the day set.
+const MAX_PERIOD_DAYS = 366;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Check if a date is a school holiday for the given state.
- *
- * Triggers an async fetch on first call for a state+year combination.
- * Returns false immediately if the data hasn't been loaded yet.
+ * Build the set of school-holiday days (YYYY-MM-DD) for a state,
+ * covering [year-1, year+1] so year-boundary periods are complete.
  */
-export function isSchoolHoliday(date: Date, state: GermanState): boolean {
-  const year = date.getFullYear();
-  const cacheKey = `${state}-${year}`;
-
-  // Trigger async fetch if not yet loaded
-  if (!fetchedKeys.has(cacheKey)) {
-    if (!_pendingPromise || _pendingKey !== cacheKey) {
-      _pendingKey = cacheKey;
-      _pendingPromise = buildDayCache(state, year);
+export async function buildSchoolHolidayDaySet(
+  state: GermanState,
+  year: number
+): Promise<Set<string>> {
+  const days = new Set<string>();
+  for (const y of [year - 1, year, year + 1]) {
+    const periods = await fetchSchoolHolidays(state, y);
+    for (const p of periods) {
+      const start = parseDay(p.start);
+      const end = parseDay(p.end);
+      if ((end.getTime() - start.getTime()) / DAY_MS > MAX_PERIOD_DAYS) continue;
+      const current = new Date(start);
+      while (current <= end) {
+        days.add(toDayISO(current));
+        current.setDate(current.getDate() + 1);
+      }
     }
-    return false;
   }
-
-  const iso = toDayISO(date);
-  return dayCache.has(iso);
+  return days;
 }
 
 /**
- * Preload school holiday data for a state+year.
- * Call this early (e.g. when state changes) to ensure data is ready.
+ * React hook: predicate telling whether a date falls in a school holiday.
+ * Backed by TanStack Query, so components re-render when the data arrives
+ * (the previous module-level cache returned false until an unrelated render).
  */
-export function preloadSchoolHolidays(state: GermanState, year: number): void {
-  _pendingKey = `${state}-${year}`;
-  _pendingPromise = buildDayCache(state, year);
+export function useSchoolHolidays(state: GermanState, year: number): (date: Date) => boolean {
+  const { data } = useQuery({
+    queryKey: ['schoolHolidays', state, year],
+    queryFn: () => buildSchoolHolidayDaySet(state, year),
+    staleTime: Infinity,
+  });
+  return useCallback((date: Date) => data?.has(toDayISO(date)) ?? false, [data]);
 }

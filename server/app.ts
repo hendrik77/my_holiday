@@ -42,6 +42,12 @@ export function createApp(db: Database.Database, options: CreateAppOptions = {})
   );
   app.use(express.json({ limit: '32kb' }));
 
+  // Liveness probe — intentionally outside the bearer-token guard so Docker
+  // healthchecks and monitoring work without credentials.
+  app.get('/health', (_req, res) => {
+    res.json({ status: 'ok' });
+  });
+
   if (options.apiToken) {
     // Hashing both sides gives timingSafeEqual equal-length buffers.
     const expected = sha256(options.apiToken);
@@ -56,6 +62,11 @@ export function createApp(db: Database.Database, options: CreateAppOptions = {})
   }
 
   app.use('/api/v1', createRouter(db));
+
+  // Unknown API paths get a JSON 404 — never the SPA fallback HTML.
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ error: 'Not found' });
+  });
 
   if (options.serveStatic) {
     const distPath = join(dirname(fileURLToPath(import.meta.url)), '../dist');

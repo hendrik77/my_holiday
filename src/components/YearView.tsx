@@ -9,7 +9,7 @@ import {
   isSpecialHalfDay,
   toISODate,
 } from '../utils/calendar';
-import { isSchoolHoliday } from '../data/schoolHolidays';
+import { useSchoolHolidays } from '../data/schoolHolidays';
 import { useT } from '../i18n/useT';
 import './Calendar.css';
 
@@ -18,6 +18,7 @@ export function YearView() {
   const { data: periods = [] } = usePeriods(year);
   const { data: settings } = useSettings();
   const state = (settings?.state as 'HE') || 'HE';
+  const isSchoolHoliday = useSchoolHolidays(state, year);
   const { t, tRaw } = useT();
   const months = tRaw<string[]>('monthView.months');
   const weekdays = tRaw<string[]>('monthView.weekdays');
@@ -90,7 +91,7 @@ export function YearView() {
                     cls += (period?.halfDay || isSpecialHalfDay(d)) ? ' vacation-half' : ' vacation';
                   } else if (isHoliday) cls += ' holiday';
                   else if (isWeekend) cls += ' weekend';
-                  if (isSchoolHoliday(d, state)) cls += ' school-holiday';
+                  if (isSchoolHoliday(d)) cls += ' school-holiday';
 
                   return <div key={iso} className={cls}>{d.getDate()}</div>;
                 })}

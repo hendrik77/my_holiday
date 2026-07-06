@@ -118,6 +118,8 @@ Open **http://localhost:3001** — the container serves both the frontend and th
 
 The SQLite database is stored in `./data/my-holiday.db` on the host. Removing and recreating the container leaves your data intact.
 
+The container runs as the unprivileged `node` user (uid 1000) and reports its health via the built-in `HEALTHCHECK` (probing `GET /health`). If the bind-mounted `./data` directory is not writable by uid 1000, fix it once with `sudo chown -R 1000:1000 data`.
+
 ## How to Use
 
 ### Views

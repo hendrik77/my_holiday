@@ -38,6 +38,16 @@ function parseYear(raw: unknown): number | null {
   return isNaN(n) ? null : n;
 }
 
+// Upper bound for day-count settings; matches the UI inputs (min/max 60).
+const MAX_DAY_SETTING = 60;
+
+/** Strict integer parse: integers, or strings that are entirely an integer. */
+function parseStrictInt(raw: unknown): number | null {
+  if (typeof raw === 'number') return Number.isInteger(raw) ? raw : null;
+  if (typeof raw === 'string' && /^-?\d+$/.test(raw.trim())) return parseInt(raw.trim(), 10);
+  return null;
+}
+
 function isISODate(v: unknown): v is string {
   if (typeof v !== 'string' || !ISO_DATE_RE.test(v)) return false;
   // Reject well-formed but non-existent dates (e.g. 2026-02-30, 2026-13-45)
@@ -336,8 +346,8 @@ export function createRouter(db: Database.Database): Router {
     const allowed: Record<string, unknown> = {};
 
     if (body.totalDays !== undefined) {
-      const n = parseInt(body.totalDays, 10);
-      if (isNaN(n) || n < 1 || n > 365) { res.status(400).json({ error: 'totalDays must be 1–365' }); return; }
+      const n = parseStrictInt(body.totalDays);
+      if (n === null || n < 1 || n > MAX_DAY_SETTING) { res.status(400).json({ error: 'totalDays must be an integer 1–60' }); return; }
       allowed.totalDays = n;
     }
     if (body.state !== undefined) {
@@ -348,8 +358,8 @@ export function createRouter(db: Database.Database): Router {
       allowed.state = body.state;
     }
     if (body.carryOverDays !== undefined) {
-      const n = parseInt(body.carryOverDays, 10);
-      if (isNaN(n) || n < 0) { res.status(400).json({ error: 'carryOverDays must be ≥ 0' }); return; }
+      const n = parseStrictInt(body.carryOverDays);
+      if (n === null || n < 0 || n > MAX_DAY_SETTING) { res.status(400).json({ error: 'carryOverDays must be an integer 0–60' }); return; }
       allowed.carryOverDays = n;
     }
     if (body.carryOverDeadline !== undefined) {
@@ -363,8 +373,8 @@ export function createRouter(db: Database.Database): Router {
       if (body.carryOverMaxDays === null) {
         allowed.carryOverMaxDays = null;
       } else {
-        const n = parseInt(body.carryOverMaxDays, 10);
-        if (isNaN(n) || n < 0) { res.status(400).json({ error: 'carryOverMaxDays must be ≥ 0 or null' }); return; }
+        const n = parseStrictInt(body.carryOverMaxDays);
+        if (n === null || n < 0 || n > MAX_DAY_SETTING) { res.status(400).json({ error: 'carryOverMaxDays must be an integer 0–60 or null' }); return; }
         allowed.carryOverMaxDays = n;
       }
     }
@@ -383,8 +393,8 @@ export function createRouter(db: Database.Database): Router {
       allowed.employmentEndDate = body.employmentEndDate;
     }
     if (body.bildungsUrlaubDays !== undefined) {
-      const n = parseInt(body.bildungsUrlaubDays, 10);
-      if (isNaN(n) || n < 0) { res.status(400).json({ error: 'bildungsUrlaubDays must be ≥ 0' }); return; }
+      const n = parseStrictInt(body.bildungsUrlaubDays);
+      if (n === null || n < 0 || n > MAX_DAY_SETTING) { res.status(400).json({ error: 'bildungsUrlaubDays must be an integer 0–60' }); return; }
       allowed.bildungsUrlaubDays = n;
     }
 

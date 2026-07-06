@@ -5,7 +5,7 @@ import {
   getFirstDayOfMonth, getDaysInMonth, isPublicHoliday, getHolidayName,
   toISODate, parseISODate, countVacationWorkDaysInYear,
 } from '../utils/calendar';
-import { isSchoolHoliday } from '../data/schoolHolidays';
+import { useSchoolHolidays } from '../data/schoolHolidays';
 import type { VacationPeriod } from '../types';
 import { VacationModal } from './VacationModal';
 import { showToast } from './toastStore';
@@ -17,6 +17,7 @@ export function MonthView() {
   const { data: periods = [] } = usePeriods(year);
   const { data: settings } = useSettings();
   const state = (settings?.state as 'HE') || 'HE';
+  const isSchoolHoliday = useSchoolHolidays(state, year);
   const deletePeriod = useDeletePeriod();
   const { t, tRaw } = useT();
 
@@ -123,7 +124,7 @@ export function MonthView() {
           else if (isWeekend) cls += ' weekend';
           if (isHoliday && isCurrentMonth) cls += ' holiday';
           if (isVacation && isCurrentMonth) cls += ' vacation';
-          if (isSchoolHoliday(d, state) && isCurrentMonth) cls += ' school-holiday';
+          if (isSchoolHoliday(d) && isCurrentMonth) cls += ' school-holiday';
           if (isToday && isCurrentMonth) cls += ' today';
 
           return (

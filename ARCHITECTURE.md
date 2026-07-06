@@ -121,7 +121,8 @@ src/
 └── main.tsx                   # Entry point (QueryClientProvider + I18nProvider)
 
 server/
-├── index.ts                   # Express server (port 3001)
+├── index.ts                   # Entry point: env config + listen (port 3001)
+├── app.ts                     # createApp(): CORS, body parsing, routes, error handler, SPA serving
 ├── routes.ts                  # REST routes (periods, settings, remaining, holidays, ICS/CSV export, import)
 ├── db.ts                      # SQLite schema + CRUD operations
 └── types.ts                   # Server-specific types

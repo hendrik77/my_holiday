@@ -216,6 +216,19 @@ describe('API /api/v1', () => {
       expect(res.status).toBe(200);
       expect(res.body[0].workDays).toBe(5);
     });
+
+    it('returns 400 for a non-numeric year', async () => {
+      const res = await request(app).get('/api/v1/periods?year=abc');
+      expect(res.status).toBe(400);
+    });
+
+    it('treats year=0 as a filter, not as "all periods"', async () => {
+      await request(app).post('/api/v1/periods').send({ startDate: '2026-06-01', endDate: '2026-06-05', note: '' });
+
+      const res = await request(app).get('/api/v1/periods?year=0');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual([]);
+    });
   });
 
   describe('PUT /api/v1/periods/:id', () => {
@@ -299,6 +312,11 @@ describe('API /api/v1', () => {
       expect(res.text).toContain('BEGIN:VCALENDAR');
       expect(res.text).toContain('END:VCALENDAR');
       expect(res.text).not.toContain('BEGIN:VEVENT');
+    });
+
+    it('returns 400 for a non-numeric year instead of silently exporting the current year', async () => {
+      const res = await request(app).get('/api/v1/export.ics?year=abc');
+      expect(res.status).toBe(400);
     });
   });
 
@@ -400,6 +418,11 @@ describe('API /api/v1', () => {
       const res = await request(app).get('/api/v1/export.csv?year=2099');
       expect(res.status).toBe(200);
       expect(res.text).toBe('Start Date;End Date;Note;Type;Half Day;Work Days');
+    });
+
+    it('returns 400 for a non-numeric year instead of silently exporting the current year', async () => {
+      const res = await request(app).get('/api/v1/export.csv?year=abc');
+      expect(res.status).toBe(400);
     });
   });
 

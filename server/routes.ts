@@ -64,17 +64,20 @@ export function createRouter(db: Database.Database): Router {
 
   // ── Periods ──────────────────────────────────────────────────────
 
-  router.get('/periods', (_req, res) => {
-    const year = _req.query.year ? parseYear(_req.query.year) : null;
-    if (_req.query.year && year === null) {
-      res.status(400).json({ error: 'Invalid year' });
-      return;
+  router.get('/periods', (req, res) => {
+    let year: number | null = null;
+    if (req.query.year !== undefined) {
+      year = parseYear(req.query.year);
+      if (year === null) {
+        res.status(400).json({ error: 'Invalid year' });
+        return;
+      }
     }
-    const periods = year ? getPeriodsByYear(db, year) : getAllPeriods(db);
+    const periods = year !== null ? getPeriodsByYear(db, year) : getAllPeriods(db);
     const state = getSettings(db).state as GermanState;
     const enriched = periods.map((p) => ({
       ...p,
-      workDays: year ? countVacationWorkDaysInYear(p, year, state) : countVacationWorkDays(p, state),
+      workDays: year !== null ? countVacationWorkDaysInYear(p, year, state) : countVacationWorkDays(p, state),
     }));
     res.json(enriched);
   });
@@ -177,7 +180,11 @@ export function createRouter(db: Database.Database): Router {
   // ── ICS Export ──────────────────────────────────────────────────
 
   router.get('/export.ics', (req, res) => {
-    const year = req.query.year ? parseYear(req.query.year) ?? new Date().getFullYear() : new Date().getFullYear();
+    const year = req.query.year !== undefined ? parseYear(req.query.year) : new Date().getFullYear();
+    if (year === null) {
+      res.status(400).json({ error: 'Invalid year' });
+      return;
+    }
     const periods = getPeriodsByYear(db, year);
     const ics = generateICS(
       periods.map((p) => ({
@@ -198,7 +205,11 @@ export function createRouter(db: Database.Database): Router {
   // ── CSV Export ──────────────────────────────────────────────────
 
   router.get('/export.csv', (req, res) => {
-    const year = req.query.year ? parseYear(req.query.year) ?? new Date().getFullYear() : new Date().getFullYear();
+    const year = req.query.year !== undefined ? parseYear(req.query.year) : new Date().getFullYear();
+    if (year === null) {
+      res.status(400).json({ error: 'Invalid year' });
+      return;
+    }
     const settings = getSettings(db);
     const periods = getPeriodsByYear(db, year);
     const csv = formatCSV(periods, settings.state as GermanState);
@@ -249,7 +260,7 @@ export function createRouter(db: Database.Database): Router {
   // ── Remaining entitlement ───────────────────────────────────────
 
   router.get('/remaining', (req, res) => {
-    const year = req.query.year ? parseYear(req.query.year) : new Date().getFullYear();
+    const year = req.query.year !== undefined ? parseYear(req.query.year) : new Date().getFullYear();
     if (year === null) {
       res.status(400).json({ error: 'Invalid year' });
       return;

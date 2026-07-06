@@ -1,7 +1,23 @@
 import type { PeriodRow, Settings, SettingsUpdate } from '../../server/types';
 import type { CreatePeriodInput } from '../../server/types';
 
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:3001/api/v1';
+export interface ApiBaseUrlEnv {
+  readonly PROD?: boolean;
+  readonly VITE_API_BASE_URL?: string;
+}
+
+/**
+ * Resolve the API base URL. In production the SPA is served by the API server
+ * itself, so a relative path works from any host (localhost, LAN, reverse
+ * proxy). During development the Vite dev server (5173) talks to the separate
+ * API process on port 3001. VITE_API_BASE_URL overrides both at build time.
+ */
+export function resolveApiBaseUrl(env: ApiBaseUrlEnv): string {
+  if (env.VITE_API_BASE_URL) return env.VITE_API_BASE_URL;
+  return env.PROD ? '/api/v1' : 'http://localhost:3001/api/v1';
+}
+
+const BASE_URL = resolveApiBaseUrl(import.meta.env);
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {

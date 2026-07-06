@@ -4,6 +4,20 @@ All notable changes to My Holiday.
 
 ---
 
+## Unreleased
+
+### Fixed
+- **SPA now works when accessed from another device** — the production bundle hardcoded `http://localhost:3001/api/v1` as API base URL, so opening the Docker container from a NAS/Pi/LAN address made every API call target the *visitor's* machine and fail. Production builds now use the relative `/api/v1` (same origin); `VITE_API_BASE_URL` still overrides at build time
+- **Malformed JSON returns 400, not 500** — errors thrown by middleware (JSON body parser, size limit) now keep their status code (`400` bad JSON, `413` over the 32 kb limit) instead of being masked as `Internal server error`
+- **Invalid `year` on `/export.ics` and `/export.csv` returns 400** — previously a non-numeric year silently exported the current year; now consistent with `GET /periods`
+- **`GET /periods?year=0`** is treated as a (empty) year filter instead of returning all periods
+- **Dependency audit** — `npm audit fix` resolves the undici advisory GHSA-pr7r-676h-xcf6 (high)
+
+### Changed
+- **Server refactor** — app assembly extracted from `server/index.ts` into `createApp()` in `server/app.ts` so middleware (error handler, CORS) is covered by supertest integration tests
+
+---
+
 ## v2.3.5 (2026-06-02)
 
 ### Fixed

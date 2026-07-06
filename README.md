@@ -71,6 +71,8 @@ The backend reads these environment variables on startup:
 | `DB_PATH` | `data/my-holiday.db` | SQLite database file path |
 | `CORS_ORIGIN` | reflect any origin | Restrict cross-origin access in production, e.g. `CORS_ORIGIN=http://localhost:5173` |
 
+The frontend resolves its API base URL automatically: production builds use the relative `/api/v1` (the server serves the SPA on the same port, so any hostname works), the dev server uses `http://localhost:3001/api/v1`. Set the build-time variable `VITE_API_BASE_URL` only if the API lives on a different origin than the frontend.
+
 Example — expose to LAN with a custom port:
 
 ```bash

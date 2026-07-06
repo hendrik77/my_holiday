@@ -114,3 +114,35 @@ describe('createApp bearer-token auth', () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe('createApp /health', () => {
+  it('responds with status ok', async () => {
+    const app = makeApp();
+    const res = await request(app).get('/health');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'ok' });
+  });
+
+  it('stays reachable without a token when apiToken is configured', async () => {
+    const app = makeApp({ apiToken: 'secret' });
+    const res = await request(app).get('/health');
+    expect(res.status).toBe(200);
+  });
+});
+
+describe('createApp unknown API routes', () => {
+  it('returns a JSON 404 for unknown /api paths', async () => {
+    const app = makeApp();
+    const res = await request(app).get('/api/v1/does-not-exist');
+    expect(res.status).toBe(404);
+    expect(res.headers['content-type']).toContain('application/json');
+    expect(res.body.error).toBeTruthy();
+  });
+
+  it('returns a JSON 404 for unknown /api paths even with static serving enabled', async () => {
+    const app = makeApp({ serveStatic: true });
+    const res = await request(app).get('/api/v1/does-not-exist');
+    expect(res.status).toBe(404);
+    expect(res.headers['content-type']).toContain('application/json');
+  });
+});

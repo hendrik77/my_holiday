@@ -168,6 +168,7 @@ Settings changes follow the same pattern via `PUT /api/v1/settings`. Read-only v
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| `GET` | `/health` | Liveness probe (`{"status":"ok"}`), used by the Docker healthcheck; never requires auth |
 | `GET` | `/api/v1/periods?year=YYYY` | List periods for a year |
 | `POST` | `/api/v1/periods` | Create a vacation period |
 | `PUT` | `/api/v1/periods/:id` | Update a period |

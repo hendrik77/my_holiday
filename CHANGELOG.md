@@ -11,6 +11,13 @@ All notable changes to My Holiday.
 - **Opt-in bearer-token auth (`API_TOKEN`)** — when the env var is set, every `/api/v1` request must send `Authorization: Bearer <token>` (timing-safe comparison). The CLI already supports this via `MY_HOLIDAY_API_TOKEN` / `--token`; also mitigates DNS-rebinding attacks
 - **CSV formula-injection guard** — exported notes starting with `=`, `+`, `-`, `@` (or tab/CR) are prefixed with a guard apostrophe so spreadsheets display instead of execute them (OWASP CSV injection); the importer strips the guard so notes survive a round trip
 
+### Added
+- **`GET /health`** — unauthenticated liveness endpoint (`{"status":"ok"}`); the Docker image now ships a `HEALTHCHECK` that probes it
+- **Docker hardening** — the container runs as the unprivileged `node` user (uid 1000) instead of root; base image bumped to `node:22-alpine`. Bind-mounted `./data` directories must be writable by uid 1000
+- **Stricter settings validation** — day-count settings (`totalDays`, `carryOverDays`, `carryOverMaxDays`, `bildungsUrlaubDays`) must now be real integers within 0/1–60, matching the UI bounds (previously `totalDays` accepted up to 365 and values like `"30abc"` were truncated)
+- **JSON 404 for unknown API paths** — `/api/*` routes that don't exist return `{"error":"Not found"}` instead of falling through to the SPA's `index.html`
+- **School-holiday data validation & live updates** — responses from ferien-api.de are schema-validated (malformed entries dropped, corrupt multi-year periods skipped) and loaded via TanStack Query, so the calendar stripes appear as soon as the data arrives instead of after the next unrelated re-render
+
 ### Fixed
 - **SPA now works when accessed from another device** — the production bundle hardcoded `http://localhost:3001/api/v1` as API base URL, so opening the Docker container from a NAS/Pi/LAN address made every API call target the *visitor's* machine and fail. Production builds now use the relative `/api/v1` (same origin); `VITE_API_BASE_URL` still overrides at build time
 - **Malformed JSON returns 400, not 500** — errors thrown by middleware (JSON body parser, size limit) now keep their status code (`400` bad JSON, `413` over the 32 kb limit) instead of being masked as `Internal server error`

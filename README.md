@@ -356,7 +356,7 @@ Documented in [`DESIGN.md`](./DESIGN.md):
 ## Development
 
 ```bash
-npm test              # unit + integration tests (388 tests)
+npm test              # unit + integration tests (Vitest)
 npm run test:watch    # watch mode
 npm run test:e2e      # Playwright end-to-end smoke tests
 ```

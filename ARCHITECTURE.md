@@ -114,7 +114,8 @@ src/
 │   ├── VacationModal.tsx      # Add/edit form with type selector
 │   ├── SettingsModal.tsx      # Settings: state, days, theme, language
 │   ├── FirstRunWizard.tsx     # 4-step onboarding modal
-│   └── Toast.tsx              # Undo notifications
+│   ├── Toast.tsx              # Undo notifications
+│   └── toastStore.ts          # Toast state (module-level store + showToast helper)
 ├── App.tsx                    # Root component + theme management
 ├── App.css                    # Layout + responsive styles only
 ├── index.css                  # Design tokens + global reset
@@ -125,7 +126,8 @@ server/
 ├── app.ts                     # createApp(): CORS, body parsing, routes, error handler, SPA serving
 ├── routes.ts                  # REST routes (periods, settings, remaining, holidays, ICS/CSV export, import)
 ├── db.ts                      # SQLite schema + CRUD operations
-└── types.ts                   # Server-specific types
+├── types.ts                   # Server-specific types
+└── __tests__/                 # supertest integration tests (API routes + app middleware)
 
 cli/                           # HTTP-only CLI, bundled to dist-cli/ via esbuild (bin: `holiday`)
 ├── my-holiday.ts              # entry point, commander setup
@@ -181,7 +183,7 @@ Settings changes follow the same pattern via `PUT /api/v1/settings`. Read-only v
 | `GET` | `/api/v1/export.csv?year=YYYY` | Download CSV file |
 | `POST` | `/api/v1/import` | Import periods from a CSV body |
 
-Period endpoints (`POST`, `PUT`, `GET /periods`) use the `VacationPeriod` shape (see Data Model below). The settings endpoints use the flat settings object (`totalDays`, `state`, `carryOverDays`, `carryOverDeadline`, `carryOverMaxDays`, `bildungsurlaubDays`, employment dates). `DELETE` and the ICS endpoint return no body on success.
+Period endpoints (`POST`, `PUT`, `GET /periods`) use the `VacationPeriod` shape (see Data Model below). The settings endpoints use the flat settings object (`totalDays`, `state`, `carryOverDays`, `carryOverDeadline`, `carryOverMaxDays`, `bildungsUrlaubDays`, employment dates). `DELETE` and the ICS endpoint return no body on success.
 
 All data is persisted to `data/my-holiday.db` (SQLite, gitignored).
 

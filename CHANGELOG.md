@@ -28,6 +28,11 @@ All notable changes to My Holiday.
 ### Changed
 - **Server refactor** — app assembly extracted from `server/index.ts` into `createApp()` in `server/app.ts` so middleware (error handler, CORS) is covered by supertest integration tests
 
+### Docs
+- **DESIGN.md rewritten from source** — tokens now mirror `src/index.css` exactly (including the dark theme); the leftover site-extraction artefacts (placeholder font names, broken button specs, contradictory radius scale) are gone
+- **ARCHITECTURE.md** — corrected the settings field casing (`bildungsUrlaubDays`), added `server/app.ts`, `components/toastStore.ts` and the `__tests__/` directories to the structure tree, documented `GET /health`
+- **README / AGENTS.md** — removed the hardcoded test count (drifts every PR), documented all test locations
+
 ---
 
 ## v2.3.5 (2026-06-02)

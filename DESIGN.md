@@ -1,309 +1,128 @@
 # Design System
 
-## 1. Visual Theme & Atmosphere
+All tokens below are the **actual** CSS custom properties defined in
+[`src/index.css`](./src/index.css) — that file is the single source of truth.
+(Earlier versions of this document contained artefacts from an automated
+source-site extraction, including placeholder font names and broken component
+specs; those have been removed.)
+
+## 1. Visual Theme
 
 Friendly, approachable design with rounded shapes and generous whitespace.
 
-> **Note on fonts:** The font names in some sections below (e.g. "aawdfdgnxz", "Alaska") are artefacts from an earlier extraction and are not real typeface names. The app uses **Inter** (`'Inter', system-ui, -apple-system, sans-serif`) for both headings and body text, defined via `--font-heading` and `--font-body` in `src/index.css`.
-
-**Key Characteristics:**
-- Inter (system-ui fallback) as both heading and body font
-- Heading weight 500
-- Light/white background (#ffffff) as the primary canvas
+- **Inter** (`'Inter', system-ui, -apple-system, sans-serif`) for both headings and body text
+- Heading weight **500**
+- Light/white background as the primary canvas; a full dark theme via `[data-theme="dark"]`
 - Primary accent `#db001b` used for CTAs and brand highlights
-- 7 shadow level(s) detected — tinted shadows
-- Rounded corners (6px+) creating a friendly, approachable feel
-- Tags: light, rounded, accented, sans-serif
+- Rounded corners (6px default) on all interactive elements
 
-## 2. Color Palette & Roles
+## 2. Color Tokens
 
-### Primary
-- **Primary Accent** (`#db001b`) · `--color-primary`: Brand color, CTA backgrounds, link text, interactive highlights.
-- **Secondary Accent** (`#bc002c`) · `--color-secondary`: Secondary brand, hover states, complementary highlights.
-- **Background** (`#ffffff`) · `--color-bg`: Page background, primary canvas.
-
-### Text
-- **Text Primary** (`#151f27`) · `--color-text`: Headings and body text.
-- **Text Secondary** (`#586674`) · `--color-text-secondary`: Muted text, captions, placeholders.
-
-### Borders & Surfaces
-- **Border** (`#f4f8fc`) · `--color-border`: Dividers, outlines, input borders.
-
-### Full Extracted Palette
-
-| # | Hex | CSS Variable | Role | Area | Contrast |
-|---|---|---|---|---|---|
-| 1 | `#f4f8fc` | `--palette-1` | button | large | text-dark |
-| 2 | `#ffffff` | `--palette-2` | block | large | text-dark |
-| 3 | `#151f27` | `--palette-3` | button | large | text-light |
-| 4 | `#000000` | `--palette-4` | block | large | text-light |
-| 5 | `#c5ccd3` | `--palette-5` | block | medium | text-dark |
-| 6 | `#db001b` | `--palette-6` | badge | small | text-light |
-| 7 | `#586674` | `--palette-7` | text-accent | small | text-light |
-| 8 | `#bc002c` | `--palette-8` | text-accent | small | text-light |
-| 9 | `#3860be` | `--palette-9` | text-accent | small | text-light |
-
-## 3. Typography Rules
-
-> **App reality:** Both `--font-heading` and `--font-body` resolve to `Inter, system-ui, -apple-system, sans-serif`. The names below are from the source-site extraction and do not reflect what the app loads.
-
-- **Heading Font:** `aawdfdgnxz`, sans-serif *(source reference — app uses Inter)*
-- **Body Font:** `Alaska`, sans-serif *(source reference — app uses Inter)*
-
-### Type Hierarchy
-
-| Role | Font | Size | Weight | Line Height | Letter Spacing |
-|---|---|---|---|---|---|
-| H1 | aawdfdgnxz | 64px | 500 | 70.4px | normal |
-| H2 | Alaska | 16px | 700 | 19.2px | normal |
-| H3 | khanqyjjei | 36px | 500 | 43.2px | normal |
-| H4 | Alaska | 14.08px | 600 | 21.12px | normal |
-| Body | Alaska | 15px | 400 | 19.5px | normal |
-| Small | Alaska | 12px | 300 | 16.8px | normal |
-
-### Type Scale
-
-| Token | Size | Suggested Usage |
-|---|---|---|
-| Display | `64px` | headings |
-| H1 | `42px` | headings |
-| H2 | `36px` | headings |
-| H3 | `28px` | headings |
-| H4 | `24px` | headings |
-| Body L | `22px` | body / supporting text |
-| Body | `20px` | body / supporting text |
-| Small | `18px` | body / supporting text |
-| XS | `16px` | body / supporting text |
-| Caption | `15px` | body / supporting text |
-
-## 4. Component Stylings
-
-### Primary Button
-
-```css
-.btn-primary {
-  background: transparent;
-  color: #151f27;
-  border-radius: 0px;
-  padding: 20px 0px;
-  font-size: 14px;
-  font-weight: 400;
-  border: none;
-  cursor: pointer;
-}
-```
-
-### Filled Button
-
-```css
-.btn-filled {
-  background: #151f27;
-  color: #ffffff;
-  border-radius: 0px;
-  padding: 0px 0px;
-  font-size: 16px;
-  font-weight: 400;
-  border: none;
-  cursor: pointer;
-}
-```
-
----
-
-> **Note on button variants 2–5 and the card below:** These are provided as reference only. Several contain errors (e.g. Filled Button 2 has white text on a white background) and none are used directly in the app. Use only the design tokens and the Primary / Filled Button patterns above when building new components.
-
-### Filled Button 2 *(source reference only)*
-
-```css
-.btn-filled-2 {
-  background: #ffffff;
-  color: #ffffff;
-  border-radius: 4px;
-  padding: 20px 40px;
-  font-size: 16px;
-  font-weight: 400;
-  border: none;
-  cursor: pointer;
-}
-```
-
-### Filled Button 3
-
-```css
-.btn-filled-3 {
-  background: #c5ccd3;
-  color: #ffffff;
-  border-radius: 4px;
-  padding: 20px 40px;
-  font-size: 16px;
-  font-weight: 400;
-  border: none;
-  cursor: pointer;
-}
-```
-
-### Filled Button 4
-
-```css
-.btn-filled-4 {
-  background: #ffffff;
-  color: #ffffff;
-  border-radius: 50px;
-  padding: 1px 6px;
-  font-size: 16px;
-  font-weight: 400;
-  border: none;
-  cursor: pointer;
-}
-```
-
-### Filled Button 5
-
-```css
-.btn-filled-5 {
-  background: #151f27;
-  color: #ffffff;
-  border-radius: 4px;
-  padding: 20px 40px;
-  font-size: 16px;
-  font-weight: 400;
-  border: none;
-  cursor: pointer;
-}
-```
-
-### Card
-
-```css
-.card {
-  background: #000000;
-  border-radius: 6px;
-  padding: 0px;
-}
-```
-
-## 5. Layout Principles
-
-- **Base spacing unit:** `20px` — use multiples (40px, 60px, 80px, etc.)
-
-### Spacing Scale (extracted from real elements)
+### Light theme (`:root`)
 
 | Token | Value | Role |
 |---|---|---|
-| spacing-1 | `20px` | element |
-| spacing-2 | `1px` | element |
-| spacing-3 | `24px` | card |
-| spacing-4 | `40px` | card |
-| spacing-5 | `12px` | element |
-| spacing-6 | `16px` | element |
-| spacing-7 | `8px` | element |
-| spacing-8 | `96px` | section |
+| `--color-primary` | `#db001b` | Brand color, CTA backgrounds, interactive highlights |
+| `--color-secondary` | `#bc002c` | Secondary brand, hover states, Educational-Leave accents |
+| `--color-bg` | `#ffffff` | Page background |
+| `--color-text` | `#151f27` | Headings and body text |
+| `--color-text-secondary` | `#586674` | Muted text, captions, placeholders |
+| `--color-border` | `#f4f8fc` | Dividers, outlines, input borders |
+| `--color-surface` | `#f4f8fc` | Cards, subtle raised surfaces |
+| `--color-success` | `#16a34a` | Positive states (e.g. remaining-days progress) |
 
-### Border Radius Scale
+### Dark theme (`[data-theme="dark"]` overrides)
 
-| Token | Value | Element |
+| Token | Value |
+|---|---|
+| `--color-bg` | `#151f27` |
+| `--color-text` | `#f4f8fc` |
+| `--color-text-secondary` | `#8d99a5` |
+| `--color-border` | `#2a3a4a` |
+| `--color-surface` | `#1e2d3d` |
+
+## 3. Typography
+
+| Token | Value |
+|---|---|
+| `--font-heading` | `'Inter', system-ui, -apple-system, sans-serif` |
+| `--font-body` | `'Inter', system-ui, -apple-system, sans-serif` |
+
+| Element | Size | Weight | Line height |
+|---|---|---|---|
+| `h1` | 42px | 500 | 1.15 |
+| `h2` | 28px | 500 | 1.2 |
+| `h3` | 24px | 500 | 1.25 |
+| `h4` | 20px | 500 | 1.3 |
+| body | 15px | 400 | 1.5 |
+
+Base font size: `html { font-size: 16px }` with antialiased smoothing.
+
+## 4. Spacing
+
+Base unit `--spacing-unit: 20px`; use the derived scale:
+
+| Token | Value |
+|---|---|
+| `--space-xs` | `4px` |
+| `--space-sm` | `8px` |
+| `--space-md` | `12px` |
+| `--space-lg` | `20px` |
+| `--space-xl` | `40px` |
+| `--space-2xl` | `60px` |
+| `--space-3xl` | `80px` |
+
+## 5. Radius & Elevation
+
+| Token | Value | Usage |
 |---|---|---|
-| radius-button | `6px` | button |
-| radius-card | `50px` | card |
-| radius-subtle | `4px` | subtle |
-| radius-button | `10px` | button |
-| radius-subtle | `2px` | subtle |
-| radius-subtle | `1px` | subtle |
+| `--radius-sm` | `4px` | Subtle (inputs, badges) |
+| `--radius` | `6px` | Default (buttons, cards) |
+| `--radius-lg` | `10px` | Large cards, modals |
+| `--radius-xl` | `50px` | Pills |
 
-## 6. Depth & Elevation
-
-| Level | Shadow | Usage |
+| Token | Value (light) | Usage |
 |---|---|---|
-| Deep | `rgba(0, 0, 0, 0.1) 0px 16px 32px 0px` | Hero sections, deep layers |
-| Deep | `rgba(0, 0, 0, 0.2) 0px 16px 32px 0px` | Hero sections, deep layers |
-| Mid | `rgb(128, 128, 128) 0px 0px 5px 0px` | Dropdowns, popovers |
-| High | `rgba(0, 0, 0, 0.2) 0px 0px 18px 0px` | Modals, floating elements |
-| Mid | `rgb(153, 153, 153) 0px 2px 10px -3px` | Dropdowns, popovers |
+| `--shadow-mid` | `rgb(153,153,153) 0 2px 10px -3px` | Dropdowns, popovers |
+| `--shadow-high` | `rgba(0,0,0,0.2) 0 0 18px 0` | Modals, floating elements |
+| `--shadow-deep` | `rgba(0,0,0,0.1) 0 16px 32px 0` | Hero/deep layers |
 
+`--shadow-mid` / `--shadow-high` have stronger dark-theme variants.
 
-## 7. Do's and Don'ts
+## 6. Do's and Don'ts
 
 ### Do
-- Use `#ffffff` as the primary background color
-- Use **Inter** (or system-ui fallback) for all headings and body text
-- Use `#db001b` as the single dominant accent/CTA color
-- Maintain `20px` as the base spacing unit — all gaps should be multiples
-- Use rounded corners (`6px`+) consistently for all interactive elements
-- Apply the shadow system for elevation — use the extracted shadow values
-- Use weight 500 for headings to match the brand's typographic voice
+- Use the CSS custom properties — never hardcode colors or spacing in component CSS
+- Use **Inter** (with the system-ui fallback) for all text
+- Keep `#db001b` the single dominant accent/CTA color
+- Stick to the `--space-*` scale for gaps and padding
+- Use rounded corners (`--radius` 6px+) for all interactive elements
+- Style both themes: any new color must have a `[data-theme="dark"]` story
 
 ### Don't
-- Don't use colors outside the extracted palette without justification
-- Don't substitute Inter / system-ui with arbitrary font stacks
-- Don't use irregular spacing — stick to 20px grid
-- Don't use dark/black backgrounds — this is a light-themed design
-- Don't use sharp corners — they feel hostile in this rounded design language
-- Don't use pure black (#000000) for text — use `#151f27` instead
-- Don't add decorative elements not already present in the app — no badges, ribbons, banners, or ornaments without clear justification
-- Don't invent UI patterns that don't exist in the app — if there is no NEW badge anywhere, don't add one just because red is in the palette
+- Don't introduce colors outside the token palette without justification
+- Don't use pure black `#000000` for text — use `--color-text` (`#151f27`)
+- Don't use sharp corners — they clash with the rounded design language
+- Don't add decorative elements (badges, ribbons, banners) that have no counterpart in the existing UI
 
-## 8. Responsive Behavior
+## 7. Responsive Behavior
 
 | Breakpoint | Width | Notes |
 |---|---|---|
-| Mobile | < 640px | Single column, stack sections, reduce font sizes ~80% |
-| Tablet | 640–1024px | 2-column where appropriate, maintain spacing ratios |
-| Desktop | 1024–1440px | Full layout as designed |
-| Wide | > 1440px | Max-width container, center content |
+| Mobile | < 640px | 2-column year grid, single-column stats, stacked nav |
+| Tablet | 640–1024px | 3-column year grid, 2-column stats |
+| Desktop | > 1024px | 4-column year grid, 3-column stats |
 
 - Touch targets: minimum 44×44px on mobile
-- Maintain 20px base unit across breakpoints — only scale multipliers
 
-## 9. Agent Prompt Guide
+## 8. Agent Prompt Guide
 
-> These prompts are for AI coding assistants building new UI components. For general development rules and further reading, see [AGENTS.md](./AGENTS.md).
+For AI coding assistants building new UI components (general rules live in
+[AGENTS.md](./AGENTS.md)):
 
-### Quick Color Reference
-
-```
-Background:  #ffffff
-Text:        #151f27
-Accent:      #db001b
-Secondary:   #bc002c
-Border:      #f4f8fc
-```
-
-### Example Prompts
-
-1. "Build a hero section with a `#ffffff` background, Inter heading in `#151f27`, and a `#db001b` CTA button with 6px radius."
-2. "Create a pricing card using background `#ffffff`, border `#f4f8fc`, Inter for text, and 60px padding."
-3. "Design a navigation bar — `#ffffff` background, `#151f27` links, `#db001b` for active state."
-4. "Build a feature grid with 3 columns, 60px gap, each card using the card component style."
-5. "Create a footer with `#151f27` background, `#ffffff` text, and 40px padding."
-
-### Iteration Guide
-
-1. Start with layout structure (sections, grid, spacing)
-2. Apply colors from the palette — background first, then text, then accents
-3. Set typography — font families, sizes from the type scale, weights
-4. Add components — buttons, cards, inputs using the specs above
-5. Apply border-radius consistently across all elements
-6. Add shadows for depth — use the extracted shadow values, not defaults
-7. Check responsive behavior — test mobile and tablet layouts
-8. Final pass — verify all colors match, spacing is consistent, fonts are correct
-
-## 10. CSS Custom Properties
-
-> 7 custom properties extracted from `:root` / `html` stylesheets.
-
-### Color Variables
-
-| Variable | Value |
-|---|---|
-| `--brand-color` | `#DB001B` |
-| `--primary-color-20` | `#8D99A5` |
-| `--primary-color-50` | `#DB001B` |
-| `--text-on-brand-color` | `#FFFFFF` |
-
-### Spacing Variables
-
-| Variable | Value |
-|---|---|
-| `--jobs-header` | `440px` |
-| `--header-height` | `64px` |
-| `--img-invert-value` | `0` |
+1. Start with layout structure (sections, grid, spacing from the `--space-*` scale)
+2. Apply color tokens — background first, then text, then accents
+3. Set typography — Inter, sizes from the h1–h4 scale, weight 500 for headings
+4. Apply `--radius` consistently; use `--shadow-*` for elevation
+5. Add the dark-theme story for every new color
+6. Check responsive behavior at the three breakpoints

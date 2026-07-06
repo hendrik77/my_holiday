@@ -8,9 +8,11 @@ const DB_PATH = process.env.DB_PATH || 'data/my-holiday.db';
 const db = createDb(DB_PATH);
 
 // Localhost-only tool by default. Override origins via CORS_ORIGIN; override
-// bind interface via API_HOST (e.g. '0.0.0.0' for LAN access — only with auth).
+// bind interface via API_HOST (e.g. '0.0.0.0' for LAN access — only with auth,
+// e.g. API_TOKEN or an authenticating reverse proxy).
 const app = createApp(db, {
   corsOrigin: process.env.CORS_ORIGIN,
+  apiToken: process.env.API_TOKEN,
   serveStatic: process.env.NODE_ENV === 'production',
 });
 

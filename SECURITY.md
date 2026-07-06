@@ -8,8 +8,9 @@ My Holiday is a **single-user, locally-hosted** vacation planner. It binds to `1
 
 These are intentional design tradeoffs, not bugs:
 
-- **No authentication** — the API accepts all requests without credentials when accessed on the loopback interface. (The CLI may send an `Authorization: Bearer` token via `MY_HOLIDAY_API_TOKEN`, but the server does not yet verify it — bearer enforcement lands with v3 multi-user auth.)
-- **Permissive CORS default** — without `CORS_ORIGIN` set, the API reflects any origin; restrict this in any networked deployment
+- **No authentication by default** — the API accepts all requests without credentials. As an opt-in hardening step, set the `API_TOKEN` environment variable: every `/api/v1` request must then carry `Authorization: Bearer <token>` (the CLI sends it via `MY_HOLIDAY_API_TOKEN` / `--token`). The web UI does not attach a token itself, so `API_TOKEN` suits CLI/API-only deployments or setups where an authenticating reverse proxy injects the header. Full multi-user auth lands with v3.
+- **CORS restricted to local origins by default** — the API only answers cross-origin browser requests from `localhost` / `127.0.0.1` / `[::1]` origins (any port). Web pages on other origins cannot read or write the API from a visitor's browser. Set `CORS_ORIGIN` to allow one specific additional origin. Same-origin use (the SPA served by the API itself) is unaffected.
+- **DNS rebinding** — CORS does not stop an attacker-controlled hostname that rebinds to `127.0.0.1`; setting `API_TOKEN` closes this vector because the attacker's page cannot supply the token.
 - **No rate limiting** — not relevant for a single-user localhost app, but must be added before any public exposure
 - **No CSRF protection** — acceptable in the current threat model; required if the app is ever exposed with session-based auth
 

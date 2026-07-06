@@ -30,6 +30,14 @@ export function escapeCSV(value: string): string {
   return value;
 }
 
+/** Leading characters that make a spreadsheet execute a cell as a formula (OWASP CSV injection). */
+const FORMULA_TRIGGERS = ['=', '+', '-', '@', '\t', '\r'];
+
+/** Prefix a guard apostrophe so spreadsheets display, not execute, the value. */
+function guardFormula(value: string): string {
+  return value !== '' && FORMULA_TRIGGERS.includes(value[0]) ? `'${value}` : value;
+}
+
 /**
  * Build a semicolon-delimited, BOM-free CSV for the given periods.
  *
@@ -47,7 +55,7 @@ export function formatCSV(
   for (const p of periods) {
     const workDays = countVacationWorkDays(p, state);
     const halfDayLabel = p.halfDay ? labels.yes : labels.no;
-    const note = escapeCSV(p.note || '');
+    const note = escapeCSV(guardFormula(p.note || ''));
     const type = p.type ?? 'urlaub';
     rows.push(
       `${p.startDate};${p.endDate};${note};${type};${halfDayLabel};${workDays.toString().replace('.', ',')}`,
@@ -200,7 +208,9 @@ export function parseImportCSV(csv: string, t: ImportMessage = defaultImportMess
       continue;
     }
 
-    const note = noteCol >= 0 ? (row[noteCol] || '').trim() : '';
+    const rawNote = noteCol >= 0 ? (row[noteCol] || '').trim() : '';
+    // Reverse the export-side formula guard so notes survive a round trip.
+    const note = /^'[=+\-@]/.test(rawNote) ? rawNote.slice(1) : rawNote;
     const rawType = typeCol >= 0 ? (row[typeCol] || '').trim() : '';
     const type = VACATION_TYPES.includes(rawType as VacationType) ? (rawType as VacationType) : undefined;
     let halfDay = false;

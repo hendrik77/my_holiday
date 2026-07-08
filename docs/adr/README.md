@@ -9,3 +9,4 @@ context, the decision, the alternatives considered, and the consequences.
 | [0001](0001-http-only-cli-transport.md) | HTTP-only transport for the my-holiday CLI | accepted | 2026-05-26 |
 | [0002](0002-server-side-computation.md) | Compute entitlement, CSV export, and import server-side | accepted | 2026-05-26 |
 | [0003](0003-holidays-endpoint.md) | Dedicated /holidays endpoint for server-computed public holidays | accepted | 2026-05-29 |
+| [0004](0004-opt-in-bearer-token-auth.md) | Opt-in bearer-token auth for the API | accepted | 2026-07-06 |

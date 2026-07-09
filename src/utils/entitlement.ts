@@ -1,5 +1,6 @@
 import type { VacationPeriod } from '../types';
-import { parseISODate } from './calendar';
+import { parseISODate, countVacationWorkDaysInYear } from './calendar';
+import type { GermanState } from '../data/holidays';
 
 /**
  * Compute pro-rata vacation entitlement for a given year.
@@ -134,4 +135,47 @@ export function computeLeaveReduction(
   }
 
   return (totalFullMonths / 12) * totalDays;
+}
+
+export interface RemainingDaysInputs {
+  periods: VacationPeriod[];
+  year: number;
+  totalDays: number;
+  employmentStartDate: string;
+  employmentEndDate: string;
+  state: GermanState;
+}
+
+export interface RemainingDays {
+  /** Pro-rata entitlement minus statutory reductions, floored at 0. */
+  entitledDays: number;
+  /** Urlaub work days consumed within the year. */
+  usedDays: number;
+  /** entitledDays − usedDays; negative when the Urlaub quota is exceeded. */
+  remaining: number;
+}
+
+/**
+ * Compute a year's Urlaub balance for a set of periods: entitlement (§ 4 BUrlG
+ * pro-rata minus § 17 reductions), the Urlaub work days used, and the resulting
+ * remaining days. The single source of truth shared by the Dashboard summary
+ * and the VacationModal's live quota hint, mirroring the server's `/remaining`.
+ */
+export function computeRemainingDays({
+  periods,
+  year,
+  totalDays,
+  employmentStartDate,
+  employmentEndDate,
+  state,
+}: RemainingDaysInputs): RemainingDays {
+  const proRata = computeProRataEntitlement(employmentStartDate, employmentEndDate, year, totalDays);
+  const reduction = computeLeaveReduction(periods, year, totalDays);
+  const entitledDays = Math.max(0, proRata - reduction);
+
+  const usedDays = periods
+    .filter((p) => !p.type || p.type === 'urlaub')
+    .reduce((sum, p) => sum + countVacationWorkDaysInYear(p, year, state), 0);
+
+  return { entitledDays, usedDays, remaining: entitledDays - usedDays };
 }

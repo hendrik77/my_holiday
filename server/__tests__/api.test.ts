@@ -330,6 +330,74 @@ describe('API /api/v1', () => {
     });
   });
 
+  describe('quota warnings on period writes', () => {
+    it('omits warnings when a new period stays within entitlement', async () => {
+      // Default entitlement is 30 days; 2026-07-06..10 is 5 work days.
+      const res = await request(app)
+        .post('/api/v1/periods')
+        .send({ startDate: '2026-07-06', endDate: '2026-07-10', note: '', type: 'urlaub' });
+      expect(res.status).toBe(201);
+      expect(res.body.warnings).toBeUndefined();
+    });
+
+    it('attaches a quota-exceeded warning when a new period exceeds entitlement', async () => {
+      await request(app).put('/api/v1/settings').send({ totalDays: 3 });
+
+      // 5 work days against a 3-day entitlement → over by 2.
+      const res = await request(app)
+        .post('/api/v1/periods')
+        .send({ startDate: '2026-07-06', endDate: '2026-07-10', note: '', type: 'urlaub' });
+      expect(res.status).toBe(201);
+      expect(res.body.id).toBeDefined();
+      expect(res.body.warnings).toEqual([
+        { code: 'quota-exceeded', year: 2026, entitledDays: 3, usedDays: 5, remaining: -2 },
+      ]);
+    });
+
+    it('does not warn for a non-urlaub type that consumes no entitlement', async () => {
+      await request(app).put('/api/v1/settings').send({ totalDays: 1 });
+
+      const res = await request(app)
+        .post('/api/v1/periods')
+        .send({ startDate: '2026-07-06', endDate: '2026-07-10', note: '', type: 'bildungsurlaub' });
+      expect(res.status).toBe(201);
+      expect(res.body.warnings).toBeUndefined();
+    });
+
+    it('warns when an edit extends a period past entitlement', async () => {
+      await request(app).put('/api/v1/settings').send({ totalDays: 3 });
+
+      // 2026-07-06..08 is 3 work days → exactly at entitlement, no warning.
+      const created = await request(app)
+        .post('/api/v1/periods')
+        .send({ startDate: '2026-07-06', endDate: '2026-07-08', note: '', type: 'urlaub' });
+      expect(created.body.warnings).toBeUndefined();
+
+      // Extend to 2026-07-10 → 5 work days, over by 2.
+      const res = await request(app)
+        .put(`/api/v1/periods/${created.body.id}`)
+        .send({ endDate: '2026-07-10' });
+      expect(res.status).toBe(200);
+      expect(res.body.warnings).toEqual([
+        { code: 'quota-exceeded', year: 2026, entitledDays: 3, usedDays: 5, remaining: -2 },
+      ]);
+    });
+
+    it('flags only the year that exceeds entitlement on a year-spanning period', async () => {
+      await request(app).put('/api/v1/settings').send({ totalDays: 3 });
+
+      // Dec 2026 portion is many work days (over 3); the 2027 portion is just
+      // Jan 4 (Jan 1 holiday, Jan 2–3 weekend) → 1 work day, within 3.
+      const res = await request(app)
+        .post('/api/v1/periods')
+        .send({ startDate: '2026-12-28', endDate: '2027-01-04', note: '', type: 'urlaub' });
+      expect(res.status).toBe(201);
+      expect(res.body.warnings).toHaveLength(1);
+      expect(res.body.warnings[0].year).toBe(2026);
+      expect(res.body.warnings[0].remaining).toBeLessThan(0);
+    });
+  });
+
   describe('GET /api/v1/export.ics', () => {
     it('returns a valid ICS file', async () => {
       await request(app).post('/api/v1/periods').send({ startDate: '2026-07-01', endDate: '2026-07-15', note: 'Sommerurlaub' });

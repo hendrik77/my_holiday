@@ -53,7 +53,7 @@ function buildProgram(): Command {
     .action(async (options: { start?: string; end?: string; type?: string; note?: string; halfDay?: boolean }, command: Command) => {
       const globals = command.optsWithGlobals()
       const client = createApiClient({ api: globals.api, token: globals.token })
-      const output = await runAdd(client, {
+      const { output, warning } = await runAdd(client, {
         start: options.start,
         end: options.end,
         type: options.type,
@@ -62,6 +62,7 @@ function buildProgram(): Command {
         json: globals.json === true,
       })
       process.stdout.write(`${output}\n`)
+      if (warning) process.stderr.write(`${warning}\n`)
     })
   program
     .command('change')
@@ -79,7 +80,7 @@ function buildProgram(): Command {
       const globals = command.optsWithGlobals()
       const client = createApiClient({ api: globals.api, token: globals.token })
       const halfDay = command.getOptionValueSource('halfDay') === 'cli' ? options.halfDay === true : undefined
-      const output = await runChange(client, {
+      const { output, warning } = await runChange(client, {
         id,
         start: options.start,
         end: options.end,
@@ -89,6 +90,7 @@ function buildProgram(): Command {
         json: globals.json === true,
       })
       process.stdout.write(`${output}\n`)
+      if (warning) process.stderr.write(`${warning}\n`)
     })
   program
     .command('delete')

@@ -44,7 +44,7 @@ Beyond the one-shot `.ics` export, expose a stable, token-protected `webcal://�
 
 ### Conflict & quota warnings
 
-Overlap prevention already blocks conflicting bookings today. The remaining work is to turn this into a fuller advisor: when adding or editing a period, also warn on exceeding the remaining entitlement for the year and (later) on collision with a blackout window. A year-validation pass (`holiday check`) would flag every issue for a year at once — moving the planner from a passive recorder to one that catches mistakes before they are saved.
+Overlap prevention already blocks conflicting bookings today, and entitlement warnings have shipped: adding or editing an `urlaub` period that exceeds the year's remaining days now surfaces a non-blocking warning across the web modal, the REST API (a `warnings` array on period writes), and the CLI. The remaining work extends this advisor further: warn on collision with a blackout window, and add a year-validation pass (`holiday check`) that flags every issue for a year at once — moving the planner from a passive recorder to one that catches mistakes before they are saved.
 
 ---
 

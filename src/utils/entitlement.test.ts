@@ -4,6 +4,7 @@ import {
   computeProRataEntitlement,
   countFullCalendarMonths,
   computeLeaveReduction,
+  computeRemainingDays,
 } from './entitlement';
 
 // ============================================================
@@ -290,5 +291,61 @@ describe('computeLeaveReduction', () => {
     // 1 month of 25 days/yr → 25/12 ≈ 2.0833
     const periods = [makePeriod('2026-03-01', '2026-03-31', 'unbezahlterUrlaub')];
     expect(computeLeaveReduction(periods, 2026, 25)).toBeCloseTo(25 / 12, 10);
+  });
+});
+
+// ============================================================
+// computeRemainingDays
+// ============================================================
+describe('computeRemainingDays', () => {
+  const base = {
+    year: 2026,
+    totalDays: 30,
+    employmentStartDate: '',
+    employmentEndDate: '',
+    state: 'HE' as const,
+  };
+
+  it('returns full entitlement and zero used for a full-year employee with no periods', () => {
+    const result = computeRemainingDays({ ...base, periods: [] });
+    expect(result).toEqual({ entitledDays: 30, usedDays: 0, remaining: 30 });
+  });
+
+  it('counts urlaub work days against entitlement', () => {
+    // 2026-07-06..10 is Mon–Fri with no Hessen holiday → 5 work days.
+    const periods = [
+      { id: 'a', startDate: '2026-07-06', endDate: '2026-07-10', note: '', type: 'urlaub' as const },
+    ];
+    const result = computeRemainingDays({ ...base, periods });
+    expect(result.usedDays).toBe(5);
+    expect(result.remaining).toBe(25);
+  });
+
+  it('ignores non-urlaub types in the used total', () => {
+    const periods = [
+      { id: 'a', startDate: '2026-07-06', endDate: '2026-07-10', note: '', type: 'bildungsurlaub' as const },
+    ];
+    const result = computeRemainingDays({ ...base, periods });
+    expect(result.usedDays).toBe(0);
+    expect(result.remaining).toBe(30);
+  });
+
+  it('reduces entitlement for statutory leave (§ 17) and never goes below zero', () => {
+    // 6 full months of elternzeit → reduction 15; entitled = 30 - 15 = 15.
+    const periods = [
+      { id: 'a', startDate: '2026-01-01', endDate: '2026-06-30', note: '', type: 'elternzeit' as const },
+    ];
+    const result = computeRemainingDays({ ...base, periods });
+    expect(result.entitledDays).toBe(15);
+    expect(result.usedDays).toBe(0);
+    expect(result.remaining).toBe(15);
+  });
+
+  it('reports a negative remaining when urlaub exceeds entitlement', () => {
+    const periods = [
+      { id: 'a', startDate: '2026-07-06', endDate: '2026-07-10', note: '', type: 'urlaub' as const },
+    ];
+    const result = computeRemainingDays({ ...base, totalDays: 3, periods });
+    expect(result).toEqual({ entitledDays: 3, usedDays: 5, remaining: -2 });
   });
 });

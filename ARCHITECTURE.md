@@ -172,8 +172,8 @@ Settings changes follow the same pattern via `PUT /api/v1/settings`. Read-only v
 |--------|----------|-------------|
 | `GET` | `/health` | Liveness probe (`{"status":"ok"}`), used by the Docker healthcheck; never requires auth |
 | `GET` | `/api/v1/periods?year=YYYY` | List periods for a year |
-| `POST` | `/api/v1/periods` | Create a vacation period |
-| `PUT` | `/api/v1/periods/:id` | Update a period |
+| `POST` | `/api/v1/periods` | Create a vacation period (response may carry `warnings`) |
+| `PUT` | `/api/v1/periods/:id` | Update a period (response may carry `warnings`) |
 | `DELETE` | `/api/v1/periods/:id` | Delete a period |
 | `GET` | `/api/v1/settings` | Get all settings |
 | `PUT` | `/api/v1/settings` | Update settings |
@@ -183,7 +183,7 @@ Settings changes follow the same pattern via `PUT /api/v1/settings`. Read-only v
 | `GET` | `/api/v1/export.csv?year=YYYY` | Download CSV file |
 | `POST` | `/api/v1/import` | Import periods from a CSV body |
 
-Period endpoints (`POST`, `PUT`, `GET /periods`) use the `VacationPeriod` shape (see Data Model below). The settings endpoints use the flat settings object (`totalDays`, `state`, `carryOverDays`, `carryOverDeadline`, `carryOverMaxDays`, `bildungsUrlaubDays`, employment dates). `DELETE` and the ICS endpoint return no body on success.
+Period endpoints (`POST`, `PUT`, `GET /periods`) use the `VacationPeriod` shape (see Data Model below). A `POST`/`PUT` write of an `urlaub` period whose year total exceeds entitlement additionally carries an optional `warnings` array — one `{ code: "quota-exceeded", year, entitledDays, usedDays, remaining }` entry per affected year (a year-spanning period is checked per year). The write still succeeds; the warning is advisory. The settings endpoints use the flat settings object (`totalDays`, `state`, `carryOverDays`, `carryOverDeadline`, `carryOverMaxDays`, `bildungsUrlaubDays`, employment dates). `DELETE` and the ICS endpoint return no body on success.
 
 All data is persisted to `data/my-holiday.db` (SQLite, gitignored).
 

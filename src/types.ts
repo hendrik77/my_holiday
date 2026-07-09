@@ -29,4 +29,17 @@ export interface VacationPeriod {
   type?: VacationType; // defaults to 'urlaub' when absent
 }
 
+/**
+ * Non-blocking advisory attached to a period write (POST/PUT) when the booking
+ * pushes a year's Urlaub total past the available entitlement. `remaining` is
+ * the entitled-minus-used balance and is negative when the quota is exceeded.
+ */
+export interface QuotaWarning {
+  code: 'quota-exceeded';
+  year: number;
+  entitledDays: number;
+  usedDays: number;
+  remaining: number;
+}
+
 export type ViewType = 'dashboard' | 'year' | 'month' | 'list';

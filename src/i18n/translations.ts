@@ -88,6 +88,7 @@ export const translations = {
       save: 'Speichern',
       plan: 'Urlaub planen',
       overlapError: 'Dieser Zeitraum überschneidet sich mit einem bereits geplanten Urlaub.',
+      quotaWarning: 'Dieser Urlaub überschreitet dein verbleibendes Urlaubskontingent für dieses Jahr.',
     },
     settings: {
       title: 'Einstellungen',
@@ -280,6 +281,7 @@ export const translations = {
       save: 'Save',
       plan: 'Plan Vacation',
       overlapError: 'This period overlaps with an already planned vacation.',
+      quotaWarning: 'This vacation exceeds your remaining entitlement for this year.',
     },
     settings: {
       title: 'Settings',

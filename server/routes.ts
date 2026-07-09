@@ -21,6 +21,7 @@ import { computeProRataEntitlement, computeLeaveReduction } from '../src/utils/e
 import { formatCSV, parseImportCSV } from '../src/utils/csv';
 import { getHolidayMap } from '../src/data/holidays';
 import type { GermanState } from '../src/data/holidays';
+import type { QuotaWarning } from '../src/types';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MM_DD_RE = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
@@ -65,6 +66,77 @@ function isMonthDay(v: unknown): v is string {
   return typeof v === 'string' && MM_DD_RE.test(v);
 }
 
+interface YearRemaining {
+  year: number;
+  totalDays: number;
+  entitledDays: number;
+  usedDays: number;
+  carryOver: { available: number; used: number; expiresOn: string };
+  remaining: number;
+}
+
+/**
+ * Compute the Urlaub entitlement balance for a single year: pro-rata
+ * entitlement (§ 4 BUrlG) minus statutory reductions (§ 17), the Urlaub work
+ * days consumed within the year, and the carry-over sub-total. Shared by
+ * `GET /remaining` and the quota-warning check on period writes.
+ */
+function computeRemainingForYear(db: Database.Database, year: number): YearRemaining {
+  const settings = getSettings(db);
+  const totalDays = settings.totalDays;
+  const state = settings.state as GermanState;
+  const periods = getPeriodsByYear(db, year);
+  const urlaubPeriods = periods.filter((p) => !p.type || p.type === 'urlaub');
+
+  const usedDays = urlaubPeriods.reduce(
+    (sum, p) => sum + countVacationWorkDaysInYear(p, year, state),
+    0,
+  );
+  const proRata = computeProRataEntitlement(
+    settings.employmentStartDate,
+    settings.employmentEndDate,
+    year,
+    totalDays,
+  );
+  const reduction = computeLeaveReduction(periods, year, totalDays);
+  const entitledDays = Math.max(0, proRata - reduction);
+  const carryOverUsed = countCarryOverUsed(urlaubPeriods, year, state, settings.carryOverDays);
+
+  return {
+    year,
+    totalDays,
+    entitledDays,
+    usedDays,
+    carryOver: {
+      available: settings.carryOverDays,
+      used: carryOverUsed,
+      expiresOn: carryOverDeadline(year),
+    },
+    remaining: entitledDays - usedDays,
+  };
+}
+
+/**
+ * After an Urlaub period is written, return a quota-exceeded warning for each
+ * year the period touches whose Urlaub total now exceeds entitlement. Empty
+ * when everything is within quota; only `urlaub` bookings are checked.
+ */
+function quotaWarningsForPeriod(
+  db: Database.Database,
+  startDate: string,
+  endDate: string,
+): QuotaWarning[] {
+  const startYear = Number(startDate.slice(0, 4));
+  const endYear = Number(endDate.slice(0, 4));
+  const warnings: QuotaWarning[] = [];
+  for (let year = startYear; year <= endYear; year++) {
+    const { entitledDays, usedDays, remaining } = computeRemainingForYear(db, year);
+    if (remaining < 0) {
+      warnings.push({ code: 'quota-exceeded', year, entitledDays, usedDays, remaining });
+    }
+  }
+  return warnings;
+}
 
 export function createRouter(db: Database.Database): Router {
   const router = Router();
@@ -113,15 +185,17 @@ export function createRouter(db: Database.Database): Router {
       return;
     }
 
+    const effectiveType = type || 'urlaub';
     const period = createPeriod(db, {
       startDate,
       endDate,
       note: typeof note === 'string' ? note : '',
       halfDay: halfDay === true,
-      type: type || 'urlaub',
+      type: effectiveType,
     });
 
-    res.status(201).json(period);
+    const warnings = effectiveType === 'urlaub' ? quotaWarningsForPeriod(db, startDate, endDate) : [];
+    res.status(201).json(warnings.length > 0 ? { ...period, warnings } : period);
   });
 
   router.put('/periods/:id', (req, res) => {
@@ -172,7 +246,11 @@ export function createRouter(db: Database.Database): Router {
       return;
     }
 
-    res.json(updated);
+    const warnings =
+      (updated.type ?? 'urlaub') === 'urlaub'
+        ? quotaWarningsForPeriod(db, effectiveStart, effectiveEnd)
+        : [];
+    res.json(warnings.length > 0 ? { ...updated, warnings } : updated);
   });
 
   router.delete('/periods/:id', (req, res) => {
@@ -276,38 +354,7 @@ export function createRouter(db: Database.Database): Router {
       return;
     }
 
-    const settings = getSettings(db);
-    const totalDays = settings.totalDays;
-    const state = settings.state as GermanState;
-    const periods = getPeriodsByYear(db, year);
-    const urlaubPeriods = periods.filter((p) => !p.type || p.type === 'urlaub');
-
-    const usedDays = urlaubPeriods.reduce(
-      (sum, p) => sum + countVacationWorkDaysInYear(p, year, state),
-      0,
-    );
-    const proRata = computeProRataEntitlement(
-      settings.employmentStartDate,
-      settings.employmentEndDate,
-      year,
-      totalDays,
-    );
-    const reduction = computeLeaveReduction(periods, year, totalDays);
-    const entitledDays = Math.max(0, proRata - reduction);
-    const carryOverUsed = countCarryOverUsed(urlaubPeriods, year, state, settings.carryOverDays);
-
-    res.json({
-      year,
-      totalDays,
-      entitledDays,
-      usedDays,
-      carryOver: {
-        available: settings.carryOverDays,
-        used: carryOverUsed,
-        expiresOn: carryOverDeadline(year),
-      },
-      remaining: entitledDays - usedDays,
-    });
+    res.json(computeRemainingForYear(db, year));
   });
 
   // ── Public holidays ─────────────────────────────────────────────

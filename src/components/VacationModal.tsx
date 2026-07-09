@@ -4,6 +4,7 @@ import { usePeriods, useSettings, useCreatePeriod, useUpdatePeriod } from '../ap
 import type { VacationPeriod, VacationType } from '../types';
 import { VACATION_TYPES } from '../types';
 import { countVacationWorkDays, hasOverlap, toISODate } from '../utils/calendar';
+import { computeRemainingDays } from '../utils/entitlement';
 import { useT } from '../i18n/useT';
 import { downloadSingleICS } from '../utils/icsDownload';
 import './Modal.css';
@@ -40,6 +41,28 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
     try { return countVacationWorkDays({ startDate, endDate, halfDay }, state); }
     catch { return 0; }
   }, [startDate, endDate, halfDay, state]);
+
+  // Live, non-blocking hint: would this Urlaub draft push the year past the
+  // remaining entitlement? Mirrors the server's quota check by recomputing the
+  // year total with the draft in place of the period being edited.
+  const quotaExceeded = useMemo(() => {
+    if (type !== 'urlaub' || !settings || endDate < startDate) return false;
+    const others = periods.filter((p) => p.id !== initial?.id);
+    const draft: VacationPeriod = { id: initial?.id ?? '__draft__', startDate, endDate, note, halfDay, type };
+    try {
+      const { remaining } = computeRemainingDays({
+        periods: [...others, draft],
+        year,
+        totalDays: settings.totalDays,
+        employmentStartDate: settings.employmentStartDate ?? '',
+        employmentEndDate: settings.employmentEndDate ?? '',
+        state,
+      });
+      return remaining < 0;
+    } catch {
+      return false;
+    }
+  }, [type, settings, periods, initial?.id, startDate, endDate, note, halfDay, year, state]);
 
   const handleStartDateChange = (newStart: string) => {
     setStartDate(newStart);
@@ -107,6 +130,7 @@ export function VacationModal({ onClose, initial, presetDates }: VacationModalPr
           </label>
           {!isSingleDay && <div className="form-hint" style={{ marginTop: -8 }}>{t('vacationModal.halfDayHint')}</div>}
           {error && <div className="form-error">{error}</div>}
+          {quotaExceeded && <div className="form-warning">{t('vacationModal.quotaWarning')}</div>}
           <div className="form-hint"><strong>{workDaysDisplay}</strong> {t('vacationModal.workdayHint')}</div>
         </div>
         <div className="modal-footer">

@@ -1,8 +1,13 @@
-import type { VacationPeriod } from '../src/types'
+import type { QuotaWarning, VacationPeriod } from '../src/types'
 
 /** A period as returned by `GET /periods`, optionally carrying server-computed work days. */
 export interface ListedPeriod extends VacationPeriod {
   readonly workDays?: number
+}
+
+/** A period as returned by a write (POST/PUT), optionally carrying quota warnings. */
+export interface WrittenPeriod extends VacationPeriod {
+  readonly warnings?: readonly QuotaWarning[]
 }
 
 const MS_PER_DAY = 86_400_000
@@ -93,6 +98,19 @@ export function formatStatus(info: StatusInfo): string {
     return `${left} · next: ${type} in ${days} ${unit} (${info.next.startDate}→${info.next.endDate})`
   }
   return `${left} · no upcoming vacation`
+}
+
+/**
+ * Render quota-exceeded warnings as one `⚠` line per affected year, or an empty
+ * string when there are none. Meant for stderr so stdout stays script-stable.
+ */
+export function formatQuotaWarnings(warnings: readonly QuotaWarning[] = []): string {
+  return warnings
+    .map(
+      (w) =>
+        `⚠ ${w.year}: booked ${formatDays(w.usedDays)} of ${formatDays(w.entitledDays)} Urlaub days — over by ${formatDays(-w.remaining)}`,
+    )
+    .join('\n')
 }
 
 /** Render a remaining-entitlement summary as aligned human-readable lines. */

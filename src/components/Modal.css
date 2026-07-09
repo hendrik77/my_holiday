@@ -183,6 +183,16 @@
   padding: var(--space-sm) var(--space-md);
 }
 
+/* Non-blocking advisory (e.g. exceeding remaining entitlement); amber, not red. */
+.form-warning {
+  font-size: 13px;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: var(--radius);
+  padding: var(--space-sm) var(--space-md);
+}
+
 /* === Half-day checkbox === */
 .form-checkbox {
   display: flex;

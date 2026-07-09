@@ -155,8 +155,23 @@ describe('runChange', () => {
     const updated = { ...PERIODS[0], note: 'Sommerurlaub' }
     const { client } = clientReturning(PERIODS, updated)
 
-    const output = await runChange(client, { id: 'aaaa', note: 'Sommerurlaub', json: true })
+    const { output } = await runChange(client, { id: 'aaaa', note: 'Sommerurlaub', json: true })
 
     expect(JSON.parse(output)).toEqual(updated)
+  })
+
+  it('surfaces a quota warning on stderr when an edit exceeds entitlement', async () => {
+    const updated = {
+      ...PERIODS[0],
+      endDate: '2026-07-31',
+      warnings: [{ code: 'quota-exceeded', year: 2026, entitledDays: 3, usedDays: 5, remaining: -2 }],
+    }
+    const { client } = clientReturning(PERIODS, updated)
+
+    const { output, warning } = await runChange(client, { id: 'aaaa', end: '2026-07-31' })
+
+    expect(output).toContain('Updated:')
+    expect(warning).toBeDefined()
+    expect(warning).toContain('over by 2')
   })
 })

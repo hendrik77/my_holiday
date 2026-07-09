@@ -63,7 +63,7 @@ describe('runAdd', () => {
   it('POSTs the correct body and prints an "Added:" line on success', async () => {
     const { client, request } = resolvingClient(CREATED)
 
-    const output = await runAdd(client, VALID)
+    const { output, warning } = await runAdd(client, VALID)
 
     expect(request).toHaveBeenCalledWith('/periods', expect.objectContaining({ method: 'POST' }))
     const calls = request.mock.calls as unknown as Array<[string, RequestInit]>
@@ -76,6 +76,21 @@ describe('runAdd', () => {
     })
     expect(output).toContain('Added:')
     expect(output).toContain('p-123')
+    expect(warning).toBeUndefined()
+  })
+
+  it('surfaces a quota warning on stderr while still printing the "Added:" line', async () => {
+    const { client } = resolvingClient({
+      ...CREATED,
+      warnings: [{ code: 'quota-exceeded', year: 2026, entitledDays: 3, usedDays: 5, remaining: -2 }],
+    })
+
+    const { output, warning } = await runAdd(client, VALID)
+
+    expect(output).toContain('Added:')
+    expect(warning).toBeDefined()
+    expect(warning).toContain('2026')
+    expect(warning).toContain('over by 2')
   })
 
   it('maps a server 409 to an overlap usage error (exit 1)', async () => {
@@ -137,8 +152,22 @@ describe('runAdd', () => {
   it('prints the created record verbatim when --json is set', async () => {
     const { client } = resolvingClient(CREATED)
 
-    const output = await runAdd(client, { ...VALID, json: true })
+    const { output, warning } = await runAdd(client, { ...VALID, json: true })
 
     expect(JSON.parse(output)).toEqual(CREATED)
+    expect(warning).toBeUndefined()
+  })
+
+  it('embeds warnings in --json output without a separate stderr warning', async () => {
+    const withWarning = {
+      ...CREATED,
+      warnings: [{ code: 'quota-exceeded', year: 2026, entitledDays: 3, usedDays: 5, remaining: -2 }],
+    }
+    const { client } = resolvingClient(withWarning)
+
+    const { output, warning } = await runAdd(client, { ...VALID, json: true })
+
+    expect(JSON.parse(output)).toEqual(withWarning)
+    expect(warning).toBeUndefined()
   })
 })

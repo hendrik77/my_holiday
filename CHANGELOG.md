@@ -4,6 +4,13 @@ All notable changes to My Holiday.
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Quota warnings on booking** — creating or editing an `urlaub` period that pushes a year past its remaining entitlement now surfaces a non-blocking warning (the booking still saves). `POST /periods` and `PUT /periods/:id` responses carry an optional `warnings` array (`{ code: "quota-exceeded", year, entitledDays, usedDays, remaining }`), one entry per affected year; a year-spanning period is checked per year. The web `VacationModal` shows a live amber hint while you pick dates, and the `holiday` CLI prints a `⚠` line to stderr (embedded in the JSON body under `--json`). Turns the planner from a passive recorder into one that flags over-booking before you save
+
+---
+
 ## v2.4.0 (2026-07-06)
 
 ### Security

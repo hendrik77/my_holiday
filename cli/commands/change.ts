@@ -1,8 +1,9 @@
 import { ApiError, type ApiClient } from '../api'
 import { type VacationType, VACATION_TYPES } from '../../src/types'
 import { UsageError } from '../errors'
-import type { ListedPeriod } from '../format'
+import { formatQuotaWarnings, type WrittenPeriod } from '../format'
 import { resolvePeriod } from '../periods'
+import type { CommandResult } from './result'
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -31,7 +32,7 @@ interface PeriodUpdate {
  * `PUT /periods/:id` carrying only the fields the user provided. Bad input and
  * server 400/404/409 surface as `UsageError` (exit 1).
  */
-export async function runChange(client: ApiClient, options: ChangeOptions = {}): Promise<string> {
+export async function runChange(client: ApiClient, options: ChangeOptions = {}): Promise<CommandResult> {
   const { id, start, end, type, note, halfDay } = options
 
   if (!id) {
@@ -60,9 +61,9 @@ export async function runChange(client: ApiClient, options: ChangeOptions = {}):
 
   const fullId = (await resolvePeriod(client, id)).id
 
-  let updated: ListedPeriod
+  let updated: WrittenPeriod
   try {
-    updated = await client.request<ListedPeriod>(`/periods/${fullId}`, {
+    updated = await client.request<WrittenPeriod>(`/periods/${fullId}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     })
@@ -77,7 +78,9 @@ export async function runChange(client: ApiClient, options: ChangeOptions = {}):
   }
 
   if (options.json) {
-    return JSON.stringify(updated, null, 2)
+    return { output: JSON.stringify(updated, null, 2) }
   }
-  return `Updated: ${updated.id} ${updated.startDate} → ${updated.endDate} (${updated.type ?? 'urlaub'})`
+  const output = `Updated: ${updated.id} ${updated.startDate} → ${updated.endDate} (${updated.type ?? 'urlaub'})`
+  const warning = formatQuotaWarnings(updated.warnings)
+  return warning ? { output, warning } : { output }
 }

@@ -288,6 +288,8 @@ Or pass it per-command without exporting: `holiday --api http://localhost:3001/a
 
 Valid `--type` values: `urlaub`, `bildungsurlaub`, `kur`, `sabbatical`, `unbezahlterUrlaub`, `mutterschaftsurlaub`, `elternzeit`, `sonderurlaub` (default: `urlaub`).
 
+`add` and `change` still succeed when a booking exceeds your remaining `urlaub` entitlement, but print a `⚠` warning to **stderr** (stdout stays clean for scripts). Under `--json` the warning is carried in the response body as a `warnings` array instead. Exit code is unchanged (`0`).
+
 ### Examples
 
 ```bash

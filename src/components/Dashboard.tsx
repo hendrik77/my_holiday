@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useUIStore } from '../state/store';
 import { usePeriods, useSettings } from '../api/hooks';
 import { countVacationWorkDaysInYear, countCarryOverUsed, carryOverDeadline, toISODate, formatDate, formatDateRange } from '../utils/calendar';
-import { computeProRataEntitlement, computeLeaveReduction } from '../utils/entitlement';
+import { computeRemainingDays } from '../utils/entitlement';
 import { VacationModal } from './VacationModal';
 import { useT } from '../i18n/useT';
 import './Dashboard.css';
@@ -16,17 +16,6 @@ export function Dashboard() {
   const { data: periods = [] } = usePeriods(year);
   const { data: settings } = useSettings();
   const baseTotalDays = settings?.totalDays ?? 30;
-  const effectiveTotalDays = useMemo(() => {
-    const proRata = computeProRataEntitlement(
-      settings?.employmentStartDate ?? '',
-      settings?.employmentEndDate ?? '',
-      year,
-      baseTotalDays,
-    );
-    const reduction = computeLeaveReduction(periods, year, baseTotalDays);
-    return Math.max(0, proRata - reduction);
-  }, [settings, year, periods, baseTotalDays]);
-  const isAdjusted = effectiveTotalDays !== baseTotalDays;
   const carryOverDays = settings?.carryOverDays ?? 0;
   const bildungsUrlaubDays = settings?.bildungsUrlaubDays ?? 0;
   const state = (settings?.state as 'HE') || 'HE';
@@ -34,18 +23,24 @@ export function Dashboard() {
   const [showAdd, setShowAdd] = useState(false);
   const [editingPeriod, setEditingPeriod] = useState<VacationPeriod | null>(null);
 
+  const { entitledDays: effectiveTotalDays, usedDays, remaining: remainingDays } = useMemo(
+    () =>
+      computeRemainingDays({
+        periods,
+        year,
+        totalDays: baseTotalDays,
+        employmentStartDate: settings?.employmentStartDate ?? '',
+        employmentEndDate: settings?.employmentEndDate ?? '',
+        state,
+      }),
+    [periods, year, baseTotalDays, settings, state],
+  );
+  const isAdjusted = effectiveTotalDays !== baseTotalDays;
+
   const urlaubPeriods = useMemo(
     () => periods.filter((p) => !p.type || p.type === 'urlaub'),
     [periods],
   );
-
-  const usedDays = useMemo(() => {
-    return urlaubPeriods.reduce((sum, p) => {
-      return sum + countVacationWorkDaysInYear(p, year, state);
-    }, 0);
-  }, [urlaubPeriods, year, state]);
-
-  const remainingDays = effectiveTotalDays - usedDays;
   const usedPercent = Math.min((usedDays / effectiveTotalDays) * 100, 100);
   const isOver = usedDays > effectiveTotalDays;
 

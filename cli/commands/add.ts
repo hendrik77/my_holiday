@@ -1,6 +1,8 @@
 import { ApiError, type ApiClient } from '../api'
-import { type VacationPeriod, type VacationType, VACATION_TYPES } from '../../src/types'
+import { type VacationType, VACATION_TYPES } from '../../src/types'
 import { UsageError } from '../errors'
+import { formatQuotaWarnings, type WrittenPeriod } from '../format'
+import type { CommandResult } from './result'
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -15,11 +17,12 @@ export interface AddOptions {
 
 /**
  * Validate input locally, POST a new vacation period, and return the line to
- * print. Bad input throws `UsageError` (exit 1) before any request is made;
- * server 400/409 are translated to `UsageError` so the user sees a usage-level
- * failure rather than a generic server error (exit 2).
+ * print (plus any quota warning for stderr). Bad input throws `UsageError`
+ * (exit 1) before any request is made; server 400/409 are translated to
+ * `UsageError` so the user sees a usage-level failure rather than a generic
+ * server error (exit 2).
  */
-export async function runAdd(client: ApiClient, options: AddOptions = {}): Promise<string> {
+export async function runAdd(client: ApiClient, options: AddOptions = {}): Promise<CommandResult> {
   const { start, type } = options
 
   if (!start || !ISO_DATE_RE.test(start)) {
@@ -42,9 +45,9 @@ export async function runAdd(client: ApiClient, options: AddOptions = {}): Promi
     type: type ?? 'urlaub',
   }
 
-  let created: VacationPeriod
+  let created: WrittenPeriod
   try {
-    created = await client.request<VacationPeriod>('/periods', {
+    created = await client.request<WrittenPeriod>('/periods', {
       method: 'POST',
       body: JSON.stringify(body),
     })
@@ -59,7 +62,9 @@ export async function runAdd(client: ApiClient, options: AddOptions = {}): Promi
   }
 
   if (options.json) {
-    return JSON.stringify(created, null, 2)
+    return { output: JSON.stringify(created, null, 2) }
   }
-  return `Added: ${created.id} ${created.startDate} → ${created.endDate} (${created.type ?? 'urlaub'})`
+  const output = `Added: ${created.id} ${created.startDate} → ${created.endDate} (${created.type ?? 'urlaub'})`
+  const warning = formatQuotaWarnings(created.warnings)
+  return warning ? { output, warning } : { output }
 }

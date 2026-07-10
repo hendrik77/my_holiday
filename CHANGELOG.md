@@ -8,6 +8,13 @@ All notable changes to My Holiday.
 
 ---
 
+## v2.5.1 (2026-07-10)
+
+### Changed
+- **CI & release workflows bumped to Node 24-native action majors** — every pinned GitHub Action (`checkout`, `setup-node`, `upload`/`download-artifact`, the `docker/*` actions, `action-gh-release`) now runs on Node 24, clearing the Node.js 20 runtime deprecation warnings on every CI and release run; the interim `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` stopgap was removed. No runtime or app changes
+
+---
+
 ## v2.5.0 (2026-07-10)
 
 ### Added

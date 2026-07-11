@@ -9,4 +9,29 @@ services:
       NODE_ENV: production
       DB_PATH: /app/data/my-holiday.db
       API_HOST: "0.0.0.0"
+      # Multi-user mode (ADR-0006): start the db service via
+      #   docker compose --profile postgres up
+      # and switch the app to it with:
+      # DB_DRIVER: postgres
+      # DATABASE_URL: postgres://holiday:change-me@db:5432/holiday
     restart: unless-stopped
+
+  # Optional PostgreSQL backend — only needed for multi-user mode.
+  db:
+    image: postgres:17-alpine
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_USER: holiday
+      POSTGRES_PASSWORD: change-me
+      POSTGRES_DB: holiday
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U holiday"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:

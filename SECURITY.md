@@ -12,6 +12,7 @@ These are intentional design tradeoffs, not bugs:
 - **CORS restricted to local origins by default** — the API only answers cross-origin browser requests from `localhost` / `127.0.0.1` / `[::1]` origins (any port). Web pages on other origins cannot read or write the API from a visitor's browser. Set `CORS_ORIGIN` to allow one specific additional origin. Same-origin use (the SPA served by the API itself) is unaffected.
 - **DNS rebinding** — CORS does not stop an attacker-controlled hostname that rebinds to `127.0.0.1`; setting `API_TOKEN` closes this vector because the attacker's page cannot supply the token.
 - **No rate limiting** — not relevant for a single-user localhost app, but must be added before any public exposure
+- **PostgreSQL compose service has no port mapping and no default password** — the optional `db` service (`docker compose --profile postgres up`) is reachable only from the compose network and refuses to start unless `POSTGRES_PASSWORD` is set. Do not add a host `ports:` mapping without also treating that password as a production credential.
 - **No CSRF protection** — acceptable in the current threat model; required if the app is ever exposed with session-based auth
 
 ## Reporting a Vulnerability

@@ -4,28 +4,29 @@ import type { SettingsRepo } from '../types';
 import { settingsFromRows, settingsUpdateEntries } from '../rows';
 
 /**
- * PostgreSQL settings repository over the key-value `settings` table.
- * Mapping and defaults shared with the SQLite driver via rows.ts.
+ * PostgreSQL settings repository over the per-user key-value `user_settings`
+ * table (migration 002). Mapping and defaults shared with the SQLite driver
+ * via rows.ts — users without stored rows read pure defaults.
  */
 export function createPostgresSettingsRepo(pool: Pool): SettingsRepo {
-  async function readSettings(): Promise<Settings> {
-    const { rows } = await pool.query('SELECT key, value FROM settings');
+  async function readSettings(userId: string): Promise<Settings> {
+    const { rows } = await pool.query('SELECT key, value FROM user_settings WHERE user_id = $1', [userId]);
     return settingsFromRows(rows);
   }
 
   return {
-    async get(): Promise<Settings> {
-      return readSettings();
+    async get(userId: string): Promise<Settings> {
+      return readSettings(userId);
     },
 
-    async update(_userId: string, updates: SettingsUpdate): Promise<Settings> {
+    async update(userId: string, updates: SettingsUpdate): Promise<Settings> {
       for (const [key, value] of settingsUpdateEntries(updates)) {
         await pool.query(
-          'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
-          [key, value],
+          'INSERT INTO user_settings (user_id, key, value) VALUES ($1, $2, $3) ON CONFLICT (user_id, key) DO UPDATE SET value = EXCLUDED.value',
+          [userId, key, value],
         );
       }
-      return readSettings();
+      return readSettings(userId);
     },
   };
 }

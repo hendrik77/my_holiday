@@ -63,6 +63,23 @@ describe('migrate-v1 script', () => {
     await db.close();
   });
 
+  it('skips duplicate rows within a single CSV', async () => {
+    const csv = [
+      'Startdatum;Enddatum;Notiz;Halber Tag;Arbeitstage',
+      '2026-07-01;2026-07-15;Sommerurlaub;Nein;11',
+      '2026-07-01;2026-07-15;Sommerurlaub;Nein;11',
+    ].join('\n');
+
+    const output = runMigrate(csv);
+    expect(output).toContain('Imported 1');
+    expect(output).toContain('Skipped 1');
+
+    const db = await openDb();
+    const periods = await db.periods.listByYear(DEFAULT_USER_ID, 2026);
+    expect(periods).toHaveLength(1);
+    await db.close();
+  });
+
   it('is idempotent — re-running skips existing periods', async () => {
     const csv = [
       'Startdatum;Enddatum;Notiz;Halber Tag;Arbeitstage',

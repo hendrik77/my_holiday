@@ -131,12 +131,17 @@ async function quotaWarningsForPeriod(
   return warnings;
 }
 
+/**
+ * The acting user of a request: whatever upstream auth middleware resolved
+ * (Phase 4), else the synthetic single-user identity. Phase 4's requireUser
+ * middleware makes the fallback unreachable in oidc mode.
+ */
+function uid(req: express.Request): string {
+  return req.user?.id ?? DEFAULT_USER_ID;
+}
+
 export function createRouter(db: Db): Router {
   const router = Router();
-
-  // Single-user mode: every request acts as the default user. Replaced by
-  // the authenticated req.user in Phase 3/4.
-  const userId = DEFAULT_USER_ID;
 
   // Parse raw CSV bodies for the import endpoint (JSON is parsed app-level).
   router.use(express.text({ type: 'text/csv', limit: '1mb' }));
@@ -144,6 +149,7 @@ export function createRouter(db: Db): Router {
   // ── Periods ──────────────────────────────────────────────────────
 
   router.get('/periods', async (req, res) => {
+    const userId = uid(req);
     let year: number | null = null;
     if (req.query.year !== undefined) {
       year = parseYear(req.query.year);
@@ -162,6 +168,7 @@ export function createRouter(db: Db): Router {
   });
 
   router.post('/periods', async (req, res) => {
+    const userId = uid(req);
     const { startDate, endDate, note, halfDay, type } = req.body;
 
     if (!isISODate(startDate) || !isISODate(endDate)) {
@@ -197,6 +204,7 @@ export function createRouter(db: Db): Router {
   });
 
   router.put('/periods/:id', async (req, res) => {
+    const userId = uid(req);
     const { id } = req.params;
     const { startDate, endDate, note, halfDay, type } = req.body;
 
@@ -253,7 +261,7 @@ export function createRouter(db: Db): Router {
 
   router.delete('/periods/:id', async (req, res) => {
     const { id } = req.params;
-    const deleted = await db.periods.remove(userId, id);
+    const deleted = await db.periods.remove(uid(req), id);
 
     if (!deleted) {
       res.status(404).json({ error: 'Period not found' });
@@ -271,7 +279,7 @@ export function createRouter(db: Db): Router {
       res.status(400).json({ error: 'Invalid year' });
       return;
     }
-    const periods = await db.periods.listByYear(userId, year);
+    const periods = await db.periods.listByYear(uid(req), year);
     const ics = generateICS(
       periods.map((p) => ({
         id: p.id,
@@ -291,6 +299,7 @@ export function createRouter(db: Db): Router {
   // ── CSV Export ──────────────────────────────────────────────────
 
   router.get('/export.csv', async (req, res) => {
+    const userId = uid(req);
     const year = req.query.year !== undefined ? parseYear(req.query.year) : new Date().getFullYear();
     if (year === null) {
       res.status(400).json({ error: 'Invalid year' });
@@ -307,6 +316,7 @@ export function createRouter(db: Db): Router {
   // ── CSV Import ──────────────────────────────────────────────────
 
   router.post('/import', async (req, res) => {
+    const userId = uid(req);
     const csv = typeof req.body === 'string' ? req.body : '';
     const { periods, errors } = parseImportCSV(csv);
 
@@ -352,7 +362,7 @@ export function createRouter(db: Db): Router {
       return;
     }
 
-    res.json(await computeRemainingForYear(db, userId, year));
+    res.json(await computeRemainingForYear(db, uid(req), year));
   });
 
   // ── Public holidays ─────────────────────────────────────────────
@@ -364,7 +374,7 @@ export function createRouter(db: Db): Router {
       return;
     }
 
-    let state = (await db.settings.get(userId)).state as GermanState;
+    let state = (await db.settings.get(uid(req))).state as GermanState;
     if (req.query.state !== undefined) {
       if (typeof req.query.state !== 'string' || !VALID_STATES.has(req.query.state)) {
         res.status(400).json({ error: 'state must be a valid German state code (e.g. BW, BY, HE)' });
@@ -381,8 +391,8 @@ export function createRouter(db: Db): Router {
 
   // ── Settings ─────────────────────────────────────────────────────
 
-  router.get('/settings', async (_req, res) => {
-    const settings = await db.settings.get(userId);
+  router.get('/settings', async (req, res) => {
+    const settings = await db.settings.get(uid(req));
     res.json(settings);
   });
 
@@ -443,7 +453,7 @@ export function createRouter(db: Db): Router {
       allowed.bildungsUrlaubDays = n;
     }
 
-    const settings = await db.settings.update(userId, allowed);
+    const settings = await db.settings.update(uid(req), allowed);
     res.json(settings);
   });
 

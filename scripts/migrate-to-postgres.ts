@@ -13,7 +13,7 @@
 import Database from 'better-sqlite3';
 import { Pool } from 'pg';
 import { existsSync } from 'node:fs';
-import { createDb, DEFAULT_USER_ID } from '../server/db';
+import { createDb } from '../server/db';
 import { loadConfig } from '../server/config';
 
 function arg(name: string): string | undefined {
@@ -21,17 +21,29 @@ function arg(name: string): string | undefined {
   return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : undefined;
 }
 
+/** Operator-facing failure: printed as-is, exit code 1, no stack trace. */
+class MigrationError extends Error {}
+
+async function countRows(
+  client: { query: (sql: string) => Promise<{ rows: { n: number }[] }> },
+  table: 'periods' | 'settings',
+): Promise<number> {
+  const { rows } = await client.query(`SELECT COUNT(*)::int AS n FROM ${table}`);
+  return rows[0].n;
+}
+
 async function main() {
   const sqlitePath = arg('--sqlite');
   const databaseUrl = arg('--database-url') || process.env.DATABASE_URL;
 
   if (!sqlitePath || !databaseUrl) {
-    console.error('Usage: npx tsx scripts/migrate-to-postgres.ts --sqlite <path> --database-url <url>');
-    process.exit(1);
+    throw new MigrationError('Usage: npx tsx scripts/migrate-to-postgres.ts --sqlite <path> --database-url <url>');
+  }
+  if (arg('--database-url')) {
+    console.error('Warning: --database-url is visible in shell history and process lists — prefer the DATABASE_URL env var.');
   }
   if (!existsSync(sqlitePath)) {
-    console.error(`Error: SQLite file not found: "${sqlitePath}"`);
-    process.exit(1);
+    throw new MigrationError(`Error: SQLite file not found: "${sqlitePath}"`);
   }
 
   // Source: read-only snapshot of the raw rows.
@@ -40,23 +52,27 @@ async function main() {
   const settings = src.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
   src.close();
 
-  // Target: bring the schema up to date, then refuse if periods exist.
+  // Target: bring the schema up to date before touching it directly.
   const target = await createDb(loadConfig({ DB_DRIVER: 'postgres', DATABASE_URL: databaseUrl }));
-  const existing = await target.periods.listAll(DEFAULT_USER_ID);
   await target.close();
-  if (existing.length > 0) {
-    console.error(
-      `Error: target database is not empty (${existing.length} period(s)) — refusing to migrate into existing data`,
-    );
-    process.exit(1);
-  }
 
-  // Copy raw rows in one transaction, preserving ids and timestamps.
+  // Emptiness guard, copy, and verification all run in ONE transaction on
+  // ONE client with the tables locked — nothing can slip rows in between the
+  // "target is empty" observation and the commit, and any failure rolls back.
   const pool = new Pool({ connectionString: databaseUrl });
   try {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+      await client.query('LOCK TABLE periods, settings IN EXCLUSIVE MODE');
+
+      const existing = await countRows(client, 'periods');
+      if (existing > 0) {
+        throw new MigrationError(
+          `Error: target database is not empty (${existing} period(s)) — refusing to migrate into existing data`,
+        );
+      }
+
       for (const row of periods) {
         await client.query(
           'INSERT INTO periods (id, start_date, end_date, note, half_day, type, changed_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
@@ -69,18 +85,22 @@ async function main() {
           [key, value],
         );
       }
+
+      const periodCount = await countRows(client, 'periods');
+      const settingsCount = await countRows(client, 'settings');
+      if (periodCount !== periods.length || settingsCount < settings.length) {
+        throw new MigrationError(
+          `Error: verification failed — expected ${periods.length} period(s) and ${settings.length} setting(s), ` +
+            `found ${periodCount} and ${settingsCount}; nothing was written`,
+        );
+      }
+
       await client.query('COMMIT');
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
     } finally {
       client.release();
-    }
-
-    const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM periods');
-    if (rows[0].n !== periods.length) {
-      console.error(`Error: verification failed — expected ${periods.length} period(s), found ${rows[0].n}`);
-      process.exit(1);
     }
   } finally {
     await pool.end();
@@ -90,4 +110,12 @@ async function main() {
   console.log('   Point the server at it with DB_DRIVER=postgres and DATABASE_URL, then verify before deleting the SQLite file.');
 }
 
-await main();
+try {
+  await main();
+} catch (error) {
+  if (error instanceof MigrationError) {
+    console.error(error.message);
+    process.exit(1);
+  }
+  throw error;
+}

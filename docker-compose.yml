@@ -9,11 +9,12 @@ services:
       NODE_ENV: production
       DB_PATH: /app/data/my-holiday.db
       API_HOST: "0.0.0.0"
-      # Multi-user mode (ADR-0006): start the db service via
+      # Multi-user mode (ADR-0006): set POSTGRES_PASSWORD in a .env file,
+      # start the db service via
       #   docker compose --profile postgres up
       # and switch the app to it with:
       # DB_DRIVER: postgres
-      # DATABASE_URL: postgres://holiday:change-me@db:5432/holiday
+      # DATABASE_URL: postgres://holiday:${POSTGRES_PASSWORD}@db:5432/holiday
     restart: unless-stopped
 
   # Optional PostgreSQL backend — only needed for multi-user mode.
@@ -22,7 +23,8 @@ services:
     profiles: ["postgres"]
     environment:
       POSTGRES_USER: holiday
-      POSTGRES_PASSWORD: change-me
+      # No default on purpose — compose refuses to start without a password.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env for the postgres profile}
       POSTGRES_DB: holiday
     volumes:
       - pgdata:/var/lib/postgresql/data

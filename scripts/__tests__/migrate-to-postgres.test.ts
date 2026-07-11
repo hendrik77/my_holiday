@@ -36,7 +36,7 @@ describe.skipIf(!url)('migrate-to-postgres script', () => {
   beforeEach(async () => {
     cleanupFixture();
     const admin = new Pool({ connectionString: url, max: 1 });
-    await admin.query('DROP TABLE IF EXISTS periods, settings, schema_migrations CASCADE');
+    await admin.query('DROP TABLE IF EXISTS periods, settings, user_settings, users, schema_migrations CASCADE');
     await admin.end();
 
     // Fixture: a populated single-user SQLite database.

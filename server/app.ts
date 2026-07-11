@@ -3,7 +3,7 @@ import cors from 'cors';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
-import type Database from 'better-sqlite3';
+import type { Db } from './db/types';
 import { createRouter } from './routes';
 
 export interface CreateAppOptions {
@@ -30,7 +30,7 @@ interface HttpError extends Error {
 }
 
 /** Build the Express app: CORS, JSON body parsing, API routes, optional SPA serving. */
-export function createApp(db: Database.Database, options: CreateAppOptions = {}): express.Express {
+export function createApp(db: Db, options: CreateAppOptions = {}): express.Express {
   const app = express();
 
   app.use(

@@ -8,7 +8,8 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { createDb, createPeriod } from '../server/db';
+import { createDb, DEFAULT_USER_ID } from '../server/db';
+import { loadConfig } from '../server/config';
 import type { CreatePeriodInput } from '../server/types';
 
 // Re-use the CSV parser from the frontend utilities
@@ -203,7 +204,7 @@ function parseImportCSV(csv: string): { periods: CreatePeriodInput[]; errors: st
 
 // ── Main migration logic ──
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
   const csvPath = args[0];
   let dbPath = 'data/my-holiday.db';
@@ -245,37 +246,30 @@ function main() {
     process.exit(0);
   }
 
-  const db = createDb(dbPath);
+  const db = await createDb(loadConfig({ DB_PATH: dbPath }));
 
   let imported = 0;
   let skipped = 0;
 
-  // Use a transaction for speed
-  const checkExisting = db.prepare(
-    'SELECT id FROM periods WHERE start_date = ? AND end_date = ? AND note = ? AND half_day = ? AND type = ?'
-  );
+  // Duplicate detection: match on (startDate, endDate, note, halfDay, type),
+  // same criteria as the previous SQL lookup.
+  const dedupeKey = (p: { startDate: string; endDate: string; note?: string; halfDay?: boolean; type?: string }) =>
+    [p.startDate, p.endDate, p.note || '', p.halfDay === true, p.type || 'urlaub'].join('|');
 
-  const insertAll = db.transaction(() => {
-    for (const period of periods) {
-      const existing = checkExisting.get(
-        period.startDate,
-        period.endDate,
-        period.note,
-        period.halfDay ? 1 : 0,
-        period.type || 'urlaub'
-      );
+  const existing = new Set((await db.periods.listAll(DEFAULT_USER_ID)).map(dedupeKey));
 
-      if (existing) {
-        skipped++;
-        continue;
-      }
-
-      createPeriod(db, period);
-      imported++;
+  for (const period of periods) {
+    const key = dedupeKey(period);
+    if (existing.has(key)) {
+      skipped++;
+      continue;
     }
-  });
-
-  insertAll();
+    await db.periods.create(DEFAULT_USER_ID, period);
+    // Track within-batch inserts so a duplicate row later in the same CSV
+    // is skipped, matching the pre-v3 live-query behavior.
+    existing.add(key);
+    imported++;
+  }
 
   console.log(`✅ Imported ${imported} period(s).`);
   if (skipped > 0) {
@@ -285,7 +279,7 @@ function main() {
     console.log(`⚠️  ${errors.length} warning(s).`);
   }
 
-  db.close();
+  await db.close();
 }
 
-main();
+await main();

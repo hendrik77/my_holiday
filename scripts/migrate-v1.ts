@@ -259,11 +259,15 @@ async function main() {
   const existing = new Set((await db.periods.listAll(DEFAULT_USER_ID)).map(dedupeKey));
 
   for (const period of periods) {
-    if (existing.has(dedupeKey(period))) {
+    const key = dedupeKey(period);
+    if (existing.has(key)) {
       skipped++;
       continue;
     }
     await db.periods.create(DEFAULT_USER_ID, period);
+    // Track within-batch inserts so a duplicate row later in the same CSV
+    // is skipped, matching the pre-v3 live-query behavior.
+    existing.add(key);
     imported++;
   }
 

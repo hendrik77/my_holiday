@@ -18,6 +18,8 @@ const SETTINGS_DEFAULTS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 // `ON CONFLICT DO NOTHING` is valid in both SQLite (3.24+) and PostgreSQL.
+// String interpolation is safe ONLY because SETTINGS_DEFAULTS is a hardcoded
+// module constant — never build migration SQL from dynamic/user input.
 const seedSettings = SETTINGS_DEFAULTS.map(
   ([key, value]) => `INSERT INTO settings (key, value) VALUES ('${key}', '${value}') ON CONFLICT (key) DO NOTHING;`,
 ).join('\n');

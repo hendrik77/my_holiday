@@ -1,24 +1,23 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import request from 'supertest';
-import Database from 'better-sqlite3';
-import { initDb } from '../db';
+import { createDb, type Db } from '../db';
+import { loadConfig } from '../config';
 import { createApp, type CreateAppOptions } from '../app';
 
-let db: Database.Database;
+let db: Db;
 
-function makeApp(options: CreateAppOptions = {}) {
-  db = new Database(':memory:');
-  initDb(db);
+async function makeApp(options: CreateAppOptions = {}) {
+  db = await createDb(loadConfig({ DB_DRIVER: 'sqlite', DB_PATH: ':memory:' }));
   return createApp(db, options);
 }
 
-afterEach(() => {
-  db.close();
+afterEach(async () => {
+  await db.close();
 });
 
 describe('createApp error handling', () => {
   it('returns 400 (not 500) for a malformed JSON body', async () => {
-    const app = makeApp();
+    const app = await makeApp();
     const res = await request(app)
       .post('/api/v1/periods')
       .set('Content-Type', 'application/json')
@@ -28,7 +27,7 @@ describe('createApp error handling', () => {
   });
 
   it('returns 413 for an oversized JSON body', async () => {
-    const app = makeApp();
+    const app = await makeApp();
     const res = await request(app)
       .post('/api/v1/periods')
       .set('Content-Type', 'application/json')
@@ -38,7 +37,7 @@ describe('createApp error handling', () => {
   });
 
   it('still serves the API routes', async () => {
-    const app = makeApp();
+    const app = await makeApp();
     const res = await request(app).get('/api/v1/settings');
     expect(res.status).toBe(200);
     expect(res.body.totalDays).toBe(30);
@@ -47,25 +46,25 @@ describe('createApp error handling', () => {
 
 describe('createApp CORS defaults', () => {
   it('does not reflect a non-local origin by default', async () => {
-    const app = makeApp();
+    const app = await makeApp();
     const res = await request(app).get('/api/v1/settings').set('Origin', 'https://evil.example');
     expect(res.headers['access-control-allow-origin']).toBeUndefined();
   });
 
   it('allows localhost dev origins by default', async () => {
-    const app = makeApp();
+    const app = await makeApp();
     const res = await request(app).get('/api/v1/settings').set('Origin', 'http://localhost:5173');
     expect(res.headers['access-control-allow-origin']).toBe('http://localhost:5173');
   });
 
   it('allows 127.0.0.1 origins by default', async () => {
-    const app = makeApp();
+    const app = await makeApp();
     const res = await request(app).get('/api/v1/settings').set('Origin', 'http://127.0.0.1:8080');
     expect(res.headers['access-control-allow-origin']).toBe('http://127.0.0.1:8080');
   });
 
   it('honours an explicit corsOrigin override', async () => {
-    const app = makeApp({ corsOrigin: 'https://holiday.example.lan' });
+    const app = await makeApp({ corsOrigin: 'https://holiday.example.lan' });
     const res = await request(app)
       .get('/api/v1/settings')
       .set('Origin', 'https://holiday.example.lan');
@@ -77,14 +76,14 @@ describe('createApp bearer-token auth', () => {
   const apiToken = 'test-token-123';
 
   it('rejects API requests without a token when apiToken is configured', async () => {
-    const app = makeApp({ apiToken });
+    const app = await makeApp({ apiToken });
     const res = await request(app).get('/api/v1/settings');
     expect(res.status).toBe(401);
     expect(res.body.error).toBeTruthy();
   });
 
   it('rejects a wrong token', async () => {
-    const app = makeApp({ apiToken });
+    const app = await makeApp({ apiToken });
     const res = await request(app)
       .get('/api/v1/settings')
       .set('Authorization', 'Bearer wrong-token');
@@ -92,7 +91,7 @@ describe('createApp bearer-token auth', () => {
   });
 
   it('accepts the configured token', async () => {
-    const app = makeApp({ apiToken });
+    const app = await makeApp({ apiToken });
     const res = await request(app)
       .get('/api/v1/settings')
       .set('Authorization', `Bearer ${apiToken}`);
@@ -101,7 +100,7 @@ describe('createApp bearer-token auth', () => {
   });
 
   it('protects mutating endpoints too', async () => {
-    const app = makeApp({ apiToken });
+    const app = await makeApp({ apiToken });
     const res = await request(app)
       .post('/api/v1/periods')
       .send({ startDate: '2026-07-01', endDate: '2026-07-03', note: '' });
@@ -109,7 +108,7 @@ describe('createApp bearer-token auth', () => {
   });
 
   it('requires no token when apiToken is not configured', async () => {
-    const app = makeApp();
+    const app = await makeApp();
     const res = await request(app).get('/api/v1/settings');
     expect(res.status).toBe(200);
   });
@@ -117,14 +116,14 @@ describe('createApp bearer-token auth', () => {
 
 describe('createApp /health', () => {
   it('responds with status ok', async () => {
-    const app = makeApp();
+    const app = await makeApp();
     const res = await request(app).get('/health');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: 'ok' });
   });
 
   it('stays reachable without a token when apiToken is configured', async () => {
-    const app = makeApp({ apiToken: 'secret' });
+    const app = await makeApp({ apiToken: 'secret' });
     const res = await request(app).get('/health');
     expect(res.status).toBe(200);
   });
@@ -132,7 +131,7 @@ describe('createApp /health', () => {
 
 describe('createApp unknown API routes', () => {
   it('returns a JSON 404 for unknown /api paths', async () => {
-    const app = makeApp();
+    const app = await makeApp();
     const res = await request(app).get('/api/v1/does-not-exist');
     expect(res.status).toBe(404);
     expect(res.headers['content-type']).toContain('application/json');
@@ -140,7 +139,7 @@ describe('createApp unknown API routes', () => {
   });
 
   it('returns a JSON 404 for unknown /api paths even with static serving enabled', async () => {
-    const app = makeApp({ serveStatic: true });
+    const app = await makeApp({ serveStatic: true });
     const res = await request(app).get('/api/v1/does-not-exist');
     expect(res.status).toBe(404);
     expect(res.headers['content-type']).toContain('application/json');

@@ -1,14 +1,6 @@
 import express, { Router } from 'express';
-import type Database from 'better-sqlite3';
-import {
-  getAllPeriods,
-  getPeriodsByYear,
-  createPeriod,
-  updatePeriod,
-  deletePeriod,
-  getSettings,
-  updateSettings,
-} from './db';
+import type { Db, PeriodUpdate } from './db/types';
+import { DEFAULT_USER_ID } from './db/constants';
 import { generateICS } from '../src/utils/ics';
 import {
   countVacationWorkDays,
@@ -81,11 +73,11 @@ interface YearRemaining {
  * days consumed within the year, and the carry-over sub-total. Shared by
  * `GET /remaining` and the quota-warning check on period writes.
  */
-function computeRemainingForYear(db: Database.Database, year: number): YearRemaining {
-  const settings = getSettings(db);
+async function computeRemainingForYear(db: Db, userId: string, year: number): Promise<YearRemaining> {
+  const settings = await db.settings.get(userId);
   const totalDays = settings.totalDays;
   const state = settings.state as GermanState;
-  const periods = getPeriodsByYear(db, year);
+  const periods = await db.periods.listByYear(userId, year);
   const urlaubPeriods = periods.filter((p) => !p.type || p.type === 'urlaub');
 
   const usedDays = urlaubPeriods.reduce(
@@ -121,16 +113,17 @@ function computeRemainingForYear(db: Database.Database, year: number): YearRemai
  * year the period touches whose Urlaub total now exceeds entitlement. Empty
  * when everything is within quota; only `urlaub` bookings are checked.
  */
-function quotaWarningsForPeriod(
-  db: Database.Database,
+async function quotaWarningsForPeriod(
+  db: Db,
+  userId: string,
   startDate: string,
   endDate: string,
-): QuotaWarning[] {
+): Promise<QuotaWarning[]> {
   const startYear = Number(startDate.slice(0, 4));
   const endYear = Number(endDate.slice(0, 4));
   const warnings: QuotaWarning[] = [];
   for (let year = startYear; year <= endYear; year++) {
-    const { entitledDays, usedDays, remaining } = computeRemainingForYear(db, year);
+    const { entitledDays, usedDays, remaining } = await computeRemainingForYear(db, userId, year);
     if (remaining < 0) {
       warnings.push({ code: 'quota-exceeded', year, entitledDays, usedDays, remaining });
     }
@@ -138,15 +131,19 @@ function quotaWarningsForPeriod(
   return warnings;
 }
 
-export function createRouter(db: Database.Database): Router {
+export function createRouter(db: Db): Router {
   const router = Router();
+
+  // Single-user mode: every request acts as the default user. Replaced by
+  // the authenticated req.user in Phase 3/4.
+  const userId = DEFAULT_USER_ID;
 
   // Parse raw CSV bodies for the import endpoint (JSON is parsed app-level).
   router.use(express.text({ type: 'text/csv', limit: '1mb' }));
 
   // ── Periods ──────────────────────────────────────────────────────
 
-  router.get('/periods', (req, res) => {
+  router.get('/periods', async (req, res) => {
     let year: number | null = null;
     if (req.query.year !== undefined) {
       year = parseYear(req.query.year);
@@ -155,8 +152,8 @@ export function createRouter(db: Database.Database): Router {
         return;
       }
     }
-    const periods = year !== null ? getPeriodsByYear(db, year) : getAllPeriods(db);
-    const state = getSettings(db).state as GermanState;
+    const periods = year !== null ? await db.periods.listByYear(userId, year) : await db.periods.listAll(userId);
+    const state = (await db.settings.get(userId)).state as GermanState;
     const enriched = periods.map((p) => ({
       ...p,
       workDays: year !== null ? countVacationWorkDaysInYear(p, year, state) : countVacationWorkDays(p, state),
@@ -164,7 +161,7 @@ export function createRouter(db: Database.Database): Router {
     res.json(enriched);
   });
 
-  router.post('/periods', (req, res) => {
+  router.post('/periods', async (req, res) => {
     const { startDate, endDate, note, halfDay, type } = req.body;
 
     if (!isISODate(startDate) || !isISODate(endDate)) {
@@ -180,13 +177,13 @@ export function createRouter(db: Database.Database): Router {
       return;
     }
 
-    if (hasOverlap(startDate, endDate, getAllPeriods(db))) {
+    if (hasOverlap(startDate, endDate, await db.periods.listAll(userId))) {
       res.status(409).json({ error: 'overlaps an existing period' });
       return;
     }
 
     const effectiveType = type || 'urlaub';
-    const period = createPeriod(db, {
+    const period = await db.periods.create(userId, {
       startDate,
       endDate,
       note: typeof note === 'string' ? note : '',
@@ -194,11 +191,12 @@ export function createRouter(db: Database.Database): Router {
       type: effectiveType,
     });
 
-    const warnings = effectiveType === 'urlaub' ? quotaWarningsForPeriod(db, startDate, endDate) : [];
+    const warnings =
+      effectiveType === 'urlaub' ? await quotaWarningsForPeriod(db, userId, startDate, endDate) : [];
     res.status(201).json(warnings.length > 0 ? { ...period, warnings } : period);
   });
 
-  router.put('/periods/:id', (req, res) => {
+  router.put('/periods/:id', async (req, res) => {
     const { id } = req.params;
     const { startDate, endDate, note, halfDay, type } = req.body;
 
@@ -215,7 +213,7 @@ export function createRouter(db: Database.Database): Router {
       return;
     }
 
-    const all = getAllPeriods(db);
+    const all = await db.periods.listAll(userId);
     const current = all.find((p) => p.id === id);
     if (!current) {
       res.status(404).json({ error: 'Period not found' });
@@ -232,14 +230,14 @@ export function createRouter(db: Database.Database): Router {
       return;
     }
 
-    const updates: Parameters<typeof updatePeriod>[2] = {};
+    const updates: PeriodUpdate = {};
     if (startDate !== undefined) updates.startDate = startDate;
     if (endDate !== undefined) updates.endDate = endDate;
     if (note !== undefined) updates.note = String(note);
     if (halfDay !== undefined) updates.halfDay = halfDay === true;
     if (type !== undefined) updates.type = type;
 
-    const updated = updatePeriod(db, id, updates);
+    const updated = await db.periods.update(userId, id, updates);
 
     if (!updated) {
       res.status(404).json({ error: 'Period not found' });
@@ -248,14 +246,14 @@ export function createRouter(db: Database.Database): Router {
 
     const warnings =
       (updated.type ?? 'urlaub') === 'urlaub'
-        ? quotaWarningsForPeriod(db, effectiveStart, effectiveEnd)
+        ? await quotaWarningsForPeriod(db, userId, effectiveStart, effectiveEnd)
         : [];
     res.json(warnings.length > 0 ? { ...updated, warnings } : updated);
   });
 
-  router.delete('/periods/:id', (req, res) => {
+  router.delete('/periods/:id', async (req, res) => {
     const { id } = req.params;
-    const deleted = deletePeriod(db, id);
+    const deleted = await db.periods.remove(userId, id);
 
     if (!deleted) {
       res.status(404).json({ error: 'Period not found' });
@@ -267,13 +265,13 @@ export function createRouter(db: Database.Database): Router {
 
   // ── ICS Export ──────────────────────────────────────────────────
 
-  router.get('/export.ics', (req, res) => {
+  router.get('/export.ics', async (req, res) => {
     const year = req.query.year !== undefined ? parseYear(req.query.year) : new Date().getFullYear();
     if (year === null) {
       res.status(400).json({ error: 'Invalid year' });
       return;
     }
-    const periods = getPeriodsByYear(db, year);
+    const periods = await db.periods.listByYear(userId, year);
     const ics = generateICS(
       periods.map((p) => ({
         id: p.id,
@@ -292,14 +290,14 @@ export function createRouter(db: Database.Database): Router {
 
   // ── CSV Export ──────────────────────────────────────────────────
 
-  router.get('/export.csv', (req, res) => {
+  router.get('/export.csv', async (req, res) => {
     const year = req.query.year !== undefined ? parseYear(req.query.year) : new Date().getFullYear();
     if (year === null) {
       res.status(400).json({ error: 'Invalid year' });
       return;
     }
-    const settings = getSettings(db);
-    const periods = getPeriodsByYear(db, year);
+    const settings = await db.settings.get(userId);
+    const periods = await db.periods.listByYear(userId, year);
     const csv = formatCSV(periods, settings.state as GermanState);
     res.set('Content-Type', 'text/csv; charset=utf-8');
     res.set('Content-Disposition', `attachment; filename="urlaub-${year}.csv"`);
@@ -308,7 +306,7 @@ export function createRouter(db: Database.Database): Router {
 
   // ── CSV Import ──────────────────────────────────────────────────
 
-  router.post('/import', (req, res) => {
+  router.post('/import', async (req, res) => {
     const csv = typeof req.body === 'string' ? req.body : '';
     const { periods, errors } = parseImportCSV(csv);
 
@@ -317,7 +315,7 @@ export function createRouter(db: Database.Database): Router {
       return;
     }
 
-    const existing = getAllPeriods(db).map((p) => ({
+    const existing = (await db.periods.listAll(userId)).map((p) => ({
       id: p.id,
       startDate: p.startDate,
       endDate: p.endDate,
@@ -330,7 +328,7 @@ export function createRouter(db: Database.Database): Router {
         skipped.push({ startDate: period.startDate, endDate: period.endDate, reason: 'overlap' });
         continue;
       }
-      const created = createPeriod(db, {
+      const created = await db.periods.create(userId, {
         startDate: period.startDate,
         endDate: period.endDate,
         note: period.note,
@@ -347,26 +345,26 @@ export function createRouter(db: Database.Database): Router {
 
   // ── Remaining entitlement ───────────────────────────────────────
 
-  router.get('/remaining', (req, res) => {
+  router.get('/remaining', async (req, res) => {
     const year = req.query.year !== undefined ? parseYear(req.query.year) : new Date().getFullYear();
     if (year === null) {
       res.status(400).json({ error: 'Invalid year' });
       return;
     }
 
-    res.json(computeRemainingForYear(db, year));
+    res.json(await computeRemainingForYear(db, userId, year));
   });
 
   // ── Public holidays ─────────────────────────────────────────────
 
-  router.get('/holidays', (req, res) => {
+  router.get('/holidays', async (req, res) => {
     const year = parseYear(req.query.year);
     if (year === null) {
       res.status(400).json({ error: 'Invalid year' });
       return;
     }
 
-    let state = getSettings(db).state as GermanState;
+    let state = (await db.settings.get(userId)).state as GermanState;
     if (req.query.state !== undefined) {
       if (typeof req.query.state !== 'string' || !VALID_STATES.has(req.query.state)) {
         res.status(400).json({ error: 'state must be a valid German state code (e.g. BW, BY, HE)' });
@@ -383,12 +381,12 @@ export function createRouter(db: Database.Database): Router {
 
   // ── Settings ─────────────────────────────────────────────────────
 
-  router.get('/settings', (_req, res) => {
-    const settings = getSettings(db);
+  router.get('/settings', async (_req, res) => {
+    const settings = await db.settings.get(userId);
     res.json(settings);
   });
 
-  router.put('/settings', (req, res) => {
+  router.put('/settings', async (req, res) => {
     const body = req.body;
     const allowed: Record<string, unknown> = {};
 
@@ -445,7 +443,7 @@ export function createRouter(db: Database.Database): Router {
       allowed.bildungsUrlaubDays = n;
     }
 
-    const settings = updateSettings(db, allowed);
+    const settings = await db.settings.update(userId, allowed);
     res.json(settings);
   });
 

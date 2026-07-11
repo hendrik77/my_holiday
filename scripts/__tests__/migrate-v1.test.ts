@@ -3,8 +3,8 @@ import { writeFileSync, unlinkSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import Database from 'better-sqlite3';
-import { initDb, getPeriodsByYear } from '../../server/db';
+import { createDb, DEFAULT_USER_ID, type Db } from '../../server/db';
+import { loadConfig } from '../../server/config';
 
 const TEST_CSV = join(tmpdir(), 'test-urlaub-migrate.csv');
 const TEST_DB = join(tmpdir(), 'test-my-holiday.db');
@@ -40,13 +40,11 @@ describe('migrate-v1 script', () => {
     }
   }
 
-  function openDb(): Database.Database {
-    const db = new Database(TEST_DB);
-    initDb(db);
-    return db;
+  function openDb(): Promise<Db> {
+    return createDb(loadConfig({ DB_PATH: TEST_DB }));
   }
 
-  it('imports periods from a valid CSV', () => {
+  it('imports periods from a valid CSV', async () => {
     const csv = [
       'Startdatum;Enddatum;Notiz;Halber Tag;Arbeitstage',
       '2026-07-01;2026-07-15;Sommerurlaub;Nein;11',
@@ -56,16 +54,16 @@ describe('migrate-v1 script', () => {
     const output = runMigrate(csv);
     expect(output).toContain('Imported 2');
 
-    const db = openDb();
-    const periods = getPeriodsByYear(db, 2026);
+    const db = await openDb();
+    const periods = await db.periods.listByYear(DEFAULT_USER_ID, 2026);
     expect(periods).toHaveLength(2);
     expect(periods[0].startDate).toBe('2026-07-01');
     expect(periods[0].note).toBe('Sommerurlaub');
     expect(periods[1].halfDay).toBe(true);
-    db.close();
+    await db.close();
   });
 
-  it('is idempotent — re-running skips existing periods', () => {
+  it('is idempotent — re-running skips existing periods', async () => {
     const csv = [
       'Startdatum;Enddatum;Notiz;Halber Tag;Arbeitstage',
       '2026-07-01;2026-07-15;Sommerurlaub;Nein;11',
@@ -76,10 +74,10 @@ describe('migrate-v1 script', () => {
     const output2 = runMigrate(csv);
     expect(output2).toContain('Skipped 1');
 
-    const db = openDb();
-    const periods = getPeriodsByYear(db, 2026);
+    const db = await openDb();
+    const periods = await db.periods.listByYear(DEFAULT_USER_ID, 2026);
     expect(periods).toHaveLength(1);
-    db.close();
+    await db.close();
   });
 
   it('handles empty CSV (header only)', () => {
@@ -112,7 +110,7 @@ describe('migrate-v1 script', () => {
     expect(output.toLowerCase()).toMatch(/invalid|ungültig/);
   });
 
-  it('accepts English column headers', () => {
+  it('accepts English column headers', async () => {
     const csv = [
       'Start Date;End Date;Note;Half Day;Work Days',
       '2026-08-01;2026-08-15;Summer;No;11',
@@ -121,14 +119,14 @@ describe('migrate-v1 script', () => {
     const output = runMigrate(csv);
     expect(output).toContain('Imported 1');
 
-    const db = openDb();
-    const periods = getPeriodsByYear(db, 2026);
+    const db = await openDb();
+    const periods = await db.periods.listByYear(DEFAULT_USER_ID, 2026);
     expect(periods).toHaveLength(1);
     expect(periods[0].startDate).toBe('2026-08-01');
-    db.close();
+    await db.close();
   });
 
-  it('preserves existing periods when running migration', () => {
+  it('preserves existing periods when running migration', async () => {
     const csv = [
       'Startdatum;Enddatum;Notiz;Halber Tag;Arbeitstage',
       '2026-07-01;2026-07-15;Neu;Nein;11',
@@ -146,9 +144,9 @@ describe('migrate-v1 script', () => {
     const output2 = runMigrate(csv2);
     expect(output2).toContain('Imported 1');
 
-    const db = openDb();
-    const periods = getPeriodsByYear(db, 2026);
+    const db = await openDb();
+    const periods = await db.periods.listByYear(DEFAULT_USER_ID, 2026);
     expect(periods).toHaveLength(2);
-    db.close();
+    await db.close();
   });
 });

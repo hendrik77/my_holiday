@@ -1,15 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import Database from 'better-sqlite3';
 import cors from 'cors';
-import { initDb } from '../db';
+import { createDb, type Db } from '../db';
+import { loadConfig } from '../config';
 import { createRouter } from '../routes';
 import { formatCSV } from '../../src/utils/csv';
 
-function createTestApp() {
-  const db = new Database(':memory:');
-  initDb(db);
+async function createTestApp() {
+  const db = await createDb(loadConfig({ DB_DRIVER: 'sqlite', DB_PATH: ':memory:' }));
 
   const app = express();
   app.use(cors());
@@ -21,16 +20,16 @@ function createTestApp() {
 
 describe('API /api/v1', () => {
   let app: express.Express;
-  let db: Database.Database;
+  let db: Db;
 
-  beforeEach(() => {
-    const test = createTestApp();
+  beforeEach(async () => {
+    const test = await createTestApp();
     app = test.app;
     db = test.db;
   });
 
-  afterEach(() => {
-    db.close();
+  afterEach(async () => {
+    await db.close();
   });
 
   describe('GET /api/v1/settings', () => {

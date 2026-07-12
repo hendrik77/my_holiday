@@ -1,3 +1,7 @@
+// @vitest-environment node
+// jose resolves its browser build under jsdom, where cross-realm Uint8Array
+// checks fail ("payload must be an instance of Uint8Array"). Server tests
+// have no DOM dependency — run this file in the node environment.
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createDb, DEFAULT_USER_ID, type Db } from '../db';
 import { loadConfig } from '../config';

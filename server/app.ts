@@ -13,6 +13,8 @@ export interface CreateAppOptions {
   apiToken?: string;
   /** Serve the built SPA from dist/ (production single-port mode). */
   serveStatic?: boolean;
+  /** AUTH_MODE from config. 'oidc' is rejected until the auth layer (Phase 4) exists. */
+  authMode?: 'none' | 'oidc';
 }
 
 // Same-machine origins (any port). Cross-origin reads from arbitrary websites
@@ -31,6 +33,13 @@ interface HttpError extends Error {
 
 /** Build the Express app: CORS, JSON body parsing, API routes, optional SPA serving. */
 export function createApp(db: Db, options: CreateAppOptions = {}): express.Express {
+  // Fail closed: config already validates AUTH_MODE=oidc, but no middleware
+  // sets req.user yet — booting would serve an unauthenticated API where
+  // every caller acts as the shared default admin user. Removed in Phase 4.
+  if (options.authMode === 'oidc') {
+    throw new Error('AUTH_MODE=oidc is not supported by this build yet — the OIDC auth layer lands in a later release');
+  }
+
   const app = express();
 
   app.use(

@@ -91,15 +91,34 @@ async function main() {
           `Error: target database is not empty (${existing} period(s)) — refusing to migrate into existing data`,
         );
       }
+      const { rows: foreignUsers } = await client.query(
+        'SELECT COUNT(*)::int AS n FROM users WHERE id <> $1',
+        [DEFAULT_USER_ID],
+      );
+      if (foreignUsers[0].n > 0) {
+        throw new MigrationError(
+          `Error: target database is not empty (${foreignUsers[0].n} registered user(s)) — refusing to migrate into existing data`,
+        );
+      }
 
-      // Users first (periods.user_id references them). The default user
-      // already exists on the target — migration 002 inserts it.
+      // Users first (periods.user_id references them), in two passes:
+      // manager_id is a self-referential FK and SELECT * returns rowid order,
+      // so a report inserted before their manager would violate it. The
+      // default user already exists on the target (migration 002 inserts
+      // it) — source values win, consistent with the settings policy.
       for (const row of users) {
         await client.query(
           `INSERT INTO users (id, oidc_sub, email, name, team, role, manager_id, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (id) DO NOTHING`,
-          [row.id, row.oidc_sub, row.email, row.name, row.team, row.role, row.manager_id, row.created_at, row.updated_at],
+           VALUES ($1, $2, $3, $4, $5, $6, NULL, $7, $8)
+           ON CONFLICT (id) DO UPDATE SET oidc_sub = EXCLUDED.oidc_sub, email = EXCLUDED.email,
+             name = EXCLUDED.name, team = EXCLUDED.team, role = EXCLUDED.role, updated_at = EXCLUDED.updated_at`,
+          [row.id, row.oidc_sub, row.email, row.name, row.team, row.role, row.created_at, row.updated_at],
         );
+      }
+      for (const row of users) {
+        if (row.manager_id != null) {
+          await client.query('UPDATE users SET manager_id = $1 WHERE id = $2', [row.manager_id, row.id]);
+        }
       }
       for (const row of periods) {
         await client.query(

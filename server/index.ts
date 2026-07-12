@@ -22,6 +22,7 @@ const app = createApp(db, {
   corsOrigin: config.CORS_ORIGIN,
   apiToken: config.API_TOKEN,
   serveStatic: process.env.NODE_ENV === 'production',
+  authMode: config.AUTH_MODE,
 });
 
 app.listen(config.API_PORT, config.API_HOST, () => {

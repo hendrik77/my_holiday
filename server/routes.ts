@@ -260,8 +260,9 @@ export function createRouter(db: Db): Router {
   });
 
   router.delete('/periods/:id', async (req, res) => {
+    const userId = uid(req);
     const { id } = req.params;
-    const deleted = await db.periods.remove(uid(req), id);
+    const deleted = await db.periods.remove(userId, id);
 
     if (!deleted) {
       res.status(404).json({ error: 'Period not found' });
@@ -274,12 +275,13 @@ export function createRouter(db: Db): Router {
   // ── ICS Export ──────────────────────────────────────────────────
 
   router.get('/export.ics', async (req, res) => {
+    const userId = uid(req);
     const year = req.query.year !== undefined ? parseYear(req.query.year) : new Date().getFullYear();
     if (year === null) {
       res.status(400).json({ error: 'Invalid year' });
       return;
     }
-    const periods = await db.periods.listByYear(uid(req), year);
+    const periods = await db.periods.listByYear(userId, year);
     const ics = generateICS(
       periods.map((p) => ({
         id: p.id,
@@ -356,13 +358,14 @@ export function createRouter(db: Db): Router {
   // ── Remaining entitlement ───────────────────────────────────────
 
   router.get('/remaining', async (req, res) => {
+    const userId = uid(req);
     const year = req.query.year !== undefined ? parseYear(req.query.year) : new Date().getFullYear();
     if (year === null) {
       res.status(400).json({ error: 'Invalid year' });
       return;
     }
 
-    res.json(await computeRemainingForYear(db, uid(req), year));
+    res.json(await computeRemainingForYear(db, userId, year));
   });
 
   // ── Public holidays ─────────────────────────────────────────────
@@ -374,7 +377,8 @@ export function createRouter(db: Db): Router {
       return;
     }
 
-    let state = (await db.settings.get(uid(req))).state as GermanState;
+    const userId = uid(req);
+    let state = (await db.settings.get(userId)).state as GermanState;
     if (req.query.state !== undefined) {
       if (typeof req.query.state !== 'string' || !VALID_STATES.has(req.query.state)) {
         res.status(400).json({ error: 'state must be a valid German state code (e.g. BW, BY, HE)' });
@@ -392,11 +396,13 @@ export function createRouter(db: Db): Router {
   // ── Settings ─────────────────────────────────────────────────────
 
   router.get('/settings', async (req, res) => {
-    const settings = await db.settings.get(uid(req));
+    const userId = uid(req);
+    const settings = await db.settings.get(userId);
     res.json(settings);
   });
 
   router.put('/settings', async (req, res) => {
+    const userId = uid(req);
     const body = req.body;
     const allowed: Record<string, unknown> = {};
 
@@ -453,7 +459,7 @@ export function createRouter(db: Db): Router {
       allowed.bildungsUrlaubDays = n;
     }
 
-    const settings = await db.settings.update(uid(req), allowed);
+    const settings = await db.settings.update(userId, allowed);
     res.json(settings);
   });
 

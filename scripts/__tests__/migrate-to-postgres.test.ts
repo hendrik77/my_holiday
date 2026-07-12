@@ -101,6 +101,34 @@ describe.skipIf(!url)('migrate-to-postgres script', () => {
     await pgDb.close();
   });
 
+  it('preserves manager relations even when a report was created before their manager', async () => {
+    const src = await createDb(loadConfig({ DB_PATH: FIXTURE_DB }));
+    // Report first: rowid order would insert them before the manager row.
+    const report = await src.users.upsertFromIdP({ oidcSub: 'idp|report', email: 'report@example.com', name: 'R' });
+    const manager = await src.users.upsertFromIdP({ oidcSub: 'idp|manager', email: 'manager@example.com', name: 'M' });
+    await src.users.updateProfile(manager.id, { role: 'manager' });
+    await src.users.updateProfile(report.id, { managerId: manager.id });
+    await src.close();
+
+    const { output, status } = runScript(`--sqlite "${FIXTURE_DB}" --database-url "${url}"`);
+    expect(status, output).toBe(0);
+
+    const pgDb = await createDb(loadConfig({ DB_DRIVER: 'postgres', DATABASE_URL: url }));
+    const reports = await pgDb.users.listDirectReports(manager.id);
+    expect(reports.map((u) => u.email)).toEqual(['report@example.com']);
+    await pgDb.close();
+  });
+
+  it('refuses to run against a Postgres that already has registered users', async () => {
+    const pgDb = await createDb(loadConfig({ DB_DRIVER: 'postgres', DATABASE_URL: url! }));
+    await pgDb.users.upsertFromIdP({ oidcSub: 'idp|existing', email: 'existing@example.com', name: 'E' });
+    await pgDb.close();
+
+    const { output, status } = runScript(`--sqlite "${FIXTURE_DB}" --database-url "${url}"`);
+    expect(status).not.toBe(0);
+    expect(output.toLowerCase()).toContain('not empty');
+  });
+
   it('refuses to run against a Postgres that already has periods', async () => {
     const first = runScript(`--sqlite "${FIXTURE_DB}" --database-url "${url}"`);
     expect(first.status).toBe(0);

@@ -6,6 +6,10 @@ All notable changes to My Holiday.
 
 ## [Unreleased]
 
+### Changed
+- **User-scoped database schema (v3 Phase 3)** — new `users` table with a synthetic default user owning all existing data; `periods` gained a `user_id` column. **Breaking for external tooling reading the SQLite file directly:** the singleton `settings` table was replaced by per-user `user_settings(user_id, key, value)`. The app API and CLI are unaffected — single-user behavior is byte-identical.
+- `migrate-to-postgres` now copies users and per-user settings and refuses targets that already contain registered users.
+
 ---
 
 ## v2.5.1 (2026-07-10)

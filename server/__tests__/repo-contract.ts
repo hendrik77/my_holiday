@@ -288,6 +288,65 @@ export function describeRepoContract(name: string, makeDb: () => Promise<Db>): v
       });
     });
 
+    describe('refresh tokens (migration 003)', () => {
+      const FUTURE = '2099-01-01T00:00:00.000Z';
+
+      it('stores a token and finds it by hash', async () => {
+        const row = await db.refreshTokens.create({
+          userId: USER,
+          tokenHash: 'hash-a',
+          familyId: 'fam-1',
+          expiresAt: FUTURE,
+        });
+        expect(row.id).toBeDefined();
+        expect(row.rotatedAt).toBeNull();
+        expect(row.revokedAt).toBeNull();
+
+        expect(await db.refreshTokens.findByHash('hash-a')).toEqual(row);
+        expect(await db.refreshTokens.findByHash('nonexistent')).toBeNull();
+      });
+
+      it('markRotated stamps rotated_at exactly once', async () => {
+        const row = await db.refreshTokens.create({
+          userId: USER,
+          tokenHash: 'hash-b',
+          familyId: 'fam-1',
+          expiresAt: FUTURE,
+        });
+        await db.refreshTokens.markRotated(row.id);
+
+        const rotated = await db.refreshTokens.findByHash('hash-b');
+        expect(rotated!.rotatedAt).not.toBeNull();
+        expect(rotated!.revokedAt).toBeNull();
+      });
+
+      it('revokeFamily revokes every token of the family and reports the count', async () => {
+        await db.refreshTokens.create({ userId: USER, tokenHash: 'f1-a', familyId: 'fam-x', expiresAt: FUTURE });
+        await db.refreshTokens.create({ userId: USER, tokenHash: 'f1-b', familyId: 'fam-x', expiresAt: FUTURE });
+        await db.refreshTokens.create({ userId: USER, tokenHash: 'other', familyId: 'fam-y', expiresAt: FUTURE });
+
+        expect(await db.refreshTokens.revokeFamily('fam-x')).toBe(2);
+
+        expect((await db.refreshTokens.findByHash('f1-a'))!.revokedAt).not.toBeNull();
+        expect((await db.refreshTokens.findByHash('f1-b'))!.revokedAt).not.toBeNull();
+        expect((await db.refreshTokens.findByHash('other'))!.revokedAt).toBeNull();
+      });
+
+      it('deleteExpired removes only expired tokens', async () => {
+        await db.refreshTokens.create({
+          userId: USER,
+          tokenHash: 'old',
+          familyId: 'fam-old',
+          expiresAt: '2000-01-01T00:00:00.000Z',
+        });
+        await db.refreshTokens.create({ userId: USER, tokenHash: 'new', familyId: 'fam-new', expiresAt: FUTURE });
+
+        expect(await db.refreshTokens.deleteExpired()).toBe(1);
+        expect(await db.refreshTokens.findByHash('old')).toBeNull();
+        expect(await db.refreshTokens.findByHash('new')).not.toBeNull();
+      });
+    });
+
     describe('per-user isolation (migration 002)', () => {
       let userA: string;
       let userB: string;

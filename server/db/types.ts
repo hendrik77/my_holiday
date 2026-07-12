@@ -1,4 +1,12 @@
-import type { PeriodRow, CreatePeriodInput, Settings, SettingsUpdate } from '../types';
+import type {
+  PeriodRow,
+  CreatePeriodInput,
+  Settings,
+  SettingsUpdate,
+  UserRow,
+  UpsertUserInput,
+  UserProfileUpdate,
+} from '../types';
 
 /** Fields of a period that may be changed after creation. */
 export type PeriodUpdate = Partial<Pick<PeriodRow, 'startDate' | 'endDate' | 'note' | 'halfDay' | 'type'>>;
@@ -23,11 +31,31 @@ export interface SettingsRepo {
   update(userId: string, updates: SettingsUpdate): Promise<Settings>;
 }
 
+/**
+ * Users repository (migration 002, Phase 3). The synthetic default user
+ * (DEFAULT_USER_ID) is inserted by the migration itself and owns all
+ * pre-existing data.
+ */
+export interface UsersRepo {
+  findById(id: string): Promise<UserRow | null>;
+  findByOidcSub(oidcSub: string): Promise<UserRow | null>;
+  /**
+   * Create-or-refresh a user on IdP login, keyed by oidc_sub: inserts a new
+   * employee on first login, updates email/name on subsequent logins.
+   * Role/team/managerId are never touched — those are admin-managed.
+   */
+  upsertFromIdP(input: UpsertUserInput): Promise<UserRow>;
+  listAll(): Promise<UserRow[]>;
+  listDirectReports(managerId: string): Promise<UserRow[]>;
+  updateProfile(id: string, updates: UserProfileUpdate): Promise<UserRow | null>;
+}
+
 /** Aggregate handle to one database backend. Created via createDb(config). */
 export interface Db {
   readonly driver: 'sqlite' | 'postgres';
   readonly periods: PeriodsRepo;
   readonly settings: SettingsRepo;
+  readonly users: UsersRepo;
   /** Apply pending schema migrations (idempotent; the factory runs it once). */
   migrate(): Promise<void>;
   close(): Promise<void>;

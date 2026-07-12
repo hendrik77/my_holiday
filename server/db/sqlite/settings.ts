@@ -4,28 +4,30 @@ import type { SettingsRepo } from '../types';
 import { settingsFromRows, settingsUpdateEntries } from '../rows';
 
 /**
- * SQLite settings repository over the key-value `settings` table. Mapping
- * and defaults shared with the PostgreSQL driver via rows.ts. Single global
- * row set until migration 002 (Phase 3) makes settings per-user.
+ * SQLite settings repository over the per-user key-value `user_settings`
+ * table (migration 002). Mapping and defaults shared with the PostgreSQL
+ * driver via rows.ts — users without stored rows read pure defaults, so no
+ * per-user seeding step is needed.
  */
 export function createSqliteSettingsRepo(db: Database.Database): SettingsRepo {
-  function readSettings(): Settings {
-    const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
+  function readSettings(userId: string): Settings {
+    const rows = db
+      .prepare('SELECT key, value FROM user_settings WHERE user_id = ?')
+      .all(userId) as { key: string; value: string }[];
     return settingsFromRows(rows);
   }
 
   return {
-    // Contract passes userId; omitted here until the schema is user-scoped.
-    async get(): Promise<Settings> {
-      return readSettings();
+    async get(userId: string): Promise<Settings> {
+      return readSettings(userId);
     },
 
-    async update(_userId: string, updates: SettingsUpdate): Promise<Settings> {
-      const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+    async update(userId: string, updates: SettingsUpdate): Promise<Settings> {
+      const upsert = db.prepare('INSERT OR REPLACE INTO user_settings (user_id, key, value) VALUES (?, ?, ?)');
       for (const [key, value] of settingsUpdateEntries(updates)) {
-        upsert.run(key, value);
+        upsert.run(userId, key, value);
       }
-      return readSettings();
+      return readSettings(userId);
     },
   };
 }

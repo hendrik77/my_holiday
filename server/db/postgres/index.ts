@@ -5,6 +5,7 @@ import { SCHEMA_MIGRATIONS_TABLE_SQL, pendingMigrations } from '../migrate';
 import { migrations } from '../migrations';
 import { createPostgresPeriodsRepo } from './periods';
 import { createPostgresSettingsRepo } from './settings';
+import { createPostgresUsersRepo } from './users';
 
 /** Arbitrary app-wide lock id so concurrent instances serialize migrations. */
 const MIGRATION_LOCK_ID = 727274;
@@ -45,6 +46,7 @@ export function createPostgresDb(config: Pick<Config, 'DATABASE_URL'>): Db {
     driver: 'postgres',
     periods: createPostgresPeriodsRepo(pool),
     settings: createPostgresSettingsRepo(pool),
+    users: createPostgresUsersRepo(pool),
     async migrate(): Promise<void> {
       await runMigrations(pool);
     },

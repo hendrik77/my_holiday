@@ -1,4 +1,4 @@
-import type { PeriodRow, Settings, SettingsUpdate } from '../types';
+import type { PeriodRow, Settings, SettingsUpdate, UserRow, UserRole } from '../types';
 
 /**
  * Map a raw `periods` row to the API shape. Shared by both drivers:
@@ -13,6 +13,21 @@ export function rowToPeriod(row: Record<string, unknown>): PeriodRow {
     halfDay: row.half_day === 1 || row.half_day === true,
     type: ((row.type as string) || 'urlaub') as PeriodRow['type'],
     changedAt: row.changed_at as string,
+  };
+}
+
+/** Map a raw `users` row to the API shape. Shared by both drivers. */
+export function rowToUser(row: Record<string, unknown>): UserRow {
+  return {
+    id: row.id as string,
+    oidcSub: (row.oidc_sub as string | null) ?? null,
+    email: row.email as string,
+    name: row.name as string,
+    team: row.team as string,
+    role: row.role as UserRole,
+    managerId: (row.manager_id as string | null) ?? null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
   };
 }
 

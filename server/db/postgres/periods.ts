@@ -6,31 +6,31 @@ import { rowToPeriod } from '../rows';
 /**
  * PostgreSQL periods repository — same semantics as the SQLite driver,
  * verified by the shared contract suite. half_day is a native BOOLEAN.
- * userId is accepted per the contract; scoping lands with migration 002.
+ * Every query is scoped to the owning user since migration 002.
  */
 export function createPostgresPeriodsRepo(pool: Pool): PeriodsRepo {
   return {
-    async listAll(): Promise<PeriodRow[]> {
-      const { rows } = await pool.query('SELECT * FROM periods ORDER BY start_date');
+    async listAll(userId: string): Promise<PeriodRow[]> {
+      const { rows } = await pool.query('SELECT * FROM periods WHERE user_id = $1 ORDER BY start_date', [userId]);
       return rows.map(rowToPeriod);
     },
 
-    async listByYear(_userId: string, year: number): Promise<PeriodRow[]> {
+    async listByYear(userId: string, year: number): Promise<PeriodRow[]> {
       const { rows } = await pool.query(
-        'SELECT * FROM periods WHERE end_date >= $1 AND start_date <= $2 ORDER BY start_date',
-        [`${year}-01-01`, `${year}-12-31`],
+        'SELECT * FROM periods WHERE user_id = $1 AND end_date >= $2 AND start_date <= $3 ORDER BY start_date',
+        [userId, `${year}-01-01`, `${year}-12-31`],
       );
       return rows.map(rowToPeriod);
     },
 
-    async create(_userId: string, input: CreatePeriodInput): Promise<PeriodRow> {
+    async create(userId: string, input: CreatePeriodInput): Promise<PeriodRow> {
       const id = crypto.randomUUID();
       const now = new Date().toISOString();
       const type = input.type || 'urlaub';
 
       await pool.query(
-        'INSERT INTO periods (id, start_date, end_date, note, half_day, type, changed_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-        [id, input.startDate, input.endDate, input.note || '', input.halfDay === true, type, now],
+        'INSERT INTO periods (id, user_id, start_date, end_date, note, half_day, type, changed_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+        [id, userId, input.startDate, input.endDate, input.note || '', input.halfDay === true, type, now],
       );
 
       return {
@@ -44,8 +44,8 @@ export function createPostgresPeriodsRepo(pool: Pool): PeriodsRepo {
       };
     },
 
-    async update(_userId: string, id: string, updates: PeriodUpdate): Promise<PeriodRow | null> {
-      const { rows } = await pool.query('SELECT * FROM periods WHERE id = $1', [id]);
+    async update(userId: string, id: string, updates: PeriodUpdate): Promise<PeriodRow | null> {
+      const { rows } = await pool.query('SELECT * FROM periods WHERE id = $1 AND user_id = $2', [id, userId]);
       const existing = rows[0] as Record<string, unknown> | undefined;
       if (!existing) return null;
 
@@ -63,8 +63,9 @@ export function createPostgresPeriodsRepo(pool: Pool): PeriodsRepo {
       fields.push(`changed_at = $${i++}`);
       values.push(now);
       values.push(id);
+      values.push(userId);
 
-      await pool.query(`UPDATE periods SET ${fields.join(', ')} WHERE id = $${i}`, values);
+      await pool.query(`UPDATE periods SET ${fields.join(', ')} WHERE id = $${i} AND user_id = $${i + 1}`, values);
 
       return rowToPeriod({
         ...existing,
@@ -77,8 +78,8 @@ export function createPostgresPeriodsRepo(pool: Pool): PeriodsRepo {
       });
     },
 
-    async remove(_userId: string, id: string): Promise<boolean> {
-      const result = await pool.query('DELETE FROM periods WHERE id = $1', [id]);
+    async remove(userId: string, id: string): Promise<boolean> {
+      const result = await pool.query('DELETE FROM periods WHERE id = $1 AND user_id = $2', [id, userId]);
       return (result.rowCount ?? 0) > 0;
     },
   };

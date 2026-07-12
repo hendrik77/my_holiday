@@ -5,34 +5,35 @@ import { rowToPeriod } from '../rows';
 
 /**
  * SQLite periods repository. SQL bodies moved unchanged from the pre-v3
- * `server/db.ts`. The userId parameter is accepted per the repo contract but
- * not yet used — the baseline schema is single-user until migration 002.
+ * `server/db.ts`; every query is scoped to the owning user since
+ * migration 002.
  */
 export function createSqlitePeriodsRepo(db: Database.Database): PeriodsRepo {
   return {
-    // Contract passes userId; omitted here until the schema is user-scoped.
-    async listAll(): Promise<PeriodRow[]> {
-      const rows = db.prepare('SELECT * FROM periods ORDER BY start_date').all() as Record<string, unknown>[];
+    async listAll(userId: string): Promise<PeriodRow[]> {
+      const rows = db
+        .prepare('SELECT * FROM periods WHERE user_id = ? ORDER BY start_date')
+        .all(userId) as Record<string, unknown>[];
       return rows.map(rowToPeriod);
     },
 
-    async listByYear(_userId: string, year: number): Promise<PeriodRow[]> {
+    async listByYear(userId: string, year: number): Promise<PeriodRow[]> {
       const yearStart = `${year}-01-01`;
       const yearEnd = `${year}-12-31`;
       const rows = db
-        .prepare('SELECT * FROM periods WHERE end_date >= ? AND start_date <= ? ORDER BY start_date')
-        .all(yearStart, yearEnd) as Record<string, unknown>[];
+        .prepare('SELECT * FROM periods WHERE user_id = ? AND end_date >= ? AND start_date <= ? ORDER BY start_date')
+        .all(userId, yearStart, yearEnd) as Record<string, unknown>[];
       return rows.map(rowToPeriod);
     },
 
-    async create(_userId: string, input: CreatePeriodInput): Promise<PeriodRow> {
+    async create(userId: string, input: CreatePeriodInput): Promise<PeriodRow> {
       const id = crypto.randomUUID();
       const now = new Date().toISOString();
       const type = input.type || 'urlaub';
 
       db.prepare(
-        'INSERT INTO periods (id, start_date, end_date, note, half_day, type, changed_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      ).run(id, input.startDate, input.endDate, input.note || '', input.halfDay ? 1 : 0, type, now);
+        'INSERT INTO periods (id, user_id, start_date, end_date, note, half_day, type, changed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      ).run(id, userId, input.startDate, input.endDate, input.note || '', input.halfDay ? 1 : 0, type, now);
 
       return {
         id,
@@ -45,8 +46,8 @@ export function createSqlitePeriodsRepo(db: Database.Database): PeriodsRepo {
       };
     },
 
-    async update(_userId: string, id: string, updates: PeriodUpdate): Promise<PeriodRow | null> {
-      const existing = db.prepare('SELECT * FROM periods WHERE id = ?').get(id) as
+    async update(userId: string, id: string, updates: PeriodUpdate): Promise<PeriodRow | null> {
+      const existing = db.prepare('SELECT * FROM periods WHERE id = ? AND user_id = ?').get(id, userId) as
         | Record<string, unknown>
         | undefined;
       if (!existing) return null;
@@ -64,8 +65,9 @@ export function createSqlitePeriodsRepo(db: Database.Database): PeriodsRepo {
       fields.push('changed_at = ?');
       values.push(now);
       values.push(id);
+      values.push(userId);
 
-      db.prepare(`UPDATE periods SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+      db.prepare(`UPDATE periods SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`).run(...values);
 
       return rowToPeriod({
         ...existing,
@@ -78,8 +80,8 @@ export function createSqlitePeriodsRepo(db: Database.Database): PeriodsRepo {
       });
     },
 
-    async remove(_userId: string, id: string): Promise<boolean> {
-      const result = db.prepare('DELETE FROM periods WHERE id = ?').run(id);
+    async remove(userId: string, id: string): Promise<boolean> {
+      const result = db.prepare('DELETE FROM periods WHERE id = ? AND user_id = ?').run(id, userId);
       return result.changes > 0;
     },
   };

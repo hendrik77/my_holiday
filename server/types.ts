@@ -24,3 +24,30 @@ export interface Settings {
 
 /** Partial settings for updates */
 export type SettingsUpdate = Partial<Settings>;
+
+/** Role of a user in multi-user mode (v3). */
+export type UserRole = 'employee' | 'manager' | 'admin';
+
+/** Row shape from the users table (migration 002). */
+export interface UserRow {
+  id: string;
+  /** OIDC subject claim; null for the synthetic single-user-mode user. */
+  oidcSub: string | null;
+  email: string;
+  name: string;
+  team: string;
+  role: UserRole;
+  managerId: string | null;
+  createdAt: string; // ISO timestamp
+  updatedAt: string; // ISO timestamp
+}
+
+/** Identity claims used to create/refresh a user on IdP login. */
+export interface UpsertUserInput {
+  oidcSub: string;
+  email: string;
+  name: string;
+}
+
+/** Admin-editable profile fields. */
+export type UserProfileUpdate = Partial<Pick<UserRow, 'name' | 'team' | 'role' | 'managerId'>>;

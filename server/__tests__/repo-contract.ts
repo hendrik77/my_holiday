@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { Db } from '../db/types';
+import { DEFAULT_USER_ID } from '../db/constants';
 
 /**
  * Shared repository contract suite (ADR-0006).
@@ -7,12 +8,14 @@ import type { Db } from '../db/types';
  * Every Db backend (SQLite today, PostgreSQL in Phase 2) must pass this
  * suite unchanged — it is the executable definition of the repository
  * interface. Assertions mirror the pre-v3 `db.test.ts` behavior so the
- * abstraction provably preserves single-user semantics.
+ * abstraction provably preserves single-user semantics. Since migration 002
+ * (Phase 3) the schema is user-scoped: rows belong to real `users` rows and
+ * the suite also verifies per-user isolation.
  */
 export function describeRepoContract(name: string, makeDb: () => Promise<Db>): void {
-  // Arbitrary caller identity; backends without user scoping (Phase 1 SQLite
-  // baseline schema) accept and ignore it. Phase 3 adds isolation tests.
-  const USER = 'contract-test-user';
+  // The synthetic single-user identity — inserted by migration 002, so it
+  // always exists and satisfies the periods.user_id foreign key.
+  const USER = DEFAULT_USER_ID;
 
   describe(`repo contract: ${name}`, () => {
     let db: Db;
@@ -193,6 +196,154 @@ export function describeRepoContract(name: string, makeDb: () => Promise<Db>): v
 
         await db.settings.update(USER, { carryOverMaxDays: null });
         expect((await db.settings.get(USER)).carryOverMaxDays).toBeNull();
+      });
+    });
+
+    describe('users', () => {
+      it('migration 002 inserted the synthetic default user as admin', async () => {
+        const user = await db.users.findById(DEFAULT_USER_ID);
+        expect(user).not.toBeNull();
+        expect(user!.email).toBe('local@my-holiday.invalid');
+        expect(user!.role).toBe('admin');
+        expect(user!.oidcSub).toBeNull();
+      });
+
+      it('returns null for unknown ids and oidc subs', async () => {
+        expect(await db.users.findById('nonexistent')).toBeNull();
+        expect(await db.users.findByOidcSub('nonexistent')).toBeNull();
+      });
+
+      it('upsertFromIdP creates a new employee on first login', async () => {
+        const user = await db.users.upsertFromIdP({
+          oidcSub: 'idp|alice',
+          email: 'alice@example.com',
+          name: 'Alice',
+        });
+        expect(user.id).toBeDefined();
+        expect(user.id).not.toBe(DEFAULT_USER_ID);
+        expect(user.oidcSub).toBe('idp|alice');
+        expect(user.email).toBe('alice@example.com');
+        expect(user.name).toBe('Alice');
+        expect(user.role).toBe('employee');
+        expect(user.managerId).toBeNull();
+
+        expect(await db.users.findByOidcSub('idp|alice')).toEqual(user);
+      });
+
+      it('upsertFromIdP refreshes email/name but keeps id and admin-managed fields', async () => {
+        const first = await db.users.upsertFromIdP({
+          oidcSub: 'idp|bob',
+          email: 'bob@example.com',
+          name: 'Bob',
+        });
+        await db.users.updateProfile(first.id, { role: 'manager', team: 'Platform' });
+
+        const second = await db.users.upsertFromIdP({
+          oidcSub: 'idp|bob',
+          email: 'robert@example.com',
+          name: 'Robert',
+        });
+        expect(second.id).toBe(first.id);
+        expect(second.email).toBe('robert@example.com');
+        expect(second.name).toBe('Robert');
+        expect(second.role).toBe('manager');
+        expect(second.team).toBe('Platform');
+      });
+
+      it('listAll returns every user including the default user', async () => {
+        await db.users.upsertFromIdP({ oidcSub: 'idp|a', email: 'a@example.com', name: 'A' });
+        await db.users.upsertFromIdP({ oidcSub: 'idp|b', email: 'b@example.com', name: 'B' });
+
+        const all = await db.users.listAll();
+        expect(all).toHaveLength(3);
+        expect(all.map((u) => u.email)).toContain('local@my-holiday.invalid');
+      });
+
+      it('updateProfile changes role/team/managerId and returns null for unknown users', async () => {
+        const manager = await db.users.upsertFromIdP({ oidcSub: 'idp|m', email: 'm@example.com', name: 'M' });
+        const report = await db.users.upsertFromIdP({ oidcSub: 'idp|r', email: 'r@example.com', name: 'R' });
+
+        const updated = await db.users.updateProfile(report.id, {
+          team: 'Support',
+          managerId: manager.id,
+        });
+        expect(updated!.team).toBe('Support');
+        expect(updated!.managerId).toBe(manager.id);
+        expect(updated!.updatedAt).toBeDefined();
+
+        expect(await db.users.updateProfile('nonexistent', { team: 'X' })).toBeNull();
+      });
+
+      it('listDirectReports returns exactly the users managed by the given id', async () => {
+        const manager = await db.users.upsertFromIdP({ oidcSub: 'idp|mgr', email: 'mgr@example.com', name: 'Mgr' });
+        const r1 = await db.users.upsertFromIdP({ oidcSub: 'idp|r1', email: 'r1@example.com', name: 'R1' });
+        const r2 = await db.users.upsertFromIdP({ oidcSub: 'idp|r2', email: 'r2@example.com', name: 'R2' });
+        await db.users.upsertFromIdP({ oidcSub: 'idp|other', email: 'other@example.com', name: 'Other' });
+
+        await db.users.updateProfile(r1.id, { managerId: manager.id });
+        await db.users.updateProfile(r2.id, { managerId: manager.id });
+
+        const reports = await db.users.listDirectReports(manager.id);
+        expect(reports.map((u) => u.email).sort()).toEqual(['r1@example.com', 'r2@example.com']);
+      });
+    });
+
+    describe('per-user isolation (migration 002)', () => {
+      let userA: string;
+      let userB: string;
+
+      beforeEach(async () => {
+        userA = (await db.users.upsertFromIdP({ oidcSub: 'idp|iso-a', email: 'iso-a@example.com', name: 'IsoA' })).id;
+        userB = (await db.users.upsertFromIdP({ oidcSub: 'idp|iso-b', email: 'iso-b@example.com', name: 'IsoB' })).id;
+      });
+
+      it('periods are only visible to their owner', async () => {
+        await db.periods.create(userA, {
+          startDate: '2026-07-01',
+          endDate: '2026-07-15',
+          note: 'A only',
+          halfDay: false,
+          type: 'urlaub',
+        });
+
+        expect(await db.periods.listAll(userA)).toHaveLength(1);
+        expect(await db.periods.listAll(userB)).toHaveLength(0);
+        expect(await db.periods.listByYear(userB, 2026)).toHaveLength(0);
+        expect(await db.periods.listAll(USER)).toHaveLength(0);
+      });
+
+      it('update and remove cannot touch another user\'s period', async () => {
+        const period = await db.periods.create(userA, {
+          startDate: '2026-07-01',
+          endDate: '2026-07-15',
+          note: '',
+          halfDay: false,
+          type: 'urlaub',
+        });
+
+        expect(await db.periods.update(userB, period.id, { note: 'stolen' })).toBeNull();
+        expect(await db.periods.remove(userB, period.id)).toBe(false);
+
+        const [unchanged] = await db.periods.listAll(userA);
+        expect(unchanged.note).toBe('');
+      });
+
+      it('settings are stored per user', async () => {
+        await db.settings.update(userA, { totalDays: 25, state: 'BY' });
+
+        const a = await db.settings.get(userA);
+        const b = await db.settings.get(userB);
+        expect(a.totalDays).toBe(25);
+        expect(a.state).toBe('BY');
+        // B never wrote anything — reads fall back to defaults.
+        expect(b.totalDays).toBe(30);
+        expect(b.state).toBe('HE');
+      });
+
+      it('the default user keeps the seeded settings copied by migration 002', async () => {
+        const settings = await db.settings.get(USER);
+        expect(settings.totalDays).toBe(30);
+        expect(settings.state).toBe('HE');
       });
     });
   });

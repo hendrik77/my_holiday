@@ -21,7 +21,7 @@ if (url) {
   describeRepoContract('postgres', async () => {
     const admin = new Pool({ connectionString: url, max: 1 });
     try {
-      await admin.query('DROP TABLE IF EXISTS periods, settings, schema_migrations CASCADE');
+      await admin.query('DROP TABLE IF EXISTS periods, settings, user_settings, users, schema_migrations CASCADE');
     } finally {
       await admin.end();
     }

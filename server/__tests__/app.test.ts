@@ -15,6 +15,15 @@ afterEach(async () => {
   await db.close();
 });
 
+describe('createApp auth-mode guard', () => {
+  it('refuses to build an app in oidc mode until the auth layer exists (fail closed)', async () => {
+    db = await createDb(loadConfig({ DB_DRIVER: 'sqlite', DB_PATH: ':memory:' }));
+    // Without this guard, AUTH_MODE=oidc would boot an unauthenticated API
+    // where every request silently acts as the shared default admin user.
+    expect(() => createApp(db, { authMode: 'oidc' })).toThrowError(/oidc/i);
+  });
+});
+
 describe('createApp error handling', () => {
   it('returns 400 (not 500) for a malformed JSON body', async () => {
     const app = await makeApp();

@@ -13,7 +13,7 @@
 import Database from 'better-sqlite3';
 import { Pool } from 'pg';
 import { existsSync } from 'node:fs';
-import { createDb } from '../server/db';
+import { createDb, DEFAULT_USER_ID } from '../server/db';
 import { loadConfig } from '../server/config';
 
 function arg(name: string): string | undefined {
@@ -26,7 +26,7 @@ class MigrationError extends Error {}
 
 async function countRows(
   client: { query: (sql: string) => Promise<{ rows: { n: number }[] }> },
-  table: 'periods' | 'settings',
+  table: 'periods' | 'user_settings',
 ): Promise<number> {
   const { rows } = await client.query(`SELECT COUNT(*)::int AS n FROM ${table}`);
   return rows[0].n;
@@ -46,10 +46,29 @@ async function main() {
     throw new MigrationError(`Error: SQLite file not found: "${sqlitePath}"`);
   }
 
-  // Source: read-only snapshot of the raw rows.
+  // Source: read-only snapshot of the raw rows. Supports both pre-v3 files
+  // (singleton `settings`, no user_id — everything belongs to the default
+  // user) and v3 files (users / user_settings / periods.user_id).
   const src = new Database(sqlitePath, { readonly: true, fileMustExist: true });
+  const srcTables = new Set(
+    (src.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(
+      (t) => t.name,
+    ),
+  );
   const periods = src.prepare('SELECT * FROM periods').all() as Record<string, unknown>[];
-  const settings = src.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
+  const users = srcTables.has('users')
+    ? (src.prepare('SELECT * FROM users').all() as Record<string, unknown>[])
+    : [];
+  const settings = srcTables.has('user_settings')
+    ? (src.prepare('SELECT user_id, key, value FROM user_settings').all() as {
+        user_id: string;
+        key: string;
+        value: string;
+      }[])
+    : (src.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[]).map((row) => ({
+        user_id: DEFAULT_USER_ID,
+        ...row,
+      }));
   src.close();
 
   // Target: bring the schema up to date before touching it directly.
@@ -64,7 +83,7 @@ async function main() {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query('LOCK TABLE periods, settings IN EXCLUSIVE MODE');
+      await client.query('LOCK TABLE periods, user_settings, users IN EXCLUSIVE MODE');
 
       const existing = await countRows(client, 'periods');
       if (existing > 0) {
@@ -72,22 +91,51 @@ async function main() {
           `Error: target database is not empty (${existing} period(s)) — refusing to migrate into existing data`,
         );
       }
-
-      for (const row of periods) {
-        await client.query(
-          'INSERT INTO periods (id, start_date, end_date, note, half_day, type, changed_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-          [row.id, row.start_date, row.end_date, row.note, row.half_day === 1, row.type, row.changed_at],
+      const { rows: foreignUsers } = await client.query(
+        'SELECT COUNT(*)::int AS n FROM users WHERE id <> $1',
+        [DEFAULT_USER_ID],
+      );
+      if (foreignUsers[0].n > 0) {
+        throw new MigrationError(
+          `Error: target database is not empty (${foreignUsers[0].n} registered user(s)) — refusing to migrate into existing data`,
         );
       }
-      for (const { key, value } of settings) {
+
+      // Users first (periods.user_id references them), in two passes:
+      // manager_id is a self-referential FK and SELECT * returns rowid order,
+      // so a report inserted before their manager would violate it. The
+      // default user already exists on the target (migration 002 inserts
+      // it) — source values win, consistent with the settings policy.
+      for (const row of users) {
         await client.query(
-          'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
-          [key, value],
+          `INSERT INTO users (id, oidc_sub, email, name, team, role, manager_id, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NULL, $7, $8)
+           ON CONFLICT (id) DO UPDATE SET oidc_sub = EXCLUDED.oidc_sub, email = EXCLUDED.email,
+             name = EXCLUDED.name, team = EXCLUDED.team, role = EXCLUDED.role, updated_at = EXCLUDED.updated_at`,
+          [row.id, row.oidc_sub, row.email, row.name, row.team, row.role, row.created_at, row.updated_at],
+        );
+      }
+      for (const row of users) {
+        if (row.manager_id != null) {
+          await client.query('UPDATE users SET manager_id = $1 WHERE id = $2', [row.manager_id, row.id]);
+        }
+      }
+      for (const row of periods) {
+        await client.query(
+          'INSERT INTO periods (id, user_id, start_date, end_date, note, half_day, type, changed_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+          [row.id, row.user_id ?? DEFAULT_USER_ID, row.start_date, row.end_date, row.note, row.half_day === 1, row.type, row.changed_at],
+        );
+      }
+      // Source values win over the seed rows migration 002 created on the target.
+      for (const { user_id, key, value } of settings) {
+        await client.query(
+          'INSERT INTO user_settings (user_id, key, value) VALUES ($1, $2, $3) ON CONFLICT (user_id, key) DO UPDATE SET value = EXCLUDED.value',
+          [user_id, key, value],
         );
       }
 
       const periodCount = await countRows(client, 'periods');
-      const settingsCount = await countRows(client, 'settings');
+      const settingsCount = await countRows(client, 'user_settings');
       if (periodCount !== periods.length || settingsCount < settings.length) {
         throw new MigrationError(
           `Error: verification failed — expected ${periods.length} period(s) and ${settings.length} setting(s), ` +

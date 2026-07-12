@@ -8,6 +8,7 @@ import { migrations } from '../migrations';
 import { createSqlitePeriodsRepo } from './periods';
 import { createSqliteSettingsRepo } from './settings';
 import { createSqliteUsersRepo } from './users';
+import { createSqliteRefreshTokensRepo } from './refresh-tokens';
 
 /**
  * Apply pending migrations, each inside a transaction. Foreign-key
@@ -53,6 +54,7 @@ export function createSqliteDb(config: Pick<Config, 'DB_PATH'>): Db {
     periods: createSqlitePeriodsRepo(db),
     settings: createSqliteSettingsRepo(db),
     users: createSqliteUsersRepo(db),
+    refreshTokens: createSqliteRefreshTokensRepo(db),
     async migrate(): Promise<void> {
       runMigrations(db);
     },

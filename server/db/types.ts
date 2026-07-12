@@ -50,12 +50,38 @@ export interface UsersRepo {
   updateProfile(id: string, updates: UserProfileUpdate): Promise<UserRow | null>;
 }
 
+/** Row shape from the refresh_tokens table (migration 003). */
+export interface RefreshTokenRow {
+  id: string;
+  userId: string;
+  /** sha256 of the opaque token — the raw value is never stored. */
+  tokenHash: string;
+  /** Rotation family: reuse of a rotated member revokes the whole family. */
+  familyId: string;
+  expiresAt: string; // ISO timestamp
+  rotatedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+/** Refresh-token store (Phase 4, ADR-0007). */
+export interface RefreshTokensRepo {
+  create(input: Pick<RefreshTokenRow, 'userId' | 'tokenHash' | 'familyId' | 'expiresAt'>): Promise<RefreshTokenRow>;
+  findByHash(tokenHash: string): Promise<RefreshTokenRow | null>;
+  markRotated(id: string): Promise<void>;
+  /** Revoke every token of a family; returns how many were newly revoked. */
+  revokeFamily(familyId: string): Promise<number>;
+  /** Housekeeping: drop tokens past expires_at; returns how many were removed. */
+  deleteExpired(): Promise<number>;
+}
+
 /** Aggregate handle to one database backend. Created via createDb(config). */
 export interface Db {
   readonly driver: 'sqlite' | 'postgres';
   readonly periods: PeriodsRepo;
   readonly settings: SettingsRepo;
   readonly users: UsersRepo;
+  readonly refreshTokens: RefreshTokensRepo;
   /** Apply pending schema migrations (idempotent; the factory runs it once). */
   migrate(): Promise<void>;
   close(): Promise<void>;

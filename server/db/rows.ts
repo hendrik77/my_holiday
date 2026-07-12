@@ -1,4 +1,5 @@
 import type { PeriodRow, Settings, SettingsUpdate, UserRow, UserRole } from '../types';
+import type { RefreshTokenRow } from './types';
 
 /**
  * Map a raw `periods` row to the API shape. Shared by both drivers:
@@ -28,6 +29,20 @@ export function rowToUser(row: Record<string, unknown>): UserRow {
     managerId: (row.manager_id as string | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
+  };
+}
+
+/** Map a raw `refresh_tokens` row to the API shape. Shared by both drivers. */
+export function rowToRefreshToken(row: Record<string, unknown>): RefreshTokenRow {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    tokenHash: row.token_hash as string,
+    familyId: row.family_id as string,
+    expiresAt: row.expires_at as string,
+    rotatedAt: (row.rotated_at as string | null) ?? null,
+    revokedAt: (row.revoked_at as string | null) ?? null,
+    createdAt: row.created_at as string,
   };
 }
 

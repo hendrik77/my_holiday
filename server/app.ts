@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import { rateLimit } from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -86,6 +87,12 @@ export async function createApp(db: Db, options: CreateAppOptions = {}): Promise
   }
 
   if (options.config) {
+    if (options.config.AUTH_MODE === 'oidc') {
+      // Every /api/v1 request may carry an unauthenticated PAT that costs a
+      // DB lookup before rejection — bound the flood per IP (security
+      // review H1). Generous enough for normal SPA bursts.
+      app.use('/api/v1', rateLimit({ windowMs: 60_000, limit: 300, standardHeaders: true, legacyHeaders: false }));
+    }
     // login/callback/refresh/logout must stay reachable without a session;
     // /me carries its own requireUser. In oidc mode everything below this
     // mount requires a valid session cookie.

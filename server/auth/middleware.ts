@@ -7,7 +7,14 @@ import { verifySessionToken, hashToken } from './session';
 
 /** Write last_used_at at most once per minute per token. */
 const LAST_USED_THROTTLE_MS = 60_000;
+// HEAD is read-only because Express dispatches it to the GET handler.
+// OPTIONS never reaches this middleware today (cors() answers it first) —
+// listed defensively in case the mount order ever changes.
 const READONLY_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+// Scheme name is case-insensitive per RFC 9110; the token itself is not.
+const BEARER_RE = /^Bearer\s+(mh_pat_[A-Za-z0-9_-]+)$/;
+const BEARER_SCHEME_RE = /^bearer\s/i;
 
 /**
  * Resolve the acting user (ADR-0007):
@@ -44,8 +51,16 @@ export function requireUser(db: Db, config: Config): RequestHandler {
         }
       }
 
-      const bearer = /^Bearer\s+(mh_pat_[A-Za-z0-9_-]+)$/i.exec(req.get('authorization') ?? '');
+      const header = req.get('authorization') ?? '';
+      const bearer = BEARER_SCHEME_RE.test(header)
+        ? BEARER_RE.exec(`Bearer ${header.replace(BEARER_SCHEME_RE, '')}`)
+        : null;
       if (bearer) {
+        // Plain indexed equality on the sha256 digest — deliberately not a
+        // timing-safe compare (unlike the legacy API_TOKEN guard): any DB
+        // timing signal reveals digest similarity at best, and forging a
+        // token needs the 256-bit random *pre-image*, not the digest
+        // (documented risk acceptance, security review M2).
         const pat = await db.pats.findByHash(hashToken(bearer[1]));
         const valid =
           pat !== null &&

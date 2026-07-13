@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { randomBytes } from 'node:crypto';
 import type { Db } from '../db/types';
 import type { Config } from '../config';
@@ -14,6 +15,10 @@ import { requireSessionUser } from './middleware';
  */
 
 const MAX_NAME_LENGTH = 100;
+/** Cap on active (non-revoked) tokens per user (security review M1). */
+const MAX_ACTIVE_TOKENS = 25;
+/** Longest allowed expiry — hygiene bound, not a security property. */
+const MAX_EXPIRY_MS = 10 * 365 * 24 * 3600 * 1000;
 
 /** Everything a client may see about a PAT — never the hash. */
 function toPublicPat(pat: PatRow) {
@@ -23,6 +28,9 @@ function toPublicPat(pat: PatRow) {
 
 export function createTokensRouter(db: Db, config: Config): Router {
   const router = Router();
+  // Minting writes a row per call — bound it like the auth endpoints
+  // (security review H1).
+  router.use(rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: true, legacyHeaders: false }));
   router.use(requireSessionUser(db, config));
 
   router.get('/', async (req, res) => {
@@ -43,11 +51,22 @@ export function createTokensRouter(db: Db, config: Config): Router {
     }
     let expiry: string | null = null;
     if (expiresAt !== undefined && expiresAt !== null) {
-      if (typeof expiresAt !== 'string' || Number.isNaN(Date.parse(expiresAt))) {
-        res.status(400).json({ error: 'expiresAt must be an ISO timestamp or null' });
+      const parsed = typeof expiresAt === 'string' ? Date.parse(expiresAt) : NaN;
+      // Bounds are hygiene (security review M3): the past is useless, and a
+      // multi-century expiry defeats the point of having one.
+      if (Number.isNaN(parsed) || parsed <= Date.now() || parsed > Date.now() + MAX_EXPIRY_MS) {
+        res.status(400).json({ error: 'expiresAt must be an ISO timestamp in the future (at most 10 years out) or null' });
         return;
       }
-      expiry = new Date(expiresAt).toISOString();
+      expiry = new Date(parsed).toISOString();
+    }
+
+    const active = (await db.pats.listForUser(req.user!.id)).filter((p) => p.revokedAt === null);
+    if (active.length >= MAX_ACTIVE_TOKENS) {
+      res.status(400).json({
+        error: `Too many active tokens (limit ${MAX_ACTIVE_TOKENS}) — revoke one first`,
+      });
+      return;
     }
 
     const raw = `mh_pat_${randomBytes(32).toString('base64url')}`;

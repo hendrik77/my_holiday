@@ -98,6 +98,59 @@ describe('token management endpoints (/api/v1/tokens)', () => {
     ).toBe(400);
   });
 
+  it('rejects an expiresAt in the past or unreasonably far out (security M3)', async () => {
+    expect(
+      (
+        await request(app)
+          .post('/api/v1/tokens')
+          .set('Cookie', sessionCookie)
+          .send({ name: 'past', scope: 'full', expiresAt: '2000-01-01T00:00:00.000Z' })
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await request(app)
+          .post('/api/v1/tokens')
+          .set('Cookie', sessionCookie)
+          .send({ name: 'far', scope: 'full', expiresAt: '3000-01-01T00:00:00.000Z' })
+      ).status,
+    ).toBe(400);
+  });
+
+  it('caps the number of active tokens per user (security M1)', async () => {
+    const user = (await db.users.findByOidcSub('idp|tok'))!;
+    for (let i = 0; i < 25; i++) {
+      await db.pats.create({
+        userId: user.id,
+        name: `t${i}`,
+        tokenHash: `cap-hash-${i}`,
+        tokenPrefix: 'mh_pat_capxx',
+        scope: 'read',
+        expiresAt: null,
+      });
+    }
+    const res = await request(app)
+      .post('/api/v1/tokens')
+      .set('Cookie', sessionCookie)
+      .send({ name: 'one too many', scope: 'full' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rate limits token creation (security H1)', async () => {
+    let limited = false;
+    for (let i = 0; i < 31; i++) {
+      const res = await request(app)
+        .post('/api/v1/tokens')
+        .set('Cookie', sessionCookie)
+        .send({ name: `burst ${i}`, scope: 'read' });
+      if (res.status === 429) {
+        limited = true;
+        break;
+      }
+    }
+    expect(limited).toBe(true);
+  });
+
   it('a PAT cannot mint or manage PATs — session cookie only', async () => {
     const created = await request(app)
       .post('/api/v1/tokens')

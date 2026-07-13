@@ -8,6 +8,7 @@ import { join, dirname } from 'node:path';
 import type { Db } from './db/types';
 import type { Config } from './config';
 import { createRouter } from './routes';
+import { createOrgRouter } from './org-routes';
 import { createAuthRouter } from './auth/routes';
 import { createTokensRouter } from './auth/tokens';
 import { requireUser } from './auth/middleware';
@@ -103,6 +104,9 @@ export async function createApp(db: Db, options: CreateAppOptions = {}): Promise
       app.use('/api/v1/tokens', createTokensRouter(db, options.config));
     }
     app.use('/api/v1', requireUser(db, options.config));
+    // Team overlay + org administration — behind the guard so requireRole
+    // can read req.user; distinct paths from the per-user router below.
+    app.use('/api/v1', createOrgRouter(db));
   }
   app.use('/api/v1', createRouter(db));
 

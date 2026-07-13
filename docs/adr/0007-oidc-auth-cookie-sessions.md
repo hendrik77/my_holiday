@@ -1,7 +1,7 @@
 # ADR-0007: OIDC authentication with cookie-based app sessions
 
 **Date**: 2026-07-13
-**Status**: proposed
+**Status**: accepted (2026-07-13, PR #57 merged)
 **Deciders**: Hendrik Neumann
 
 ## Context

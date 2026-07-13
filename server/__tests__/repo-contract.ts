@@ -358,6 +358,55 @@ export function describeRepoContract(name: string, makeDb: () => Promise<Db>): v
       });
     });
 
+    describe('personal access tokens (migration 004)', () => {
+      const FUTURE = '2099-01-01T00:00:00.000Z';
+
+      it('creates a PAT and finds it by hash', async () => {
+        const pat = await db.pats.create({
+          userId: USER,
+          name: 'CLI on laptop',
+          tokenHash: 'pat-hash-a',
+          tokenPrefix: 'mh_pat_abc1',
+          scope: 'full',
+          expiresAt: null,
+        });
+        expect(pat.id).toBeDefined();
+        expect(pat.scope).toBe('full');
+        expect(pat.lastUsedAt).toBeNull();
+        expect(pat.revokedAt).toBeNull();
+
+        expect(await db.pats.findByHash('pat-hash-a')).toEqual(pat);
+        expect(await db.pats.findByHash('unknown')).toBeNull();
+      });
+
+      it('lists only the owning user\'s tokens', async () => {
+        const other = await db.users.upsertFromIdP({ oidcSub: 'idp|pat-other', email: 'pat-other@example.com', name: 'O' });
+        await db.pats.create({ userId: USER, name: 'one', tokenHash: 'h1', tokenPrefix: 'mh_pat_1111', scope: 'full', expiresAt: null });
+        await db.pats.create({ userId: other.id, name: 'foreign', tokenHash: 'h2', tokenPrefix: 'mh_pat_2222', scope: 'read', expiresAt: null });
+
+        const mine = await db.pats.listForUser(USER);
+        expect(mine).toHaveLength(1);
+        expect(mine[0].name).toBe('one');
+      });
+
+      it('revoke only works for the owning user and is idempotent', async () => {
+        const other = await db.users.upsertFromIdP({ oidcSub: 'idp|pat-rev', email: 'pat-rev@example.com', name: 'R' });
+        const pat = await db.pats.create({ userId: USER, name: 'x', tokenHash: 'h3', tokenPrefix: 'mh_pat_3333', scope: 'full', expiresAt: null });
+
+        expect(await db.pats.revoke(other.id, pat.id)).toBe(false); // not yours
+        expect(await db.pats.revoke(USER, pat.id)).toBe(true);
+        expect(await db.pats.revoke(USER, pat.id)).toBe(false); // already revoked
+
+        expect((await db.pats.findByHash('h3'))!.revokedAt).not.toBeNull();
+      });
+
+      it('touchLastUsed stamps last_used_at', async () => {
+        const pat = await db.pats.create({ userId: USER, name: 'y', tokenHash: 'h4', tokenPrefix: 'mh_pat_4444', scope: 'read', expiresAt: FUTURE });
+        await db.pats.touchLastUsed(pat.id);
+        expect((await db.pats.findByHash('h4'))!.lastUsedAt).not.toBeNull();
+      });
+    });
+
     describe('per-user isolation (migration 002)', () => {
       let userA: string;
       let userB: string;

@@ -14,6 +14,9 @@ vi.mock('../../api/hooks', () => ({
   usePeriods: () => ({ data: [], isLoading: false }),
   useUpdateSettings: () => ({ mutate: mockMutate }),
   useCreatePeriod: () => ({ mutate: vi.fn() }),
+  useCurrentUser: () => ({
+    data: { id: 'u1', name: 'Local user', email: 'local@my-holiday.invalid', team: '', role: 'admin', authMode: 'none' },
+  }),
 }));
 
 function renderModal(onClose = vi.fn()) {

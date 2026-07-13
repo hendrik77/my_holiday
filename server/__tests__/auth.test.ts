@@ -6,7 +6,7 @@ import express from 'express';
 import { createDb, DEFAULT_USER_ID, type Db } from '../db';
 import { loadConfig, type Config } from '../config';
 import { createApp } from '../app';
-import { createSessionToken } from '../auth/session';
+import { createSessionToken, hashToken } from '../auth/session';
 import { requireRole } from '../auth/middleware';
 import { startMockIdp, type MockIdp } from '../test/mock-idp';
 
@@ -127,6 +127,92 @@ describe('auth middleware matrix', () => {
       res.json({ ok: true });
     });
     expect((await request(mini).get('/admin-only')).status).toBe(403);
+  });
+});
+
+describe('PAT bearer auth (oidc mode)', () => {
+  let db: Db;
+  let app: express.Express;
+
+  async function issuePat(scope: 'full' | 'read', overrides: Partial<{ expiresAt: string | null; revoked: boolean }> = {}) {
+    const user = await db.users.upsertFromIdP({ oidcSub: 'idp|pat-user', email: 'pat@example.com', name: 'Pat' });
+    const raw = `mh_pat_${'a'.repeat(43)}${scope === 'read' ? 'r' : 'f'}`;
+    const pat = await db.pats.create({
+      userId: user.id,
+      name: 'test token',
+      tokenHash: hashToken(raw),
+      tokenPrefix: raw.slice(0, 12),
+      scope,
+      expiresAt: overrides.expiresAt ?? null,
+    });
+    if (overrides.revoked) await db.pats.revoke(user.id, pat.id);
+    return { raw, user, pat };
+  }
+
+  beforeEach(async () => {
+    db = await createDb(loadConfig({ DB_DRIVER: 'sqlite', DB_PATH: ':memory:' }));
+    app = await createApp(db, { authMode: 'oidc', config: oidcConfig(loadConfig({ DB_PATH: ':memory:' })) });
+  });
+
+  afterEach(async () => {
+    await db.close();
+  });
+
+  it('a full-scope PAT authenticates reads and writes, scoped to its owner', async () => {
+    const { raw, user } = await issuePat('full');
+
+    const post = await request(app)
+      .post('/api/v1/periods')
+      .set('Authorization', `Bearer ${raw}`)
+      .send({ startDate: '2026-10-01', endDate: '2026-10-02' });
+    expect(post.status).toBe(201);
+    expect(await db.periods.listAll(user.id)).toHaveLength(1);
+
+    const get = await request(app).get('/api/v1/periods').set('Authorization', `Bearer ${raw}`);
+    expect(get.status).toBe(200);
+    expect(get.body).toHaveLength(1);
+  });
+
+  it('a read-scope PAT can GET but not write (403)', async () => {
+    const { raw } = await issuePat('read');
+
+    expect((await request(app).get('/api/v1/periods').set('Authorization', `Bearer ${raw}`)).status).toBe(200);
+    const post = await request(app)
+      .post('/api/v1/periods')
+      .set('Authorization', `Bearer ${raw}`)
+      .send({ startDate: '2026-10-01', endDate: '2026-10-02' });
+    expect(post.status).toBe(403);
+  });
+
+  it('rejects unknown, revoked, and expired PATs with 401', async () => {
+    expect(
+      (await request(app).get('/api/v1/periods').set('Authorization', `Bearer mh_pat_${'x'.repeat(44)}`)).status,
+    ).toBe(401);
+
+    const revoked = await issuePat('full', { revoked: true });
+    expect((await request(app).get('/api/v1/periods').set('Authorization', `Bearer ${revoked.raw}`)).status).toBe(401);
+
+    const rawExpired = `mh_pat_${'e'.repeat(44)}`;
+    const user = (await db.users.findByOidcSub('idp|pat-user'))!;
+    await db.pats.create({
+      userId: user.id,
+      name: 'expired',
+      tokenHash: hashToken(rawExpired),
+      tokenPrefix: rawExpired.slice(0, 12),
+      scope: 'full',
+      expiresAt: '2000-01-01T00:00:00.000Z',
+    });
+    expect((await request(app).get('/api/v1/periods').set('Authorization', `Bearer ${rawExpired}`)).status).toBe(401);
+  });
+
+  it('stamps last_used_at on successful PAT auth', async () => {
+    const { raw, pat } = await issuePat('full');
+    await request(app).get('/api/v1/periods').set('Authorization', `Bearer ${raw}`);
+    expect((await db.pats.findByHash(pat.tokenHash))!.lastUsedAt).not.toBeNull();
+  });
+
+  it('legacy API_TOKEN-style bearer values are still rejected in oidc mode', async () => {
+    expect((await request(app).get('/api/v1/periods').set('Authorization', 'Bearer not-a-pat')).status).toBe(401);
   });
 });
 

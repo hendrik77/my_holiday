@@ -52,6 +52,29 @@ export interface UpsertUserInput {
 /** Admin-editable profile fields. */
 export type UserProfileUpdate = Partial<Pick<UserRow, 'name' | 'team' | 'role' | 'managerId'>>;
 
+/** What a personal access token may do: full API access or read-only. */
+export type PatScope = 'full' | 'read';
+
+/** Row shape from the pats table (migration 004). */
+export interface PatRow {
+  id: string;
+  userId: string;
+  /** User-chosen label, e.g. "CLI on laptop". */
+  name: string;
+  /** sha256 of the raw token — the raw value is shown exactly once. */
+  tokenHash: string;
+  /** First characters of the raw token, for recognizing it in lists. */
+  tokenPrefix: string;
+  scope: PatScope;
+  expiresAt: string | null; // ISO timestamp
+  lastUsedAt: string | null;
+  createdAt: string;
+  revokedAt: string | null;
+}
+
+/** PAT as exposed by the API — everything but the owner id and the hash. */
+export type PublicPat = Omit<PatRow, 'userId' | 'tokenHash'>;
+
 /** Response shape of GET /api/v1/auth/me — the acting user and auth mode. */
 export interface CurrentUser {
   id: string;

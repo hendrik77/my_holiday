@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useUIStore } from '../state/store';
-import { useSettings, useUpdateSettings, useCreatePeriod, usePeriods } from '../api/hooks';
+import { useSettings, useUpdateSettings, useCreatePeriod, usePeriods, useCurrentUser } from '../api/hooks';
+import { ApiTokensSection } from '../auth/ApiTokensSection';
 import { GERMAN_STATES } from '../data/holidays';
 import type { GermanState } from '../data/holidays';
 import { useT } from '../i18n/useT';
@@ -16,6 +17,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const { data: periods = [] } = usePeriods(year);
   const updateSettings = useUpdateSettings();
   const createPeriod = useCreatePeriod();
+  const { data: currentUser } = useCurrentUser();
   const { t } = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -130,6 +132,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             {importError && <div className="form-hint" style={{ color: 'var(--color-primary)', whiteSpace: 'pre-line' }}>{importError}</div>}
             <input ref={fileInputRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={handleFileChange} />
           </div>
+          {currentUser?.authMode === 'oidc' && <ApiTokensSection />}
         </div>
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>{t('settings.cancel')}</button>

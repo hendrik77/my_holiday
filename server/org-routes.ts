@@ -68,7 +68,8 @@ export function createOrgRouter(db: Db): Router {
   });
 
   router.put('/admin/users/:id', requireRole('admin'), async (req, res) => {
-    const target = await db.users.findById(req.params.id);
+    const { id } = req.params;
+    const target = await db.users.findById(id);
     if (!target) {
       res.status(404).json({ error: 'User not found' });
       return;

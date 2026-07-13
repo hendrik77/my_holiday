@@ -16,11 +16,11 @@ afterEach(async () => {
 });
 
 describe('createApp auth-mode guard', () => {
-  it('refuses to build an app in oidc mode until the auth layer exists (fail closed)', async () => {
+  it('refuses to build an oidc app without the config wiring (fail closed)', async () => {
     db = await createDb(loadConfig({ DB_DRIVER: 'sqlite', DB_PATH: ':memory:' }));
-    // Without this guard, AUTH_MODE=oidc would boot an unauthenticated API
-    // where every request silently acts as the shared default admin user.
-    expect(() => createApp(db, { authMode: 'oidc' })).toThrowError(/oidc/i);
+    // Without this guard, AUTH_MODE=oidc without auth middleware would serve
+    // an unauthenticated API acting as the shared default admin user.
+    await expect(createApp(db, { authMode: 'oidc' })).rejects.toThrow(/oidc/i);
   });
 });
 

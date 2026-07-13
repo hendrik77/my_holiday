@@ -1,10 +1,14 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 import type { Db } from './db/types';
+import type { Config } from './config';
 import { createRouter } from './routes';
+import { createAuthRouter } from './auth/routes';
+import { requireUser } from './auth/middleware';
 
 export interface CreateAppOptions {
   /** CORS origin override; by default only local origins (localhost, 127.0.0.1, [::1]) are allowed. */
@@ -13,8 +17,10 @@ export interface CreateAppOptions {
   apiToken?: string;
   /** Serve the built SPA from dist/ (production single-port mode). */
   serveStatic?: boolean;
-  /** AUTH_MODE from config. 'oidc' is rejected until the auth layer (Phase 4) exists. */
+  /** AUTH_MODE from config; 'oidc' additionally requires `config`. */
   authMode?: 'none' | 'oidc';
+  /** Full runtime config — enables the auth endpoints (/api/v1/auth). */
+  config?: Config;
 }
 
 // Same-machine origins (any port). Cross-origin reads from arbitrary websites
@@ -32,15 +38,16 @@ interface HttpError extends Error {
 }
 
 /** Build the Express app: CORS, JSON body parsing, API routes, optional SPA serving. */
-export function createApp(db: Db, options: CreateAppOptions = {}): express.Express {
-  // Fail closed: config already validates AUTH_MODE=oidc, but no middleware
-  // sets req.user yet — booting would serve an unauthenticated API where
-  // every caller acts as the shared default admin user. Removed in Phase 4.
-  if (options.authMode === 'oidc') {
-    throw new Error('AUTH_MODE=oidc is not supported by this build yet — the OIDC auth layer lands in a later release');
+export async function createApp(db: Db, options: CreateAppOptions = {}): Promise<express.Express> {
+  const authMode = options.authMode ?? 'none';
+  // Fail closed: oidc mode without the config wiring would serve an
+  // unauthenticated API where every caller acts as the default admin user.
+  if (authMode === 'oidc' && !options.config) {
+    throw new Error('AUTH_MODE=oidc requires createApp to receive the runtime config');
   }
 
   const app = express();
+  if (authMode === 'oidc') app.set('trust proxy', true);
 
   app.use(
     cors({
@@ -50,6 +57,7 @@ export function createApp(db: Db, options: CreateAppOptions = {}): express.Expre
     }),
   );
   app.use(express.json({ limit: '32kb' }));
+  app.use(cookieParser());
 
   // Liveness probe — intentionally outside the bearer-token guard so Docker
   // healthchecks and monitoring work without credentials.
@@ -70,6 +78,13 @@ export function createApp(db: Db, options: CreateAppOptions = {}): express.Expre
     });
   }
 
+  if (options.config) {
+    // login/callback/refresh/logout must stay reachable without a session;
+    // /me carries its own requireUser. In oidc mode everything below this
+    // mount requires a valid session cookie.
+    app.use('/api/v1/auth', await createAuthRouter(db, options.config));
+    app.use('/api/v1', requireUser(db, options.config));
+  }
   app.use('/api/v1', createRouter(db));
 
   // Unknown API paths get a JSON 404 — never the SPA fallback HTML.

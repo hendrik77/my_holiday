@@ -13,6 +13,11 @@ import { startMockIdp, type MockIdp } from '../test/mock-idp';
 const SECRET = 'test-secret-at-least-32-bytes-long!!';
 const BASE_URL = 'http://127.0.0.1:3999';
 
+/** supertest types set-cookie as string, but it is an array at runtime. */
+function setCookies(headers: Record<string, string | undefined>): string[] {
+  return (headers['set-cookie'] ?? []) as unknown as string[];
+}
+
 let idp: MockIdp;
 
 beforeAll(async () => {
@@ -127,7 +132,7 @@ describe('OIDC login flow (mock IdP)', () => {
     const idpUrl = new URL(loginRes.headers.location);
     expect(idpUrl.origin).toBe(idp.url);
     expect(idpUrl.searchParams.get('code_challenge_method')).toBe('S256');
-    const oidcCookie = loginRes.headers['set-cookie']![0].split(';')[0];
+    const oidcCookie = setCookies(loginRes.headers)[0].split(';')[0];
 
     const idpRes = await fetch(idpUrl, { redirect: 'manual' });
     const callback = new URL(idpRes.headers.get('location')!);
@@ -140,7 +145,7 @@ describe('OIDC login flow (mock IdP)', () => {
     expect(cbRes.headers.location).toBe('/');
 
     const cookies: Record<string, string> = {};
-    for (const c of cbRes.headers['set-cookie']!) {
+    for (const c of setCookies(cbRes.headers)) {
       const [pair] = c.split(';');
       const [name, ...rest] = pair.split('=');
       cookies[name] = rest.join('=');
@@ -182,7 +187,7 @@ describe('OIDC login flow (mock IdP)', () => {
       .post('/api/v1/auth/refresh')
       .set('Cookie', `mh_refresh=${cookies.mh_refresh}`);
     expect(refresh.status).toBe(204);
-    const newCookies = refresh.headers['set-cookie']!.join(';');
+    const newCookies = setCookies(refresh.headers).join(';');
     expect(newCookies).toContain('mh_session=');
     expect(newCookies).toContain('mh_refresh=');
 

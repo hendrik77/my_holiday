@@ -72,6 +72,18 @@ describe('refresh-token rotation', () => {
     expect(await rotateRefreshToken(db, second!.token, 3600)).toBeNull();
   });
 
+  it('two concurrent uses of the same token yield at most one successor', async () => {
+    const issued = await issueRefreshToken(db, DEFAULT_USER_ID, 3600);
+
+    // TOCTOU guard: without an atomic claim, both racers pass the
+    // "not yet rotated" check and both receive valid successors.
+    const results = await Promise.all([
+      rotateRefreshToken(db, issued.token, 3600),
+      rotateRefreshToken(db, issued.token, 3600),
+    ]);
+    expect(results.filter((r) => r !== null)).toHaveLength(1);
+  });
+
   it('rejects unknown and expired tokens', async () => {
     expect(await rotateRefreshToken(db, 'unknown-token', 3600)).toBeNull();
 

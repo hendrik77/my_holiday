@@ -306,14 +306,16 @@ export function describeRepoContract(name: string, makeDb: () => Promise<Db>): v
         expect(await db.refreshTokens.findByHash('nonexistent')).toBeNull();
       });
 
-      it('markRotated stamps rotated_at exactly once', async () => {
+      it('markRotated claims the token exactly once (atomic)', async () => {
         const row = await db.refreshTokens.create({
           userId: USER,
           tokenHash: 'hash-b',
           familyId: 'fam-1',
           expiresAt: FUTURE,
         });
-        await db.refreshTokens.markRotated(row.id);
+        expect(await db.refreshTokens.markRotated(row.id)).toBe(true);
+        // The second claim loses: rotated_at is already set.
+        expect(await db.refreshTokens.markRotated(row.id)).toBe(false);
 
         const rotated = await db.refreshTokens.findByHash('hash-b');
         expect(rotated!.rotatedAt).not.toBeNull();

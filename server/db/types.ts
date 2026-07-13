@@ -68,7 +68,12 @@ export interface RefreshTokenRow {
 export interface RefreshTokensRepo {
   create(input: Pick<RefreshTokenRow, 'userId' | 'tokenHash' | 'familyId' | 'expiresAt'>): Promise<RefreshTokenRow>;
   findByHash(tokenHash: string): Promise<RefreshTokenRow | null>;
-  markRotated(id: string): Promise<void>;
+  /**
+   * Atomically claim the token for rotation. True iff THIS call flipped
+   * rotated_at — a false return under concurrency means another request
+   * already claimed it (replay signal).
+   */
+  markRotated(id: string): Promise<boolean>;
   /** Revoke every token of a family; returns how many were newly revoked. */
   revokeFamily(familyId: string): Promise<number>;
   /** Housekeeping: drop tokens past expires_at; returns how many were removed. */

@@ -19,11 +19,12 @@ export function createPostgresRefreshTokensRepo(pool: Pool): RefreshTokensRepo {
       return rows[0] ? rowToRefreshToken(rows[0]) : null;
     },
 
-    async markRotated(id: string): Promise<void> {
-      await pool.query('UPDATE refresh_tokens SET rotated_at = $1 WHERE id = $2 AND rotated_at IS NULL', [
-        new Date().toISOString(),
-        id,
-      ]);
+    async markRotated(id: string): Promise<boolean> {
+      const result = await pool.query(
+        'UPDATE refresh_tokens SET rotated_at = $1 WHERE id = $2 AND rotated_at IS NULL',
+        [new Date().toISOString(), id],
+      );
+      return (result.rowCount ?? 0) > 0;
     },
 
     async revokeFamily(familyId: string): Promise<number> {

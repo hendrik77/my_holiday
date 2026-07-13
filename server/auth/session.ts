@@ -22,7 +22,9 @@ const encoder = new TextEncoder();
 
 export async function createSessionToken(claims: SessionClaims, secret: string, ttlSeconds: number): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  return new SignJWT({ role: claims.role, name: claims.name, email: claims.email })
+  // typ separates token purposes signed with the same secret — a login-state
+  // JWT must never pass as a session (security review M2).
+  return new SignJWT({ typ: 'session', role: claims.role, name: claims.name, email: claims.email })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(claims.sub)
     .setIssuedAt(now)
@@ -33,7 +35,7 @@ export async function createSessionToken(claims: SessionClaims, secret: string, 
 export async function verifySessionToken(token: string, secret: string): Promise<SessionClaims | null> {
   try {
     const { payload } = await jwtVerify(token, encoder.encode(secret), { algorithms: ['HS256'] });
-    if (typeof payload.sub !== 'string') return null;
+    if (payload.typ !== 'session' || typeof payload.sub !== 'string') return null;
     return {
       sub: payload.sub,
       role: payload.role as UserRole,
@@ -94,12 +96,15 @@ export async function rotateRefreshToken(
   const row = await db.refreshTokens.findByHash(hashToken(rawToken));
   if (!row || row.revokedAt !== null || row.expiresAt < new Date().toISOString()) return null;
 
-  if (row.rotatedAt !== null) {
+  // Atomic claim: only the request that actually flips rotated_at may issue
+  // a successor. Losing the claim — whether the row was read as rotated or
+  // another request won the race between read and write — is a replay
+  // signal and kills the family (TOCTOU guard, security review H1).
+  if (row.rotatedAt !== null || !(await db.refreshTokens.markRotated(row.id))) {
     await db.refreshTokens.revokeFamily(row.familyId);
     return null;
   }
 
-  await db.refreshTokens.markRotated(row.id);
   const issued = await issueRefreshToken(db, row.userId, ttlSeconds, row.familyId);
   return { ...issued, userId: row.userId };
 }

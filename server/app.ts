@@ -47,7 +47,10 @@ export async function createApp(db: Db, options: CreateAppOptions = {}): Promise
   }
 
   const app = express();
-  if (authMode === 'oidc') app.set('trust proxy', true);
+  // Exactly one reverse-proxy hop (the deployment model behind
+  // PUBLIC_BASE_URL). Never `true`: that trusts the whole client-supplied
+  // X-Forwarded-For chain and makes req.ip spoofable (security review M1).
+  if (authMode === 'oidc') app.set('trust proxy', 1);
 
   app.use(
     cors({

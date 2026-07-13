@@ -27,7 +27,9 @@ export function createPostgresUsersRepo(pool: Pool): UsersRepo {
          VALUES ($1, $2, $3, $4, '', 'employee', NULL, $5, $5)
          ON CONFLICT (oidc_sub) DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, updated_at = EXCLUDED.updated_at
          RETURNING *`,
-        [crypto.randomUUID(), input.oidcSub, input.email, input.name, now],
+        // Lowercased at storage so casing can't split one identity into two
+        // rows under the UNIQUE constraint (security review M4).
+        [crypto.randomUUID(), input.oidcSub, input.email.toLowerCase(), input.name, now],
       );
       return rowToUser(rows[0]);
     },

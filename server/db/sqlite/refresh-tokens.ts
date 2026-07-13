@@ -31,11 +31,11 @@ export function createSqliteRefreshTokensRepo(db: Database.Database): RefreshTok
       return row ? rowToRefreshToken(row) : null;
     },
 
-    async markRotated(id: string): Promise<void> {
-      db.prepare('UPDATE refresh_tokens SET rotated_at = ? WHERE id = ? AND rotated_at IS NULL').run(
-        new Date().toISOString(),
-        id,
-      );
+    async markRotated(id: string): Promise<boolean> {
+      const result = db
+        .prepare('UPDATE refresh_tokens SET rotated_at = ? WHERE id = ? AND rotated_at IS NULL')
+        .run(new Date().toISOString(), id);
+      return result.changes > 0;
     },
 
     async revokeFamily(familyId: string): Promise<number> {

@@ -1,4 +1,5 @@
 import { Router, type Response } from 'express';
+import { rateLimit } from 'express-rate-limit';
 import * as oidc from 'openid-client';
 import { SignJWT, jwtVerify } from 'jose';
 import type { Db } from '../db/types';
@@ -53,6 +54,7 @@ async function setSessionCookie(res: Response, config: Config, user: UserRow): P
 function clearAuthCookies(res: Response): void {
   res.clearCookie(SESSION_COOKIE, { path: '/' });
   res.clearCookie(REFRESH_COOKIE, { path: AUTH_PATH });
+  res.clearCookie(LOGIN_COOKIE, { path: AUTH_PATH });
 }
 
 export async function createAuthRouter(db: Db, config: Config): Promise<Router> {
@@ -64,6 +66,18 @@ export async function createAuthRouter(db: Db, config: Config): Promise<Router> 
   });
 
   if (config.AUTH_MODE !== 'oidc') return router;
+
+  // login/callback/refresh are unauthenticated and do real work per call
+  // (IdP round-trips, DB writes) — bound them per IP (security review H3).
+  // Requires app-level 'trust proxy' to be a hop count, never `true`.
+  router.use(
+    rateLimit({
+      windowMs: 60_000,
+      limit: 30,
+      standardHeaders: true,
+      legacyHeaders: false,
+    }),
+  );
 
   const secretKey = encoder.encode(config.SESSION_SECRET!);
   const issuerUrl = new URL(config.OIDC_ISSUER_URL!);
@@ -79,13 +93,17 @@ export async function createAuthRouter(db: Db, config: Config): Promise<Router> 
 
   router.get('/login', async (_req, res, next) => {
     try {
+      // Opportunistic housekeeping: logins are rare, and without this the
+      // refresh_tokens table grows unbounded (security review L1).
+      await db.refreshTokens.deleteExpired();
+
       const verifier = oidc.randomPKCECodeVerifier();
       const loginState: LoginState = {
         state: oidc.randomState(),
         nonce: oidc.randomNonce(),
         verifier,
       };
-      const stateJwt = await new SignJWT({ ...loginState })
+      const stateJwt = await new SignJWT({ typ: 'login_state', ...loginState })
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
         .setExpirationTime(Math.floor(Date.now() / 1000) + LOGIN_STATE_TTL_S)
@@ -114,6 +132,10 @@ export async function createAuthRouter(db: Db, config: Config): Promise<Router> 
         return;
       }
       const { payload } = await jwtVerify(stateJwt, secretKey, { algorithms: ['HS256'] });
+      if (payload.typ !== 'login_state') {
+        res.status(400).json({ error: 'Missing login state — start again at /api/v1/auth/login' });
+        return;
+      }
       const loginState = payload as unknown as LoginState;
 
       const tokens = await oidc.authorizationCodeGrant(
@@ -127,12 +149,22 @@ export async function createAuthRouter(db: Db, config: Config): Promise<Router> 
       );
       const claims = tokens.claims()!;
 
+      const isFirstLogin = (await db.users.findByOidcSub(claims.sub)) === null;
       let user = await db.users.upsertFromIdP({
         oidcSub: claims.sub,
         email: String(claims.email ?? ''),
         name: String(claims.name ?? ''),
       });
-      if (config.ADMIN_EMAILS.includes(user.email.toLowerCase()) && user.role !== 'admin') {
+      // Admin bootstrap (security review H2): only on the very first login
+      // of an identity — a later self-service email change at the IdP must
+      // not escalate — and only for an IdP-verified email claim. Later
+      // grants are explicit admin actions in-app.
+      if (
+        isFirstLogin &&
+        claims.email_verified === true &&
+        config.ADMIN_EMAILS.includes(user.email.toLowerCase()) &&
+        user.role !== 'admin'
+      ) {
         user = (await db.users.updateProfile(user.id, { role: 'admin' }))!;
       }
 
@@ -142,8 +174,11 @@ export async function createAuthRouter(db: Db, config: Config): Promise<Router> 
       res.cookie(REFRESH_COOKIE, refresh.token, cookieOptions(config, AUTH_PATH, config.REFRESH_TOKEN_TTL_S));
       res.redirect(302, '/');
     } catch (error) {
-      // Never leak IdP/exchange details to the browser; log server-side.
-      console.error('OIDC callback failed:', error);
+      // Never leak IdP/exchange details to the browser, and keep raw error
+      // objects out of the logs too — openid-client errors can embed the
+      // IdP's response body (security review M3).
+      const message = error instanceof Error ? `${error.name}: ${error.message}` : 'unknown error';
+      console.error('OIDC callback failed:', message);
       res.status(401).json({ error: 'Login failed' });
     }
   });

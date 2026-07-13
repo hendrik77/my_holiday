@@ -75,6 +75,33 @@ export function requireUser(db: Db, config: Config): RequestHandler {
   };
 }
 
+/**
+ * Session-cookie-only variant for privileged self-service endpoints
+ * (token management, ADR-0008): a PAT must never be able to mint or
+ * revoke PATs, so bearer tokens are deliberately not accepted here.
+ */
+export function requireSessionUser(db: Db, config: Config): RequestHandler {
+  return async (req, res, next) => {
+    try {
+      const token = (req.cookies as Record<string, string> | undefined)?.mh_session;
+      if (typeof token === 'string') {
+        const claims = await verifySessionToken(token, config.SESSION_SECRET!);
+        if (claims) {
+          const user = await db.users.findById(claims.sub);
+          if (user) {
+            req.user = user;
+            next();
+            return;
+          }
+        }
+      }
+      res.status(401).json({ error: 'Authentication required' });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
 /** 403 unless req.user has one of the given roles. Requires requireUser upstream. */
 export function requireRole(...roles: UserRole[]): RequestHandler {
   return (req, res, next) => {

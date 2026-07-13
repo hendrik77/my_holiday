@@ -8,6 +8,7 @@ import type { Db } from './db/types';
 import type { Config } from './config';
 import { createRouter } from './routes';
 import { createAuthRouter } from './auth/routes';
+import { createTokensRouter } from './auth/tokens';
 import { requireUser } from './auth/middleware';
 
 export interface CreateAppOptions {
@@ -89,6 +90,11 @@ export async function createApp(db: Db, options: CreateAppOptions = {}): Promise
     // /me carries its own requireUser. In oidc mode everything below this
     // mount requires a valid session cookie.
     app.use('/api/v1/auth', await createAuthRouter(db, options.config));
+    if (options.config.AUTH_MODE === 'oidc') {
+      // Session-cookie-only self-service (a PAT cannot manage PATs);
+      // carries its own auth, so it mounts before the general guard.
+      app.use('/api/v1/tokens', createTokensRouter(db, options.config));
+    }
     app.use('/api/v1', requireUser(db, options.config));
   }
   app.use('/api/v1', createRouter(db));

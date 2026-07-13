@@ -150,6 +150,15 @@ describe('team, org, and admin endpoints', () => {
     });
   });
 
+  it('team/org/admin endpoints do not exist in single-user mode (security review HIGH)', async () => {
+    const noneDb = await createDb(loadConfig({ DB_DRIVER: 'sqlite', DB_PATH: ':memory:' }));
+    const noneApp = await createApp(noneDb, { authMode: 'none', config: loadConfig({ DB_PATH: ':memory:' }) });
+    for (const path of ['/api/v1/team/periods', '/api/v1/org/settings', '/api/v1/admin/users']) {
+      expect((await request(noneApp).get(path)).status).toBe(404);
+    }
+    await noneDb.close();
+  });
+
   describe('admin user management', () => {
     it('GET /api/v1/admin/users is admin-only and lists everyone', async () => {
       expect((await request(app).get('/api/v1/admin/users').set('Cookie', await cookieFor(manager))).status).toBe(403);
@@ -205,6 +214,19 @@ describe('team, org, and admin endpoints', () => {
             .send({ team: 'X' })
         ).status,
       ).toBe(403);
+    });
+
+    it('refuses to demote the last remaining admin (security review MEDIUM)', async () => {
+      // `admin` is the only admin (default user is admin too, so demote it first).
+      const defaultUser = (await db.users.listAll()).find((u) => u.role === 'admin' && u.id !== admin.id)!;
+      await db.users.updateProfile(defaultUser.id, { role: 'employee' });
+
+      const res = await request(app)
+        .put(`/api/v1/admin/users/${admin.id}`)
+        .set('Cookie', await cookieFor(admin))
+        .send({ role: 'employee' });
+      expect(res.status).toBe(400);
+      expect((await db.users.findById(admin.id))!.role).toBe('admin');
     });
   });
 });

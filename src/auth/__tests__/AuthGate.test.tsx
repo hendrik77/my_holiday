@@ -30,11 +30,11 @@ afterEach(() => {
 });
 
 describe('AuthGate', () => {
-  it('shows a loading state while the session is being checked', () => {
+  it('renders neither content nor login while the session is being checked', () => {
     mockUseCurrentUser.mockReturnValue({ data: undefined, isLoading: true, error: null });
     renderGate();
     expect(screen.queryByText('APP CONTENT')).toBeNull();
-    expect(screen.getByText('Anmeldung wird geprüft …')).toBeDefined();
+    expect(screen.queryByRole('link', { name: 'Anmelden' })).toBeNull();
   });
 
   it('renders children in single-user mode', () => {

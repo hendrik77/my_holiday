@@ -6,7 +6,6 @@ export const translations = {
   de: {
     app: { title: 'My Holiday' },
     auth: {
-      loading: 'Anmeldung wird geprüft …',
       signIn: 'Anmelden',
       signInHint: 'Bitte melde dich an, um deine Urlaubsplanung zu öffnen.',
       sessionExpired: 'Sitzung abgelaufen – bitte erneut anmelden.',
@@ -206,7 +205,6 @@ export const translations = {
   en: {
     app: { title: 'My Holiday' },
     auth: {
-      loading: 'Checking session …',
       signIn: 'Sign in',
       signInHint: 'Please sign in to open your holiday planner.',
       sessionExpired: 'Session expired — please sign in again.',

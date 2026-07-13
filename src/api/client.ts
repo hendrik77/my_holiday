@@ -19,6 +19,17 @@ export function resolveApiBaseUrl(env: ApiBaseUrlEnv): string {
 
 const BASE_URL = resolveApiBaseUrl(import.meta.env);
 
+/** API failure carrying the HTTP status, so callers can special-case auth. */
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 function doFetch(path: string, options?: RequestInit): Promise<Response> {
   return fetch(`${BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -28,23 +39,40 @@ function doFetch(path: string, options?: RequestInit): Promise<Response> {
 }
 
 /**
- * On a 401 the session JWT has likely just expired: try one silent
- * POST /auth/refresh and retry the original request. If the refresh fails
- * too, announce `auth:expired` so the AuthGate can show the login page.
+ * Single-flight session refresh: refresh tokens are single-use on the server
+ * (rotation family — a second parallel use reads as replay and revokes the
+ * whole session), so all concurrent 401s must share ONE refresh request.
+ */
+let refreshInFlight: Promise<boolean> | null = null;
+function refreshSession(): Promise<boolean> {
+  refreshInFlight ??= doFetch('/auth/refresh', { method: 'POST' })
+    .then((res) => res.ok)
+    .catch(() => false)
+    .finally(() => {
+      refreshInFlight = null;
+    });
+  return refreshInFlight;
+}
+
+/**
+ * On a 401 the session JWT has likely just expired: join the shared silent
+ * refresh and retry the original request once. If the refresh — or the
+ * retry itself — still 401s, announce `auth:expired` so the AuthGate can
+ * show the login page.
  */
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   let res = await doFetch(path, options);
   if (res.status === 401) {
-    const refresh = await fetch(`${BASE_URL}/auth/refresh`, { method: 'POST', credentials: 'include' });
-    if (refresh.ok) {
+    if (await refreshSession()) {
       res = await doFetch(path, options);
-    } else {
+    }
+    if (res.status === 401) {
       window.dispatchEvent(new Event('auth:expired'));
     }
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `Request failed: ${res.status}`);
+    throw new ApiError(body.error || `Request failed: ${res.status}`, res.status);
   }
   if (res.status === 204) return undefined as T;
   return res.json();

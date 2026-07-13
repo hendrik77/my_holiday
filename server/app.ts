@@ -57,6 +57,9 @@ export async function createApp(db: Db, options: CreateAppOptions = {}): Promise
       origin:
         options.corsOrigin ??
         ((origin, callback) => callback(null, origin === undefined || LOCAL_ORIGIN_RE.test(origin))),
+      // The SPA sends cookies (credentials: 'include'); without this the
+      // browser discards cross-origin responses in dev (5173 → 3001).
+      credentials: true,
     }),
   );
   app.use(express.json({ limit: '32kb' }));

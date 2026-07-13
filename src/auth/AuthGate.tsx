@@ -4,7 +4,6 @@ import { useCurrentUser } from '../api/hooks';
 import { LoginPage } from './LoginPage';
 import { showToast } from '../components/toastStore';
 import { useT } from '../i18n/useT';
-import './auth.css';
 
 /**
  * Session boundary for the whole app: children render only once the acting
@@ -30,7 +29,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('auth:expired', onExpired);
   }, [qc, t]);
 
-  if (isLoading) return <div className="auth-loading">{t('auth.loading')}</div>;
+  // Nothing while /auth/me resolves: in single-user mode this is a single
+  // fast local round-trip, and a flashing "checking session" message would
+  // be a visible regression there (review H3).
+  if (isLoading) return null;
   if (!user) return <LoginPage />;
   return <>{children}</>;
 }

@@ -1,4 +1,4 @@
-import type { PeriodRow, Settings, SettingsUpdate, CurrentUser } from '../../server/types';
+import type { PeriodRow, Settings, SettingsUpdate, CurrentUser, PublicPat, PatScope } from '../../server/types';
 import type { CreatePeriodInput } from '../../server/types';
 
 export interface ApiBaseUrlEnv {
@@ -118,6 +118,24 @@ export function logout(): Promise<void> {
 /** Browser navigation target that starts the OIDC login flow. */
 export function loginUrl(): string {
   return `${BASE_URL}/auth/login`;
+}
+
+// ── API tokens (oidc mode) ───────────────────────────────────────
+
+export function fetchTokens(): Promise<PublicPat[]> {
+  return request<PublicPat[]>('/tokens');
+}
+
+/** The returned raw token is shown exactly once — it is never retrievable again. */
+export function createToken(input: { name: string; scope: PatScope }): Promise<{ token: string; pat: PublicPat }> {
+  return request<{ token: string; pat: PublicPat }>('/tokens', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function revokeToken(id: string): Promise<void> {
+  return request<void>(`/tokens/${id}`, { method: 'DELETE' });
 }
 
 // ── Settings ─────────────────────────────────────────────────────

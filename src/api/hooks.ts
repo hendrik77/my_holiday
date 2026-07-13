@@ -8,7 +8,11 @@ import {
   updateSettings,
   fetchCurrentUser,
   logout,
+  fetchTokens,
+  createToken,
+  revokeToken,
 } from './client';
+import type { PatScope } from '../../server/types';
 import type { PeriodRow, SettingsUpdate } from '../../server/types';
 import type { CreatePeriodInput } from '../../server/types';
 
@@ -71,6 +75,32 @@ export function useLogout() {
     onSuccess: () => {
       qc.clear();
       window.location.assign('/');
+    },
+  });
+}
+
+// ── API tokens (oidc mode) ───────────────────────────────────────
+
+export function useTokens() {
+  return useQuery({ queryKey: ['tokens'], queryFn: fetchTokens });
+}
+
+export function useCreateToken() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { name: string; scope: PatScope }) => createToken(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tokens'] });
+    },
+  });
+}
+
+export function useRevokeToken() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => revokeToken(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tokens'] });
     },
   });
 }

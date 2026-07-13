@@ -72,6 +72,9 @@ export interface PatRow {
   revokedAt: string | null;
 }
 
+/** PAT as exposed by the API — everything but the owner id and the hash. */
+export type PublicPat = Omit<PatRow, 'userId' | 'tokenHash'>;
+
 /** Response shape of GET /api/v1/auth/me — the acting user and auth mode. */
 export interface CurrentUser {
   id: string;

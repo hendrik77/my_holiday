@@ -6,6 +6,7 @@ import type {
   UserRow,
   UpsertUserInput,
   UserProfileUpdate,
+  PatRow,
 } from '../types';
 
 /** Fields of a period that may be changed after creation. */
@@ -80,6 +81,19 @@ export interface RefreshTokensRepo {
   deleteExpired(): Promise<number>;
 }
 
+/** Personal-access-token store (Phase 6, ADR-0008). */
+export interface PatsRepo {
+  create(
+    input: Pick<PatRow, 'userId' | 'name' | 'tokenHash' | 'tokenPrefix' | 'scope' | 'expiresAt'>,
+  ): Promise<PatRow>;
+  findByHash(tokenHash: string): Promise<PatRow | null>;
+  /** Newest first. */
+  listForUser(userId: string): Promise<PatRow[]>;
+  /** True iff the token belonged to the user and was not already revoked. */
+  revoke(userId: string, id: string): Promise<boolean>;
+  touchLastUsed(id: string): Promise<void>;
+}
+
 /** Aggregate handle to one database backend. Created via createDb(config). */
 export interface Db {
   readonly driver: 'sqlite' | 'postgres';
@@ -87,6 +101,7 @@ export interface Db {
   readonly settings: SettingsRepo;
   readonly users: UsersRepo;
   readonly refreshTokens: RefreshTokensRepo;
+  readonly pats: PatsRepo;
   /** Apply pending schema migrations (idempotent; the factory runs it once). */
   migrate(): Promise<void>;
   close(): Promise<void>;

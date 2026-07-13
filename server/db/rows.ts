@@ -1,4 +1,4 @@
-import type { PeriodRow, Settings, SettingsUpdate, UserRow, UserRole } from '../types';
+import type { PeriodRow, Settings, SettingsUpdate, UserRow, UserRole, PatRow, PatScope } from '../types';
 import type { RefreshTokenRow } from './types';
 
 /**
@@ -43,6 +43,22 @@ export function rowToRefreshToken(row: Record<string, unknown>): RefreshTokenRow
     rotatedAt: (row.rotated_at as string | null) ?? null,
     revokedAt: (row.revoked_at as string | null) ?? null,
     createdAt: row.created_at as string,
+  };
+}
+
+/** Map a raw `pats` row to the API shape. Shared by both drivers. */
+export function rowToPat(row: Record<string, unknown>): PatRow {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    name: row.name as string,
+    tokenHash: row.token_hash as string,
+    tokenPrefix: row.token_prefix as string,
+    scope: row.scope as PatScope,
+    expiresAt: (row.expires_at as string | null) ?? null,
+    lastUsedAt: (row.last_used_at as string | null) ?? null,
+    createdAt: row.created_at as string,
+    revokedAt: (row.revoked_at as string | null) ?? null,
   };
 }
 

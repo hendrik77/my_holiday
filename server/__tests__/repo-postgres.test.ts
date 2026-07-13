@@ -22,7 +22,7 @@ if (url) {
     const admin = new Pool({ connectionString: url, max: 1 });
     try {
       await admin.query(
-        'DROP TABLE IF EXISTS periods, settings, user_settings, refresh_tokens, users, schema_migrations CASCADE',
+        'DROP TABLE IF EXISTS periods, settings, user_settings, refresh_tokens, pats, users, schema_migrations CASCADE',
       );
     } finally {
       await admin.end();

@@ -52,6 +52,13 @@ export interface UpsertUserInput {
 /** Admin-editable profile fields. */
 export type UserProfileUpdate = Partial<Pick<UserRow, 'name' | 'team' | 'role' | 'managerId'>>;
 
+/**
+ * Org-wide privacy level for team visibility (migration 005). Managers
+ * always see their reports' dates (role right); `dates_notes` additionally
+ * reveals notes. `nothing` reserves colleague visibility for v4.
+ */
+export type PrivacyLevel = 'nothing' | 'dates' | 'dates_notes';
+
 /** What a personal access token may do: full API access or read-only. */
 export type PatScope = 'full' | 'read';
 

@@ -8,6 +8,7 @@ import { createPostgresSettingsRepo } from './settings';
 import { createPostgresUsersRepo } from './users';
 import { createPostgresRefreshTokensRepo } from './refresh-tokens';
 import { createPostgresPatsRepo } from './pats';
+import { createPostgresOrgSettingsRepo } from './org-settings';
 
 /** Arbitrary app-wide lock id so concurrent instances serialize migrations. */
 const MIGRATION_LOCK_ID = 727274;
@@ -51,6 +52,7 @@ export function createPostgresDb(config: Pick<Config, 'DATABASE_URL'>): Db {
     users: createPostgresUsersRepo(pool),
     refreshTokens: createPostgresRefreshTokensRepo(pool),
     pats: createPostgresPatsRepo(pool),
+    orgSettings: createPostgresOrgSettingsRepo(pool),
     async migrate(): Promise<void> {
       await runMigrations(pool);
     },

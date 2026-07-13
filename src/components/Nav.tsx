@@ -20,6 +20,12 @@ export function Nav() {
   const { data: user } = useCurrentUser();
   const logout = useLogout();
 
+  // Managers and admins get a read-only team overlay tab.
+  const visibleViews =
+    user && user.role !== 'employee'
+      ? [...views, { key: 'team' as ViewType, labelKey: 'nav.team' }]
+      : views;
+
   return (
     <nav className="nav">
       <div className="nav-inner">
@@ -29,7 +35,7 @@ export function Nav() {
         </div>
 
         <div className="nav-links">
-          {views.map((v) => (
+          {visibleViews.map((v) => (
             <button
               key={v.key}
               className={`nav-link ${view === v.key ? 'active' : ''}`}

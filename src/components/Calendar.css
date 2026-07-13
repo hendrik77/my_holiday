@@ -1,3 +1,54 @@
+/* === Team View (read-only overlay) === */
+.team-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.team-row {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface);
+}
+.team-row-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs, 4px);
+}
+.team-row-name { font-weight: 600; }
+.team-row-team,
+.team-row-used {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+.team-row-used { margin-left: auto; }
+.team-months {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+.team-month { flex: 0 0 auto; }
+.team-month-label {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-bottom: 2px;
+}
+.team-month-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+}
+.team-day {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--color-border);
+}
+.team-day.weekend { opacity: 0.4; }
+.team-day.vacation { background: var(--color-primary); }
+
 /* === Year View === */
 .year-grid {
   display: grid;

@@ -102,6 +102,20 @@ describe('auth middleware matrix', () => {
     expect((await request(app).get('/api/v1/periods').set('Cookie', `mh_session=${expired}`)).status).toBe(401);
   });
 
+  it('AUTH_MODE=oidc: unauthenticated auth endpoints are rate limited (security H3)', async () => {
+    const app = await createApp(db, { authMode: 'oidc', config: oidcConfig(loadConfig({ DB_PATH: ':memory:' })) });
+    let limited = false;
+    for (let i = 0; i < 31; i++) {
+      const res = await request(app).post('/api/v1/auth/refresh');
+      if (res.status === 429) {
+        limited = true;
+        break;
+      }
+      expect(res.status).toBe(401); // no cookie — but must not be unlimited
+    }
+    expect(limited).toBe(true);
+  });
+
   it('requireRole rejects insufficient roles with 403', async () => {
     const employee = await db.users.upsertFromIdP({ oidcSub: 'idp|emp', email: 'emp@example.com', name: 'Emp' });
     const mini = express();

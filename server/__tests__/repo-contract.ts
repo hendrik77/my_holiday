@@ -250,6 +250,15 @@ export function describeRepoContract(name: string, makeDb: () => Promise<Db>): v
         expect(second.team).toBe('Platform');
       });
 
+      it('stores emails lowercased so casing cannot split one identity into two rows', async () => {
+        const user = await db.users.upsertFromIdP({
+          oidcSub: 'idp|mixed',
+          email: 'MiXeD@Example.COM',
+          name: 'Mixed',
+        });
+        expect(user.email).toBe('mixed@example.com');
+      });
+
       it('listAll returns every user including the default user', async () => {
         await db.users.upsertFromIdP({ oidcSub: 'idp|a', email: 'a@example.com', name: 'A' });
         await db.users.upsertFromIdP({ oidcSub: 'idp|b', email: 'b@example.com', name: 'B' });

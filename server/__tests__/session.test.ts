@@ -37,6 +37,18 @@ describe('app session JWT', () => {
   it('rejects garbage', async () => {
     expect(await verifySessionToken('not-a-jwt', SECRET)).toBeNull();
   });
+
+  it('rejects a token minted for a different purpose, even with the right secret', async () => {
+    const { SignJWT } = await import('jose');
+    // Shaped like a login-state token (same secret, same alg, wrong typ).
+    const foreign = await new SignJWT({ typ: 'login_state', role: 'admin', name: 'x', email: 'x@y.z' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setSubject(DEFAULT_USER_ID)
+      .setIssuedAt()
+      .setExpirationTime('10m')
+      .sign(new TextEncoder().encode(SECRET));
+    expect(await verifySessionToken(foreign, SECRET)).toBeNull();
+  });
 });
 
 describe('refresh-token rotation', () => {

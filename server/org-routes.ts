@@ -68,7 +68,9 @@ export function createOrgRouter(db: Db): Router {
   });
 
   router.put('/admin/users/:id', requireRole('admin'), async (req, res) => {
-    const { id } = req.params;
+    // Express can't infer the :id param type through the requireRole
+    // middleware, so it widens to string | string[]; it is a route param.
+    const id = req.params.id as string;
     const target = await db.users.findById(id);
     if (!target) {
       res.status(404).json({ error: 'User not found' });

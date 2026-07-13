@@ -14,6 +14,8 @@ export interface MockIdpUser {
   sub: string;
   email: string;
   name: string;
+  /** email_verified claim in the id_token; defaults to true. */
+  emailVerified?: boolean;
 }
 
 export interface MockIdp {
@@ -120,6 +122,7 @@ export async function startMockIdp(): Promise<MockIdp> {
     const now = Math.floor(Date.now() / 1000);
     const idToken = await new SignJWT({
       email: pending.user.email,
+      email_verified: pending.user.emailVerified ?? true,
       name: pending.user.name,
       ...(pending.nonce ? { nonce: pending.nonce } : {}),
     })

@@ -180,6 +180,25 @@ describe('OIDC login flow (mock IdP)', () => {
     expect(me.body.role).toBe('admin');
   });
 
+  it('does not bootstrap admin from an unverified email claim (security H2)', async () => {
+    idp.setUser({ sub: 'idp|carol', email: 'carol@example.com', name: 'Carol', emailVerified: false });
+    const cookies = await login(['carol@example.com']);
+    const me = await request(app).get('/api/v1/auth/me').set('Cookie', `mh_session=${cookies.mh_session}`);
+    expect(me.body.role).toBe('employee');
+  });
+
+  it('bootstraps only on first login — a later email change cannot self-escalate (security H2)', async () => {
+    // First login: carol is a regular employee (not in ADMIN_EMAILS).
+    await login();
+    // Carol later points her IdP profile at an admin-listed address…
+    idp.setUser({ sub: 'idp|carol', email: 'boss@example.com', name: 'Carol' });
+    // …and logs in again against an app configured with that admin email.
+    const cookies = await login(['boss@example.com']);
+    const me = await request(app).get('/api/v1/auth/me').set('Cookie', `mh_session=${cookies.mh_session}`);
+    expect(me.body.email).toBe('boss@example.com');
+    expect(me.body.role).toBe('employee');
+  });
+
   it('rotates the refresh token and detects replay', async () => {
     const cookies = await login();
 

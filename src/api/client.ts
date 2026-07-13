@@ -1,4 +1,4 @@
-import type { PeriodRow, Settings, SettingsUpdate } from '../../server/types';
+import type { PeriodRow, Settings, SettingsUpdate, CurrentUser } from '../../server/types';
 import type { CreatePeriodInput } from '../../server/types';
 
 export interface ApiBaseUrlEnv {
@@ -19,11 +19,29 @@ export function resolveApiBaseUrl(env: ApiBaseUrlEnv): string {
 
 const BASE_URL = resolveApiBaseUrl(import.meta.env);
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
+function doFetch(path: string, options?: RequestInit): Promise<Response> {
+  return fetch(`${BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', // session cookies (oidc mode); harmless otherwise
     ...options,
   });
+}
+
+/**
+ * On a 401 the session JWT has likely just expired: try one silent
+ * POST /auth/refresh and retry the original request. If the refresh fails
+ * too, announce `auth:expired` so the AuthGate can show the login page.
+ */
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  let res = await doFetch(path, options);
+  if (res.status === 401) {
+    const refresh = await fetch(`${BASE_URL}/auth/refresh`, { method: 'POST', credentials: 'include' });
+    if (refresh.ok) {
+      res = await doFetch(path, options);
+    } else {
+      window.dispatchEvent(new Event('auth:expired'));
+    }
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `Request failed: ${res.status}`);
@@ -57,6 +75,21 @@ export function updatePeriod(
 
 export function deletePeriod(id: string): Promise<void> {
   return request<void>(`/periods/${id}`, { method: 'DELETE' });
+}
+
+// ── Auth ─────────────────────────────────────────────────────────
+
+export function fetchCurrentUser(): Promise<CurrentUser> {
+  return request<CurrentUser>('/auth/me');
+}
+
+export function logout(): Promise<void> {
+  return request<void>('/auth/logout', { method: 'POST' });
+}
+
+/** Browser navigation target that starts the OIDC login flow. */
+export function loginUrl(): string {
+  return `${BASE_URL}/auth/login`;
 }
 
 // ── Settings ─────────────────────────────────────────────────────

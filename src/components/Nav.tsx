@@ -4,6 +4,7 @@ import { useUIStore } from '../state/store';
 import type { ViewType } from '../types';
 import { SettingsModal } from './SettingsModal';
 import { useT } from '../i18n/useT';
+import { useCurrentUser, useLogout } from '../api/hooks';
 
 const views: { key: ViewType; labelKey: string }[] = [
   { key: 'dashboard', labelKey: 'nav.overview' },
@@ -16,6 +17,8 @@ export function Nav() {
   const { view, year, setView, setYear, setSelectedMonth } = useUIStore();
   const { t } = useT();
   const [showSettings, setShowSettings] = useState(false);
+  const { data: user } = useCurrentUser();
+  const logout = useLogout();
 
   return (
     <nav className="nav">
@@ -44,6 +47,21 @@ export function Nav() {
         </div>
 
         <div className="nav-io">
+          {user && user.authMode !== 'none' && (
+            <div className="nav-account">
+              <span className="nav-account-name" title={user.email}>
+                {user.name}
+              </span>
+              <button
+                className="nav-io-btn"
+                onClick={() => logout.mutate()}
+                disabled={logout.isPending}
+                title={t('nav.logout')}
+              >
+                ⎋
+              </button>
+            </div>
+          )}
           <button className="nav-io-btn" onClick={() => setShowSettings(true)} title={t('nav.settings')}>⚙️</button>
         </div>
       </div>

@@ -7,6 +7,7 @@ import { MonthView } from './components/MonthView';
 import { ListView } from './components/ListView';
 import { ToastContainer } from './components/Toast';
 import { FirstRunWizard } from './components/FirstRunWizard';
+import { AuthGate } from './auth/AuthGate';
 import { useUIStore } from './state/store';
 import { useSettings } from './api/hooks';
 import './App.css';
@@ -37,15 +38,18 @@ function App() {
 
   return (
     <div className="app">
-      <Nav />
-      <main className="main">
-        {view === 'dashboard' && <Dashboard />}
-        {view === 'year' && <YearView />}
-        {view === 'month' && <MonthView />}
-        {view === 'list' && <ListView />}
-      </main>
+      <AuthGate>
+        <Nav />
+        <main className="main">
+          {view === 'dashboard' && <Dashboard />}
+          {view === 'year' && <YearView />}
+          {view === 'month' && <MonthView />}
+          {view === 'list' && <ListView />}
+        </main>
+        {showWizard && <FirstRunWizard onClose={() => setWizardDismissed(true)} />}
+      </AuthGate>
+      {/* Outside the gate so the session-expired toast is visible on the login page. */}
       <ToastContainer />
-      {showWizard && <FirstRunWizard onClose={() => setWizardDismissed(true)} />}
     </div>
   );
 }

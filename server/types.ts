@@ -51,3 +51,13 @@ export interface UpsertUserInput {
 
 /** Admin-editable profile fields. */
 export type UserProfileUpdate = Partial<Pick<UserRow, 'name' | 'team' | 'role' | 'managerId'>>;
+
+/** Response shape of GET /api/v1/auth/me — the acting user and auth mode. */
+export interface CurrentUser {
+  id: string;
+  name: string;
+  email: string;
+  team: string;
+  role: UserRole;
+  authMode: 'none' | 'oidc';
+}

@@ -6,6 +6,8 @@ import {
   deletePeriod,
   fetchSettings,
   updateSettings,
+  fetchCurrentUser,
+  logout,
 } from './client';
 import type { PeriodRow, SettingsUpdate } from '../../server/types';
 import type { CreatePeriodInput } from '../../server/types';
@@ -47,6 +49,28 @@ export function useDeletePeriod() {
     mutationFn: (id: string) => deletePeriod(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['periods'] });
+    },
+  });
+}
+
+// ── Auth ─────────────────────────────────────────────────────────
+
+export function useCurrentUser() {
+  return useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: fetchCurrentUser,
+    staleTime: 60_000,
+    retry: false, // a 401 already went through the silent-refresh path
+  });
+}
+
+export function useLogout() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      qc.clear();
+      window.location.assign('/');
     },
   });
 }

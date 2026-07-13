@@ -5,11 +5,18 @@
 export const translations = {
   de: {
     app: { title: 'My Holiday' },
+    auth: {
+      loading: 'Anmeldung wird geprüft …',
+      signIn: 'Anmelden',
+      signInHint: 'Bitte melde dich an, um deine Urlaubsplanung zu öffnen.',
+      sessionExpired: 'Sitzung abgelaufen – bitte erneut anmelden.',
+    },
     nav: {
       overview: 'Übersicht',
       yearView: 'Jahresansicht',
       monthView: 'Monatsansicht',
       list: 'Liste',
+      logout: 'Abmelden',
       prevYear: 'Vorheriges Jahr',
       nextYear: 'Nächstes Jahr',
       import: '📥 Import',
@@ -198,11 +205,18 @@ export const translations = {
 
   en: {
     app: { title: 'My Holiday' },
+    auth: {
+      loading: 'Checking session …',
+      signIn: 'Sign in',
+      signInHint: 'Please sign in to open your holiday planner.',
+      sessionExpired: 'Session expired — please sign in again.',
+    },
     nav: {
       overview: 'Overview',
       yearView: 'Year View',
       monthView: 'Month View',
       list: 'List',
+      logout: 'Log out',
       prevYear: 'Previous Year',
       nextYear: 'Next Year',
       import: '📥 Import',

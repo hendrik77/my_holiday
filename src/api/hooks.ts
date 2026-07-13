@@ -11,8 +11,13 @@ import {
   fetchTokens,
   createToken,
   revokeToken,
+  fetchTeamPeriods,
+  fetchOrgSettings,
+  updateOrgSettings,
+  fetchAdminUsers,
+  updateAdminUser,
 } from './client';
-import type { PatScope } from '../../server/types';
+import type { PatScope, PrivacyLevel, AdminUserUpdate } from '../../server/types';
 import type { PeriodRow, SettingsUpdate } from '../../server/types';
 import type { CreatePeriodInput } from '../../server/types';
 
@@ -101,6 +106,46 @@ export function useRevokeToken() {
     mutationFn: (id: string) => revokeToken(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tokens'] });
+    },
+  });
+}
+
+// ── Team & org administration ────────────────────────────────────
+
+export function useTeamPeriods(year: number) {
+  return useQuery({
+    queryKey: ['team', 'periods', year],
+    queryFn: () => fetchTeamPeriods(year),
+    staleTime: 30_000,
+  });
+}
+
+export function useOrgSettings() {
+  return useQuery({ queryKey: ['org', 'settings'], queryFn: fetchOrgSettings });
+}
+
+export function useUpdateOrgSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (privacyLevel: PrivacyLevel) => updateOrgSettings(privacyLevel),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['org', 'settings'] });
+      qc.invalidateQueries({ queryKey: ['team'] });
+    },
+  });
+}
+
+export function useAdminUsers() {
+  return useQuery({ queryKey: ['admin', 'users'], queryFn: fetchAdminUsers });
+}
+
+export function useUpdateAdminUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: AdminUserUpdate }) => updateAdminUser(id, updates),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+      qc.invalidateQueries({ queryKey: ['team'] });
     },
   });
 }

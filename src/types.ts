@@ -42,4 +42,4 @@ export interface QuotaWarning {
   remaining: number;
 }
 
-export type ViewType = 'dashboard' | 'year' | 'month' | 'list';
+export type ViewType = 'dashboard' | 'year' | 'month' | 'list' | 'team';

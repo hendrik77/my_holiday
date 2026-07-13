@@ -18,11 +18,12 @@ const db = await createDb(config);
 // Localhost-only tool by default. Override origins via CORS_ORIGIN; override
 // bind interface via API_HOST (e.g. '0.0.0.0' for LAN access — only with auth,
 // e.g. API_TOKEN or an authenticating reverse proxy).
-const app = createApp(db, {
+const app = await createApp(db, {
   corsOrigin: config.CORS_ORIGIN,
   apiToken: config.API_TOKEN,
   serveStatic: process.env.NODE_ENV === 'production',
   authMode: config.AUTH_MODE,
+  config,
 });
 
 app.listen(config.API_PORT, config.API_HOST, () => {

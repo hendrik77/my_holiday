@@ -24,13 +24,16 @@ export function createSqliteUsersRepo(db: Database.Database): UsersRepo {
 
     async upsertFromIdP(input: UpsertUserInput): Promise<UserRow> {
       const now = new Date().toISOString();
+      // Lowercased at storage so casing can't split one identity into two
+      // rows under the UNIQUE constraint (security review M4).
+      const email = input.email.toLowerCase();
       const existing = db.prepare('SELECT id FROM users WHERE oidc_sub = ?').get(input.oidcSub) as
         | { id: string }
         | undefined;
 
       if (existing) {
         db.prepare('UPDATE users SET email = ?, name = ?, updated_at = ? WHERE id = ?').run(
-          input.email,
+          email,
           input.name,
           now,
           existing.id,
@@ -42,7 +45,7 @@ export function createSqliteUsersRepo(db: Database.Database): UsersRepo {
       db.prepare(
         `INSERT INTO users (id, oidc_sub, email, name, team, role, manager_id, created_at, updated_at)
          VALUES (?, ?, ?, ?, '', 'employee', NULL, ?, ?)`,
-      ).run(id, input.oidcSub, input.email, input.name, now, now);
+      ).run(id, input.oidcSub, email, input.name, now, now);
       return findById(id)!;
     },
 

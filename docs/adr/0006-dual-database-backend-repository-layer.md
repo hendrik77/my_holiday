@@ -1,7 +1,7 @@
 # ADR-0006: Dual database backend (SQLite + PostgreSQL) behind a repository layer
 
 **Date**: 2026-07-11
-**Status**: proposed
+**Status**: accepted (2026-07-12, PR #55 merged)
 **Deciders**: Hendrik Neumann
 
 ## Context

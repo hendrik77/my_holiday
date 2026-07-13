@@ -1,7 +1,7 @@
 # ADR-0004: Opt-in bearer-token auth for the API
 
 **Date**: 2026-07-06 (recorded retrospectively 2026-07-08)
-**Status**: accepted
+**Status**: accepted — superseded by [ADR-0007](0007-oidc-auth-cookie-sessions.md) in `AUTH_MODE=oidc`; still applies verbatim in single-user mode (`AUTH_MODE=none`)
 **Deciders**: Hendrik Neumann
 
 ## Context

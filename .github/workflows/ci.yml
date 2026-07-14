@@ -41,6 +41,23 @@ jobs:
   e2e:
     name: E2E tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: holiday
+          POSTGRES_PASSWORD: holiday
+          POSTGRES_DB: holiday_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U holiday"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Multi-user (OIDC) browser E2E runs the app against this Postgres.
+      E2E_DATABASE_URL: postgres://holiday:holiday@localhost:5432/holiday_e2e
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
@@ -49,7 +66,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - run: npm run test:e2e           # single-user smoke (SQLite)
+      - run: npm run test:e2e:oidc      # multi-user OIDC browser journey
 
   docker:
     name: Docker image builds

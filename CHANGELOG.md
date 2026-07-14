@@ -6,9 +6,36 @@ All notable changes to My Holiday.
 
 ## [Unreleased]
 
+### Added — Multi-user mode (v3)
+
+Opt-in multi-user support. **Single-user installs are unaffected**: the
+defaults (`DB_DRIVER=sqlite`, `AUTH_MODE=none`) keep byte-identical behavior.
+
+- **OIDC authentication** (`AUTH_MODE=oidc`) against external identity providers
+  (Entra ID, Authentik, Keycloak) via authorization-code + PKCE. App sessions
+  are a short-lived JWT cookie plus a rotating, reuse-detecting refresh token;
+  admins are bootstrapped from `ADMIN_EMAILS` on first (verified-email) login.
+  See [ADR-0007](docs/adr/0007-oidc-auth-cookie-sessions.md).
+- **PostgreSQL backend** behind a repository layer; SQLite stays the
+  single-user default. `npm run migrate:postgres` copies an existing SQLite
+  database into an empty PostgreSQL one. See
+  [ADR-0006](docs/adr/0006-dual-database-backend-repository-layer.md).
+- **Per-user calendars** — each user has their own periods and settings.
+- **Personal access tokens** (`mh_pat_…`, Settings → API tokens) for the CLI
+  in multi-user mode: user-scoped, revocable, `full`/`read` scope, shown once.
+  The CLI is unchanged — pass one via `MY_HOLIDAY_API_TOKEN`. See
+  [ADR-0008](docs/adr/0008-personal-access-tokens.md).
+- **Manager overlay & org privacy** — a read-only Team view for managers/admins
+  and an org privacy level (`nothing` / `dates` / `dates_notes`); managers
+  always see their reports' dates. Admins manage roles, teams, and managers
+  under Settings → Organisation.
+
 ### Changed
-- **User-scoped database schema (v3 Phase 3)** — new `users` table with a synthetic default user owning all existing data; `periods` gained a `user_id` column. **Breaking for external tooling reading the SQLite file directly:** the singleton `settings` table was replaced by per-user `user_settings(user_id, key, value)`. The app API and CLI are unaffected — single-user behavior is byte-identical.
-- `migrate-to-postgres` now copies users and per-user settings and refuses targets that already contain registered users.
+- **Breaking for external tooling reading the SQLite file directly:** the
+  singleton `settings` table was replaced by per-user
+  `user_settings(user_id, key, value)`, and `periods` gained a `user_id`
+  column. The app API and CLI responses are unchanged.
+- `API_TOKEN` is rejected in `AUTH_MODE=oidc` (use personal access tokens).
 
 ---
 

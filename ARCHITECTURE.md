@@ -204,6 +204,15 @@ VacationPeriod {
 }
 ```
 
+In **multi-user mode** (v3, `AUTH_MODE=oidc`) the schema is user-scoped: a
+`users` table owns rows via `periods.user_id` and per-user
+`user_settings`, plus `refresh_tokens`, `pats` (personal access tokens),
+and shared `org_settings`. Single-user installs keep the same API shape — a
+synthetic default user owns all existing data. The storage backend is chosen
+at startup (`DB_DRIVER`) behind a repository interface, so SQLite and
+PostgreSQL implement identical semantics (verified by one shared contract
+suite). See [ADR-0006](./docs/adr/0006-dual-database-backend-repository-layer.md).
+
 ## State Flow
 
 - **TanStack Query** manages server state: periods and settings are fetched from and mutated via the REST API
@@ -240,6 +249,16 @@ Translations live in `src/i18n/translations.ts` as a typed nested object with `d
 **7. Idempotent CSV migration**
 
 The migration script (`scripts/migrate-v1.ts`) matches periods by composite key `(startDate, endDate, note, halfDay, type)`. Rerunning safely skips existing records.
+
+**8. Optional multi-user mode behind two config gates**
+
+`DB_DRIVER` and `AUTH_MODE` are the only switches: their defaults
+(`sqlite` / `none`) keep the app single-user with zero dependencies, and
+`AUTH_MODE=oidc` (which requires `DB_DRIVER=postgres`) turns on OIDC login,
+per-user data, personal access tokens, and the manager overlay. Sessions are
+app-issued (short-lived JWT cookie + rotating refresh token), never the IdP's
+tokens. See [ADR-0007](./docs/adr/0007-oidc-auth-cookie-sessions.md) and
+[ADR-0008](./docs/adr/0008-personal-access-tokens.md).
 
 ## Architecture Decision Records
 

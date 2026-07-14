@@ -1,7 +1,7 @@
 # ADR-0008: Personal access tokens for CLI/API access
 
 **Date**: 2026-07-13
-**Status**: proposed
+**Status**: accepted (2026-07-13, PR #59 merged)
 **Deciders**: Hendrik Neumann
 
 ## Context

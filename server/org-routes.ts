@@ -38,14 +38,17 @@ export function createOrgRouter(db: Db): Router {
         : await db.users.listDirectReports(me.id);
     const includeNotes = (await db.orgSettings.getPrivacyLevel()) === 'dates_notes';
 
-    const rows = [];
-    for (const member of members) {
-      const periods = await db.periods.listByYear(member.id, year);
-      rows.push({
+    // Fetch every member's periods concurrently — the admin view lists the
+    // whole org, so sequential round-trips would be O(n) latency on Postgres.
+    const rows = await Promise.all(
+      members.map(async (member) => ({
         user: { id: member.id, name: member.name, team: member.team },
-        periods: periods.map((p) => ({ ...p, note: includeNotes ? p.note : '' })),
-      });
-    }
+        periods: (await db.periods.listByYear(member.id, year)).map((p) => ({
+          ...p,
+          note: includeNotes ? p.note : '',
+        })),
+      })),
+    );
     res.json(rows);
   });
 
@@ -85,6 +88,15 @@ export function createOrgRouter(db: Db): Router {
         res.status(400).json({ error: "role must be 'employee', 'manager', or 'admin'" });
         return;
       }
+      // Never demote the last admin — that would lock everyone out of the
+      // admin endpoints with no in-app recovery (security review MEDIUM).
+      if (target.role === 'admin' && role !== 'admin') {
+        const admins = (await db.users.listAll()).filter((u) => u.role === 'admin');
+        if (admins.length <= 1) {
+          res.status(400).json({ error: 'Cannot demote the last remaining admin' });
+          return;
+        }
+      }
       updates.role = role as UserRow['role'];
     }
     if (team !== undefined) {
@@ -95,6 +107,9 @@ export function createOrgRouter(db: Db): Router {
       updates.team = team;
     }
     if (managerId !== undefined) {
+      // Rejects only the direct self-loop. Deeper cycles (A→B→A) are
+      // harmless today — listDirectReports is single-level, never recursive
+      // — but would need a walk-the-chain guard if that ever changes.
       if (managerId !== null) {
         if (typeof managerId !== 'string' || managerId === target.id || !(await db.users.findById(managerId))) {
           res.status(400).json({ error: 'managerId must be null or the id of another existing user' });

@@ -13,4 +13,4 @@ context, the decision, the alternatives considered, and the consequences.
 | [0005](0005-same-origin-production-cors-allowlist.md) | Same-origin production — relative API base URL and local-origin CORS allowlist | accepted | 2026-07-06 |
 | [0006](0006-dual-database-backend-repository-layer.md) | Dual database backend (SQLite + PostgreSQL) behind a repository layer | accepted | 2026-07-11 |
 | [0007](0007-oidc-auth-cookie-sessions.md) | OIDC authentication with cookie-based app sessions | accepted | 2026-07-13 |
-| [0008](0008-personal-access-tokens.md) | Personal access tokens for CLI/API access | proposed | 2026-07-13 |
+| [0008](0008-personal-access-tokens.md) | Personal access tokens for CLI/API access | accepted | 2026-07-13 |

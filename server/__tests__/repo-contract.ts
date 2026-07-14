@@ -358,6 +358,18 @@ export function describeRepoContract(name: string, makeDb: () => Promise<Db>): v
       });
     });
 
+    describe('org settings (migration 005)', () => {
+      it('seeds privacyLevel=dates and round-trips updates', async () => {
+        expect(await db.orgSettings.getPrivacyLevel()).toBe('dates');
+
+        await db.orgSettings.setPrivacyLevel('dates_notes');
+        expect(await db.orgSettings.getPrivacyLevel()).toBe('dates_notes');
+
+        await db.orgSettings.setPrivacyLevel('nothing');
+        expect(await db.orgSettings.getPrivacyLevel()).toBe('nothing');
+      });
+    });
+
     describe('personal access tokens (migration 004)', () => {
       const FUTURE = '2099-01-01T00:00:00.000Z';
 

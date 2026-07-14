@@ -10,6 +10,7 @@ import { createSqliteSettingsRepo } from './settings';
 import { createSqliteUsersRepo } from './users';
 import { createSqliteRefreshTokensRepo } from './refresh-tokens';
 import { createSqlitePatsRepo } from './pats';
+import { createSqliteOrgSettingsRepo } from './org-settings';
 
 /**
  * Apply pending migrations, each inside a transaction. Foreign-key
@@ -57,6 +58,7 @@ export function createSqliteDb(config: Pick<Config, 'DB_PATH'>): Db {
     users: createSqliteUsersRepo(db),
     refreshTokens: createSqliteRefreshTokensRepo(db),
     pats: createSqlitePatsRepo(db),
+    orgSettings: createSqliteOrgSettingsRepo(db),
     async migrate(): Promise<void> {
       runMigrations(db);
     },

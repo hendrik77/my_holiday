@@ -1,4 +1,15 @@
-import type { PeriodRow, Settings, SettingsUpdate, CurrentUser, PublicPat, PatScope } from '../../server/types';
+import type {
+  PeriodRow,
+  Settings,
+  SettingsUpdate,
+  CurrentUser,
+  PublicPat,
+  PatScope,
+  TeamMemberPeriods,
+  AdminUser,
+  AdminUserUpdate,
+  PrivacyLevel,
+} from '../../server/types';
 import type { CreatePeriodInput } from '../../server/types';
 
 export interface ApiBaseUrlEnv {
@@ -136,6 +147,34 @@ export function createToken(input: { name: string; scope: PatScope }): Promise<{
 
 export function revokeToken(id: string): Promise<void> {
   return request<void>(`/tokens/${id}`, { method: 'DELETE' });
+}
+
+// ── Team & org administration (manager/admin, oidc mode) ─────────
+
+export function fetchTeamPeriods(year: number): Promise<TeamMemberPeriods[]> {
+  return request<TeamMemberPeriods[]>(`/team/periods?year=${year}`);
+}
+
+export function fetchOrgSettings(): Promise<{ privacyLevel: PrivacyLevel }> {
+  return request<{ privacyLevel: PrivacyLevel }>('/org/settings');
+}
+
+export function updateOrgSettings(privacyLevel: PrivacyLevel): Promise<{ privacyLevel: PrivacyLevel }> {
+  return request<{ privacyLevel: PrivacyLevel }>('/org/settings', {
+    method: 'PUT',
+    body: JSON.stringify({ privacyLevel }),
+  });
+}
+
+export function fetchAdminUsers(): Promise<AdminUser[]> {
+  return request<AdminUser[]>('/admin/users');
+}
+
+export function updateAdminUser(id: string, updates: AdminUserUpdate): Promise<AdminUser> {
+  return request<AdminUser>(`/admin/users/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
 }
 
 // ── Settings ─────────────────────────────────────────────────────

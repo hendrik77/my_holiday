@@ -37,7 +37,7 @@ describe.skipIf(!url)('migrate-to-postgres script', () => {
     cleanupFixture();
     const admin = new Pool({ connectionString: url, max: 1 });
     await admin.query(
-      'DROP TABLE IF EXISTS periods, settings, user_settings, refresh_tokens, pats, users, schema_migrations CASCADE',
+      'DROP TABLE IF EXISTS periods, settings, user_settings, refresh_tokens, pats, org_settings, users, schema_migrations CASCADE',
     );
     await admin.end();
 

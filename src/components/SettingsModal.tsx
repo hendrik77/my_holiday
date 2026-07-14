@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useUIStore } from '../state/store';
 import { useSettings, useUpdateSettings, useCreatePeriod, usePeriods, useCurrentUser } from '../api/hooks';
 import { ApiTokensSection } from '../auth/ApiTokensSection';
+import { OrganisationSection } from '../auth/OrganisationSection';
 import { GERMAN_STATES } from '../data/holidays';
 import type { GermanState } from '../data/holidays';
 import { useT } from '../i18n/useT';
@@ -133,6 +134,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             <input ref={fileInputRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={handleFileChange} />
           </div>
           {currentUser?.authMode === 'oidc' && <ApiTokensSection />}
+          {currentUser?.authMode === 'oidc' && currentUser.role === 'admin' && <OrganisationSection />}
         </div>
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>{t('settings.cancel')}</button>

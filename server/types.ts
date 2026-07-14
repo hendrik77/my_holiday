@@ -52,6 +52,13 @@ export interface UpsertUserInput {
 /** Admin-editable profile fields. */
 export type UserProfileUpdate = Partial<Pick<UserRow, 'name' | 'team' | 'role' | 'managerId'>>;
 
+/**
+ * Org-wide privacy level for team visibility (migration 005). Managers
+ * always see their reports' dates (role right); `dates_notes` additionally
+ * reveals notes. `nothing` reserves colleague visibility for v4.
+ */
+export type PrivacyLevel = 'nothing' | 'dates' | 'dates_notes';
+
 /** What a personal access token may do: full API access or read-only. */
 export type PatScope = 'full' | 'read';
 
@@ -74,6 +81,29 @@ export interface PatRow {
 
 /** PAT as exposed by the API — everything but the owner id and the hash. */
 export type PublicPat = Omit<PatRow, 'userId' | 'tokenHash'>;
+
+/** One team member and their periods, as returned by GET /api/v1/team/periods. */
+export interface TeamMemberPeriods {
+  user: { id: string; name: string; team: string };
+  periods: PeriodRow[];
+}
+
+/** User as exposed by GET /api/v1/admin/users — no oidc_sub or timestamps. */
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  team: string;
+  role: UserRole;
+  managerId: string | null;
+}
+
+/** Admin-editable fields on PUT /api/v1/admin/users/:id. */
+export interface AdminUserUpdate {
+  role?: UserRole;
+  team?: string;
+  managerId?: string | null;
+}
 
 /** Response shape of GET /api/v1/auth/me — the acting user and auth mode. */
 export interface CurrentUser {

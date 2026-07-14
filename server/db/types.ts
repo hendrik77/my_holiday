@@ -7,6 +7,7 @@ import type {
   UpsertUserInput,
   UserProfileUpdate,
   PatRow,
+  PrivacyLevel,
 } from '../types';
 
 /** Fields of a period that may be changed after creation. */
@@ -94,6 +95,12 @@ export interface PatsRepo {
   touchLastUsed(id: string): Promise<void>;
 }
 
+/** Org-wide settings (migration 005) — one shared row set, admin-managed. */
+export interface OrgSettingsRepo {
+  getPrivacyLevel(): Promise<PrivacyLevel>;
+  setPrivacyLevel(level: PrivacyLevel): Promise<void>;
+}
+
 /** Aggregate handle to one database backend. Created via createDb(config). */
 export interface Db {
   readonly driver: 'sqlite' | 'postgres';
@@ -102,6 +109,7 @@ export interface Db {
   readonly users: UsersRepo;
   readonly refreshTokens: RefreshTokensRepo;
   readonly pats: PatsRepo;
+  readonly orgSettings: OrgSettingsRepo;
   /** Apply pending schema migrations (idempotent; the factory runs it once). */
   migrate(): Promise<void>;
   close(): Promise<void>;

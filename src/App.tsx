@@ -5,6 +5,7 @@ import { Dashboard } from './components/Dashboard';
 import { YearView } from './components/YearView';
 import { MonthView } from './components/MonthView';
 import { ListView } from './components/ListView';
+import { TeamView } from './components/TeamView';
 import { ToastContainer } from './components/Toast';
 import { FirstRunWizard } from './components/FirstRunWizard';
 import { AuthGate } from './auth/AuthGate';
@@ -45,6 +46,7 @@ function App() {
           {view === 'year' && <YearView />}
           {view === 'month' && <MonthView />}
           {view === 'list' && <ListView />}
+          {view === 'team' && <TeamView />}
         </main>
         {showWizard && <FirstRunWizard onClose={() => setWizardDismissed(true)} />}
       </AuthGate>

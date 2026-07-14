@@ -70,7 +70,9 @@ The backend reads these environment variables on startup:
 | `API_PORT` | `3001` | TCP port |
 | `DB_PATH` | `data/my-holiday.db` | SQLite database file path |
 | `CORS_ORIGIN` | local origins only | Allow one additional cross-origin origin, e.g. `CORS_ORIGIN=https://dashboard.example.lan`. By default only `localhost` / `127.0.0.1` / `[::1]` origins may call the API cross-origin |
-| `API_TOKEN` | _(none)_ | When set, every `/api/v1` request must send `Authorization: Bearer <token>`. The CLI supplies it via `MY_HOLIDAY_API_TOKEN`; the web UI does not attach tokens, so use this for CLI/API-only or reverse-proxy deployments |
+| `API_TOKEN` | _(none)_ | When set, every `/api/v1` request must send `Authorization: Bearer <token>`. The CLI supplies it via `MY_HOLIDAY_API_TOKEN`; the web UI does not attach tokens, so use this for CLI/API-only or reverse-proxy deployments. Not allowed in multi-user mode — use personal access tokens instead |
+
+Single-user mode is the default and needs none of the multi-user variables below; they are documented in [Multi-user mode](#multi-user-mode-oidc).
 
 The frontend resolves its API base URL automatically: production builds use the relative `/api/v1` (the server serves the SPA on the same port, so any hostname works), the dev server uses `http://localhost:3001/api/v1`. Set the build-time variable `VITE_API_BASE_URL` only if the API lives on a different origin than the frontend.
 
@@ -79,6 +81,122 @@ Example — expose to LAN with a custom port:
 ```bash
 API_HOST=0.0.0.0 API_PORT=4000 npm run server
 ```
+
+## Multi-user mode (OIDC)
+
+By default My Holiday is a **single-user** app: no accounts, no login, one
+shared calendar — perfect for a homelab or a personal NAS. Multi-user mode
+(v3) adds authentication against your own identity provider, per-user
+calendars, a read-only manager overlay, and personal access tokens for the
+CLI. It is entirely opt-in; existing single-user installs keep working
+unchanged.
+
+Multi-user mode requires **PostgreSQL** (SQLite stays the single-user
+default) and an OIDC provider (Microsoft Entra ID, Authentik, or Keycloak
+are all supported via standard discovery). See
+[ADR-0006](docs/adr/0006-dual-database-backend-repository-layer.md) and
+[ADR-0007](docs/adr/0007-oidc-auth-cookie-sessions.md) for the design.
+
+### Configuration
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `DB_DRIVER` | `sqlite` \| `postgres` | Set to `postgres` for multi-user mode |
+| `DATABASE_URL` | when postgres | `postgres://user:pass@host:5432/db` |
+| `AUTH_MODE` | `none` \| `oidc` | Set to `oidc` to require login (implies `DB_DRIVER=postgres`) |
+| `OIDC_ISSUER_URL` | when oidc | Issuer URL — discovery finds the rest, e.g. `https://login.example.com/realms/staff` |
+| `OIDC_CLIENT_ID` | when oidc | Confidential client id registered with your IdP |
+| `OIDC_CLIENT_SECRET` | when oidc | Client secret |
+| `PUBLIC_BASE_URL` | when oidc | Externally reachable base URL, e.g. `https://holiday.example.com`; the redirect URI is `<PUBLIC_BASE_URL>/api/v1/auth/callback` |
+| `SESSION_SECRET` | when oidc | ≥32-byte random string signing the session cookie |
+| `ADMIN_EMAILS` | optional | Comma-separated emails granted admin on **first** login (verified email only) |
+| `ACCESS_TOKEN_TTL_S` | `900` | App session (JWT cookie) lifetime |
+| `REFRESH_TOKEN_TTL_S` | `2592000` | Refresh token lifetime (30 days) |
+
+The server refuses to start if `AUTH_MODE=oidc` is set without the postgres
+driver or any required OIDC variable — misconfiguration fails fast, not at
+first login.
+
+### Register the app with your IdP
+
+Create a **confidential** OpenID Connect client and set its redirect URI to
+`<PUBLIC_BASE_URL>/api/v1/auth/callback`. Enable the authorization code flow
+with PKCE (S256) and request the `openid email profile` scopes.
+
+- **Microsoft Entra ID** — *App registrations → New registration*. Add a Web
+  redirect URI, create a client secret under *Certificates & secrets*, and
+  use `https://login.microsoftonline.com/<tenant>/v2.0` as `OIDC_ISSUER_URL`.
+- **Authentik** — *Applications → Providers → Create → OAuth2/OpenID*.
+  Client type *Confidential*, redirect URI as above; the issuer is
+  `https://authentik.example.com/application/o/my-holiday/`.
+- **Keycloak** — create a realm and a confidential client with *Standard flow*
+  enabled; issuer is `https://keycloak.example.com/realms/<realm>`. A ready
+  dev realm ships in [`docs/dev/keycloak-realm.json`](docs/dev/keycloak-realm.json)
+  (see below).
+
+### Run it
+
+Start PostgreSQL (the bundled compose profile is the easy path):
+
+```bash
+POSTGRES_PASSWORD=change-me docker compose --profile postgres up -d db
+```
+
+Then start the API in multi-user mode (build the SPA first so it's served on
+one origin — cookies require same-origin serving):
+
+```bash
+DB_DRIVER=postgres \
+DATABASE_URL=postgres://holiday:change-me@localhost:5432/holiday \
+AUTH_MODE=oidc \
+OIDC_ISSUER_URL=https://login.example.com/realms/staff \
+OIDC_CLIENT_ID=my-holiday \
+OIDC_CLIENT_SECRET=... \
+PUBLIC_BASE_URL=https://holiday.example.com \
+SESSION_SECRET="$(openssl rand -base64 32)" \
+ADMIN_EMAILS=you@example.com \
+NODE_ENV=production npm run build && npm run server
+```
+
+The first person listed in `ADMIN_EMAILS` becomes an admin on login and can
+assign roles, teams, and managers under **Settings → Organisation**.
+
+### Migrating an existing SQLite install to PostgreSQL
+
+The `migrate:postgres` script copies a single-user SQLite database into an
+empty PostgreSQL database, preserving ids and timestamps. It opens the source
+read-only and refuses to run against a non-empty target.
+
+```bash
+# 1. Bring up the schema on the target (start the API once against it, or
+#    let the migration script's createDb run the migrations), then:
+npm run migrate:postgres -- --sqlite data/my-holiday.db \
+  --database-url postgres://holiday:change-me@localhost:5432/holiday
+```
+
+All existing data is assigned to the synthetic default user; after switching
+to `AUTH_MODE=oidc`, an admin can reassign it if needed. Verify the target
+before deleting the SQLite file.
+
+### CLI in multi-user mode
+
+The static `API_TOKEN` is disabled in oidc mode (it isn't user-scoped or
+revocable). Instead, generate a **personal access token** under
+**Settings → API tokens** — it's shown once, choose full or read-only scope —
+and give it to the CLI the same way as before:
+
+```bash
+MY_HOLIDAY_API_TOKEN=mh_pat_… holiday list
+```
+
+Revoke a token any time from the same settings tab; the CLI needs no changes.
+
+### Verifying locally against Keycloak
+
+To exercise the full browser login flow against a real IdP on your machine,
+[`docker-compose.dev-keycloak.yml`](docker-compose.dev-keycloak.yml) brings up
+PostgreSQL and a Keycloak with a pre-imported realm (user `alice` / `alice`).
+The file header lists the exact environment to run the API against it.
 
 ## Docker
 

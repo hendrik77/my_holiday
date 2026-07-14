@@ -37,7 +37,8 @@ function s256(verifier: string): string {
   return createHash('sha256').update(verifier).digest('base64url');
 }
 
-export async function startMockIdp(): Promise<MockIdp> {
+/** Start the mock IdP. Port 0 (default) picks a free port; pass a fixed one for a standalone process. */
+export async function startMockIdp(port = 0): Promise<MockIdp> {
   const { publicKey, privateKey } = await generateKeyPair('RS256', { extractable: true });
   const jwk: JWK = { ...(await exportJWK(publicKey)), use: 'sig', alg: 'RS256', kid: 'mock-idp-key' };
 
@@ -143,7 +144,7 @@ export async function startMockIdp(): Promise<MockIdp> {
   });
 
   const server: Server = await new Promise((resolve) => {
-    const s = app.listen(0, '127.0.0.1', () => resolve(s));
+    const s = app.listen(port, '127.0.0.1', () => resolve(s));
   });
   const address = server.address();
   if (address === null || typeof address === 'string') throw new Error('mock IdP: unexpected server address');

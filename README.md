@@ -198,6 +198,9 @@ To exercise the full browser login flow against a real IdP on your machine,
 PostgreSQL and a Keycloak with a pre-imported realm (user `alice` / `alice`).
 The file header lists the exact environment to run the API against it.
 
+For the complete manual test runbook (both modes) and how to run the
+automated suites, see [TESTING.md](TESTING.md).
+
 ## Docker
 
 The easiest way to run the app on a server, NAS, or Raspberry Pi.

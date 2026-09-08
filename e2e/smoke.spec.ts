@@ -1,5 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// The dashboard's "upcoming" list filters by endDate >= today, so a booked
+// vacation must stay relative to today rather than hardcoded — a fixed date
+// eventually lands in the past and silently drops out of the list.
+function isoDaysFromNow(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Walk the 4-step first-run wizard with valid defaults. Idempotent —
  *  if a previous test already completed the wizard (settings persisted in
  *  the shared test DB), this is a no-op apart from the page load. */
@@ -60,8 +69,8 @@ test.describe('My Holiday smoke tests', () => {
 
     // Set start and end dates
     const dateInputs = modal.locator('input[type="date"]');
-    await dateInputs.nth(0).fill('2026-07-01');
-    await dateInputs.nth(1).fill('2026-07-15');
+    await dateInputs.nth(0).fill(isoDaysFromNow(10));
+    await dateInputs.nth(1).fill(isoDaysFromNow(24));
 
     // Add a note
     const textInput = modal.locator('input[type="text"]');

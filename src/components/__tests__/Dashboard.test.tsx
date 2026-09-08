@@ -4,12 +4,21 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nProvider } from '../../i18n/context';
 import { Dashboard } from '../Dashboard';
 
+// Dashboard filters "upcoming" by endDate >= today (see Dashboard.tsx), so
+// fixture dates must stay relative to today rather than hardcoded — a fixed
+// date eventually lands in the past and silently drops out of the list.
+function isoDaysFromNow(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 // Mock the API hooks
 vi.mock('../../api/hooks', () => ({
   usePeriods: () => ({
     data: [
-      { id: '1', startDate: '2026-07-01', endDate: '2026-07-15', note: 'Sommerurlaub', halfDay: false, type: 'urlaub', changedAt: '' },
-      { id: '2', startDate: '2026-12-23', endDate: '2026-12-23', note: 'Weihnachten', halfDay: true, type: 'urlaub', changedAt: '' },
+      { id: '1', startDate: isoDaysFromNow(10), endDate: isoDaysFromNow(24), note: 'Sommerurlaub', halfDay: false, type: 'urlaub', changedAt: '' },
+      { id: '2', startDate: isoDaysFromNow(60), endDate: isoDaysFromNow(60), note: 'Weihnachten', halfDay: true, type: 'urlaub', changedAt: '' },
     ],
     isLoading: false,
     error: null,
